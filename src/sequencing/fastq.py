@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 """ 
   Date of Creation: 28th May 2010     
                       
@@ -41,7 +43,7 @@
 """
 
 from collections import deque
-from read import FastqRead
+from fastqread import FastqRead
 
 class FastqFileFormatError(Exception):
   def __init__(self, msg):

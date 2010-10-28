@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 """ 
   Date of Creation: 28th May 2010     
                       
@@ -38,7 +40,7 @@
 """
 
 from collections import deque
-from read import FastaRead
+from fastaread import FastaRead
 
 def numSequences(fileh):
   """
