@@ -45,10 +45,15 @@
                    * added unit test for formattedString method 
                  29th Sep 2010 -- Philip Uren
                    * fixed bug in trimRight 
+                 28th October -- Philip Uren
+                   * moved fastq read classes to fastqread module 
+                   * fixed bugs in eq and ne --> added unit tests for eq and ne
   
-  TODO:          Move these classes into the associate fastq and fasta files? 
-                 truncate method should move up class hierarchy -- problem with dynamic linking? 
-                 unit tests missing  
+  TODO:           
+                 * truncate method should move up class hierarchy -- problem with 
+                   dynamic linking? 
+                 * unit tests missing  
+                 * method headers missing 
 """
 
 import unittest, sys
@@ -59,26 +64,6 @@ class FastqReadError(Exception):
     self.value = msg
   def __str__(self):
     return repr(self.value)
-  
-class FastaRead(FastRead):
-  def __init__(self, seqName, seqData = "", useMutableString = False):
-    FastRead.__init__(self, seqName, seqData, useMutableString)
-  def __str__(self):
-    """
-      DESCPT: return string representation of the read
-    """
-    return ">" + self.sequenceName + "\n" + str(self.sequenceData) 
-  
-  def formattedString(self, width):
-    """
-      DESCPT: get formatted version of the seq where no 
-              row of sequence data exceeds a given length
-    """
-    res = ">" + self.sequenceName + "\n"
-    for i in range(0,len(self.sequenceData), width) :
-      res += self.sequenceData[i:i+width]
-      if i + width < len(self.sequenceData) : res += "\n" 
-    return res
         
 class FastqRead(FastRead):
   def __init__(self, seqName, seqData=None, 
@@ -91,10 +76,12 @@ class FastqRead(FastRead):
     self.HIGHEST_SCORE = 104
         
   def __eq__(self, read):
-    FastRead.__eq__(read) and self.sequenceQual == read.sequenceQual
+    return FastRead.__eq__(self, read) and \
+           self.sequenceQual == read.sequenceQual
             
   def __ne__(self, read):
-    FastRead.__ne__(read) and self.sequenceQual != read.sequenceQual
+    return FastRead.__ne__(self, read) or \
+           self.sequenceQual != read.sequenceQual
     
   def truncate(self, size):
     self.trimRight(len(self) - size)
@@ -113,7 +100,8 @@ class FastqRead(FastRead):
     
   def getRelativeQualityScore(self, i):
     val = self.sequenceQual[i]
-    return (ord(val) - self.LOWSET_SCORE) / float (self.HIGHEST_SCORE - self.LOWSET_SCORE)
+    return (ord(val) - self.LOWSET_SCORE) / float (self.HIGHEST_SCORE - 
+                                                   self.LOWSET_SCORE)
 
   def split(self, point = None):
     """ returns two Read objects which correspond to the split of this read """
@@ -130,7 +118,8 @@ class FastqRead(FastRead):
       
   def merge(self, other, forceMerge = False):
     if self.sequenceName != other.sequenceName and not forceMerge :
-      raise FastqReadError("cannot merge " + self.sequenceName + " with " + other.sequenceName + " -- different sequence names")
+      raise FastqReadError("cannot merge " + self.sequenceName + " with " +\
+                           other.sequenceName + " -- different sequence names")
     
     name = self.sequenceName
     seq = self.sequenceData + other.sequenceData
@@ -151,26 +140,34 @@ class ReadUnitTests(unittest.TestCase):
   def SetUp(self):
     pass
   
-  def testFormattedString(self):
-    r = FastaRead("name", "ATCGATCGATCGATCTCGA")
-    expect = ">name\n" +\
-             "ATCGA\n" +\
-             "TCGAT\n" +\
-             "CGATC\n" +\
-             "TCGA"
-    got = r.formattedString(width=5)
-    self.assertTrue(got == expect)
+  def testeq(self):
+    r1 = FastqRead("s1","ACTGCT","BBBBBB")
+    r2 = FastqRead("s1","ACTGCT","BBBBBB")
+    r3 = FastqRead("s1","ACTGCT","BBBfBB")
+    r4 = FastqRead("s1","ACCGCT","BBBBBB")
+    r5 = FastqRead("s2","TCTGCT","fBBBBB")
+    r6 = FastqRead("s3","CCCCCC","fBBBBB")
+    r7 = FastqRead("s1","CCCCCC","fBBfBB")
+    r7 = FastqRead("s6","CCCCCC","fBBfBB")
     
-    # make sure this also works with a mutable underlying sequence
-    r = FastaRead("name", "ATCGATCGATCGATCTCGA", useMutableString = True)
-    expect = ">name\n" +\
-             "ATCGA\n" +\
-             "TCGAT\n" +\
-             "CGATC\n" +\
-             "TCGA"
-    got = r.formattedString(width=5)
-    self.assertTrue(got == expect)
+    self.assertTrue((r1 == r2) == True)  # same name, same seq, same qual
+    self.assertTrue((r1 == r3) == False) # same name, same seq, diff qual
+    self.assertTrue((r1 == r4) == False) # same name, diff seq, same qual
+    self.assertTrue((r3 == r4) == False) # same name, diff seq, diff qual
+    self.assertTrue((r1 == r5) == False) # diff name, diff seq, diff qual
+    self.assertTrue((r5 == r6) == False) # diff name, diff seq, same qual
+    self.assertTrue((r6 == r7) == False) # diff name, same seq, diff qual
+    self.assertTrue((r3 == r4) == False) # diff name, same seq, same qual
     
+    self.assertTrue((r1 != r2) == False)  # same name, same seq, same qual
+    self.assertTrue((r1 != r3) == True) # same name, same seq, diff qual
+    self.assertTrue((r1 != r4) == True) # same name, diff seq, same qual
+    self.assertTrue((r3 != r4) == True) # same name, diff seq, diff qual
+    self.assertTrue((r1 != r5) == True) # diff name, diff seq, diff qual
+    self.assertTrue((r5 != r6) == True) # diff name, diff seq, same qual
+    self.assertTrue((r6 != r7) == True) # diff name, same seq, diff qual
+    self.assertTrue((r3 != r4) == True) # diff name, same seq, same qual
+
   
 if __name__ == "__main__":
     unittest.main()
