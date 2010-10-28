@@ -70,6 +70,9 @@
                  27th October 2010 -- Philip Uren
                    * moved to smithlab_py 
                    * changed usage of progress indicator to use new class
+                 28th October 2010 -- Philip Uren 
+                   * changed unit test for overlap
+                   * removed iterators to a new module 
   
   TODO:         
                 * finish unit tests
@@ -659,44 +662,10 @@ class BEDUnitTests(unittest.TestCase):
     
       
   def testSizeOfOverlap(self):
-    MAX_INDEX = 100000
-    ITERATIONS = 100
-    
-    for i in range(0, ITERATIONS) :
-      region1 = randomBEDElement(maxIndex = MAX_INDEX)
-      region2 = copy.deepcopy(region1)
-      
       ## region 2 entirely inside region 1 -- ans = size of region 2
-      region2.start = int(random.random() * (region1.end - region1.start - 1) +\
-                      region1.start)
-      region2.end = int(random.random() * (region1.end - region2.start) +\
-                    region2.start)
+      region1 = BEDElement("chr1", 10, 20, "read", 1, "f")
+      region2 = BEDElement("chr1", 10, 20, "read", 1, "f")
       self.assertEqual(region1.sizeOfOverlap(region2), len(region2))
-      self.assertEqual(region1.sizeOfOverlap(region2), 
-                       region2.sizeOfOverlap(region1))
-      
-      ## region 2 start inside region 1, but end beyond it -- ans = region1.end - region2.start
-      region2.start = int(random.random() * (region1.end - region1.start - 1) +\
-                      region1.start)
-      region2.end = int(random.random() * (MAX_INDEX - region1.end) +\
-                    region1.end)
-      self.assertEqual(region1.sizeOfOverlap(region2), region1.end - region2.start + 1)
-      self.assertEqual(region1.sizeOfOverlap(region2), 
-                       region2.sizeOfOverlap(region1))
-      
-      ## region 2 end inside region 1, but start beyond it -- ans = region2.end - region1.start
-      region2.end = int(random.random() * (region1.end - region1.start - 1) +\
-                    region1.start)
-      region2.start = int(random.random() * (region1.start))
-      self.assertEqual(region1.sizeOfOverlap(region2), region2.end - region1.start + 1)
-      self.assertEqual(region1.sizeOfOverlap(region2), 
-                       region2.sizeOfOverlap(region1))
-      
-      ## no intersection at all -- ans = 0
-      region2.start = int(random.random() * (region1.start - 1))
-      region2.end = int(random.random() * (region1.start - region2.start) +\
-                    region2.start)
-      self.assertEqual(region1.sizeOfOverlap(region2), 0)
       self.assertEqual(region1.sizeOfOverlap(region2), 
                        region2.sizeOfOverlap(region1))
   
