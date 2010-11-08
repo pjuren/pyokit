@@ -37,17 +37,19 @@
                    * added copy constructor, and unit tests
                    * fixed bug in similarity 
                    * fixed bug in clipThreePrime
-                 17th September -- Philip Uren
+                 17th September 2010 -- Philip Uren
                    * added mutable string class
                    * allow underlying string rep for sequence to be 
                      mutable string
                    * improved maskRegion efficiency when using 
                      mutable strings for sequence  
                    * fixed behaviour of mutable string for slices
-                 27th October -- Philip Uren 
+                 27th October 2010 -- Philip Uren 
                    * moved code to smithlab_py
                    * fixed import statements to reflect change in
                      project structure 
+                 1st November 2010 -- Philip Uren
+                   * added code to check/convert DNA/RNA sequences
   
   
   TODO:          Expand unit tests
@@ -98,7 +100,10 @@ class MutableString :
 class FastRead:
   def __init__(self, seqName, seqData, useMutableString = False):
     """
-      DESCPT: Constructor 
+      @summary: Constructor
+      @param seqName: 
+      @param seqData: 
+      @param useMutableString:  
     """
     self.sequenceName = seqName
     if useMutableString : 
@@ -109,16 +114,16 @@ class FastRead:
     
   def copy(self):
     """
-      DESCPT: Copy constructor 
+      @summary: Copy constructor 
     """
     return FastRead(self.sequenceName, self.sequenceData, self.mutableString)
     
   def percentNuc(self, nuc):
     """
-      DESCPT: return the percentage of the sequence which is equal 
+      @summary: return the percentage of the sequence which is equal 
               to the passed nucleotide
-      PARAMS: nuc   -- count occurences of this nuc  
-      RETURN: float -- percentage
+      @param nuc: count number of times this nuc appears  
+      @return: percentage (float)
     """
     count = reduce(lambda x,y: x+1 if y==nuc else x, self.sequenceData, 0) 
     return count / float(len(self.sequenceData))
@@ -216,7 +221,36 @@ class FastRead:
       if verbose : 
         pind.done += 1
         pind.showProgress()
-      
+        
+  def isDNA(self):
+    """
+      @summary: return True if this sequence contains only DNA nucleotides 
+      @return: True if contains only DNA nucleotides, False otherwise
+    """
+    for nuc in self.sequenceData :
+      if not nuc in "ACGTacgtn" : return False
+    return True
+
+  def isRNA(self):
+    """
+      @summary: return True if this sequence contains only RNA nucleotides 
+      @return: True if contains only RNA nucleotides, False otherwise
+    """
+    for nuc in self.sequenceData :
+      if not nuc in "ACGUacgun" : return False
+    return True 
+  
+  def toRNA(self):
+    """
+      @summary: convert to RNA sequence by changing any Ts to Us
+    """
+    self.sequenceData = self.sequenceData.replace("T","U")
+  
+  def toDNA(self):
+    """
+      @summary: convert to DNA sequence by changing any Us to Ts
+    """
+    self.sequenceData = self.sequenceData.replace("U","T")
       
   def split(self, point = None):
     """ 

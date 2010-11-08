@@ -1,3 +1,5 @@
+import math, sys
+
 class ProgressIndicator:
   def __init__(self, totalToDo, messagePrefix = None, messageSuffix = None):
     self.total = totalToDo

@@ -16,6 +16,9 @@ class DummyInputStream :
     self.current += 1 
     return self.lines[self.current-1]
   
+  def reset(self):
+    self.current = 0
+  
   def __iter__(self):
     return self.lines.__iter__()
   
@@ -28,8 +31,6 @@ class DummyInputStream :
   
   def close(self):
     pass
-  
-  
   
   
   

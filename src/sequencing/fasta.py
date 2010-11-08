@@ -34,6 +34,8 @@
   Revision 
   History:       18th September 2010 -- Philip Uren
                    * added numSequences method 
+                 1st November 2010 -- Philip Uren
+                   * added verbose option for fastaIterator 
   
   
   TODO:          None
@@ -41,6 +43,7 @@
 
 from collections import deque
 from fastaread import FastaRead
+from util.progressIndicator import ProgressIndicator
 
 def numSequences(fileh):
   """
@@ -65,7 +68,7 @@ def _isSequenceHead(line):
   if line[0] == '>' : return True
   return False
       
-def fastaIterator(fn, useMutableString = False):
+def fastaIterator(fn, useMutableString = False, verbose = False):
   """
     DESCRP: A generator function which yields reads from <filename>
             the iterator is exhausted when all reads have been 
@@ -73,10 +76,26 @@ def fastaIterator(fn, useMutableString = False):
     PARAMS: fn  -  if this is a string, we treat it as a filename, else
                    we treat it as a file-like object, with a readline()
                    method
+    @param verbose: if True, output additional status messages to stderr 
+                    about progress 
   """
   prevLine = None
   fh = fn
   if type(fh).__name__ == "str" : fh = open(fh)
+  
+  if verbose :
+    try :
+      total = 0
+      for s in fastaIterator(fn.name, verbose = False) : total += 1
+      pind = ProgressIndicator(totalToDo = total, 
+                                     messagePrefix = "completed", 
+                                     messageSuffix = "of processing " +\
+                                                      fn.name)
+    except AttributeError :
+      sys.stderr.write("Warning: " +\
+                       "unable to show progress for stream")
+      verbose = False      
+    
   
   while True :
     # either we have a sequence header left over from the 
@@ -105,8 +124,10 @@ def fastaIterator(fn, useMutableString = False):
         break
       if not _isSequenceHead(line) : seqdata += line.strip()
       
-      
     # package it all up..
+    if verbose :
+      pind.done += 1
+      pind.showProgress()
     yield FastaRead(name, seqdata, useMutableString)
     
     # remember where we stopped for next call, or finish 
