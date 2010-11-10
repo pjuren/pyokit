@@ -12,8 +12,9 @@ def getUniqueFilename(dir = None, base = None):
     if not os.path.exists(fn) : break
   return fn 
 
-def linesInFile(fn):
-  f = open(fn)
+def linesInFile(fd):
+  if type(fd).__name__ == "str" : f = open(fd)
+  else : f = fd 
   t = sum(1 for line in f)
   f.close()
   return t
