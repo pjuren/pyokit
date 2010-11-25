@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 """
   Date of Creation: 3rd Apr 2010    
                        
@@ -73,29 +74,25 @@
                  28th October 2010 -- Philip Uren 
                    * changed unit test for overlap
                    * removed iterators to a new module 
+                 16th November 2010 -- Philip Uren
+                   * added support for colours and more error checking on 
+                     parsing. Cleaned up some old code
+                 24th Novemeber 2010 -- Philip Uren
+                   * added toGenomicCoordinates and associated unit tests
   
   TODO:         
                 * finish unit tests
+                * lots of duplication between intervalTreesFromList and 
+                  intervalTrees that should be removed  
 
 """
 
-import sys
-import os
-import unittest
-import copy
-from Queue import Queue
+import sys, os, unittest, copy
 
 from testing.dummyfiles import DummyInputStream, DummyOutputStream
 from util.progressIndicator import ProgressIndicator
 from util.fileUtils import linesInFile
 from datastruct.intervalTree import IntervalTree
-
-
-DEFAULT_DELIM = "\t"
-ITERATOR_SORTED_START = 1
-ITERATOR_SORTED_END = 2
-ITERATOR_SORTED_NAME = 3
-ITERATOR_SORTED_CHROM = 4
 
 class BEDError(Exception):
   def __init__(self, msg):
@@ -105,11 +102,11 @@ class BEDError(Exception):
 
 def intervalTrees(reffh, verbose = False):
   """
-    DESCRP: Build a dictionary of interval trees indexed by chrom from
-            a BED stream
-    PARAMS: reffh -- a stream allowing iteration over lines in BED format,
-                     or a filename for a BED file
-            verbose -- output progress messages to sys.stderr if True
+    @summary: Build a dictionary of interval trees indexed by chrom from
+              a BED stream
+    @param reffh: a stream allowing iteration over lines in BED format,
+                  or a filename for a BED file
+    @param verbose: output progress messages to sys.stderr if True
   """
   if type(reffh).__name__ == "str" : fh = open(reffh)
   else : fh = reffh
@@ -143,9 +140,134 @@ def intervalTrees(reffh, verbose = False):
       
   return trees
 
+def intervalTreesFromList(inElements, verbose = False):
+  elements = {}
+  if verbose :
+    totalLines = len(inElements)
+    pind = ProgressIndicator(totalToDo = totalLines, 
+                                   messagePrefix = "completed", 
+                                   messageSuffix = "of parsing")      
+  
+  for element in inElements :
+    if not element.chrom in elements : elements[element.chrom] = []
+    elements[element.chrom].append(element)
+    if verbose :
+      pind.done += 1
+      pind.showProgress()
+    
+  # create an interval tree for each list
+  trees = {}
+  if verbose:
+    totalLines = len(elements)
+    pind = ProgressIndicator(totalToDo = totalLines, 
+                                   messagePrefix = "completed", 
+                                   messageSuffix = "of making interval trees")
+  for chrom in elements :
+    trees[chrom] = IntervalTree(elements[chrom])
+    if verbose:
+      pind.done += 1
+      pind.showProgress()
+      
+  return trees
 
-def BEDElementFromString(line, delim = DEFAULT_DELIM):
-  peices = line.split(delim)
+
+def toGenomicCoordinates(start, end, transcript, debug = False):
+  """
+    @summary: transform transcript coordinates into genomic coordinates,
+              returning a BEDElement (or two if the region spans a splice
+              junction)
+    @param start: the start location in transcript coordinates
+    @param end: the end location in transcript coordinates
+    @param transcript: list of BEDElement objects describing where
+                       the exons of this transcript are
+    @return: a list of BEDElement objects representing the regions of the 
+             transcript covered in genomic coordinates -- this may be only 
+             one region if it's inside a single exon, or multiple if spanning
+             more than one exon
+    @raise BEDError: if the transcript has exons on multiple chromosomes
+  """
+  
+  def regionIterator (start, end, transcript, debug = False):
+    """
+      @summary: an internal function for iterating covered regions
+    """
+    # do some quick error checking..
+    totalSize = sum([x.end - x.start for x in transcript])
+    if start < 0 or end > totalSize :
+      raise BEDError("gave start and end as " + str(start) + "," +str(end) + " -- transcript is " + str(totalSize) + " long")
+    
+    # sort the exons into order and figure out where the gene is
+    transcript.sort(key = lambda x : x.start)
+    chrom = None 
+    for exon in transcript : 
+      if chrom == None : chrom = exon.chrom
+      elif chrom != exon.chrom : 
+        raise BEDError ("got transcript with exons on multiple chromosomes!")
+    tStart = transcript[0].start
+    
+    # figure out the relative location of the splice junctions
+    cumulative = 0
+    junctions = [0]
+    for exon in transcript :
+      cumulative += exon.end - exon.start
+      junctions.append(cumulative)
+      
+    if debug :
+      sys.stderr.write("identified exon boundaries at: " + str(junctions) + "\n")
+      
+    # now figure out which exon the start and end are in
+    startInd, endInd = None, None
+    prev = 0
+    exonInd = 0
+    for i in range(1,len(junctions)) :
+      junc = junctions[i]
+      
+      # the start...
+      if debug : sys.stderr.write("is " + str(start) + " in " + str(prev) +\
+                                  "-" + str(junc) + "? ")
+      if start >= prev and start < junc :
+        startInd = exonInd
+        if debug : sys.stderr.write("yes \n")
+      elif debug : sys.stderr.write("no \n")
+      
+      # the end...
+      if debug : sys.stderr.write("is " + str(end) + " in " + str(prev) +\
+                                  "-" + str(junc) + "? ")
+      if end >= prev and end <= junc :
+        endInd = exonInd
+        if debug : sys.stderr.write("yes \n")
+      elif debug : sys.stderr.write("no \n")
+      
+      exonInd += 1
+      prev = junc
+    
+    # convert to absolute coordinates
+    absStart = (start - junctions[startInd]) + transcript[startInd].start
+    absEnd = (end - junctions[endInd]) + transcript[endInd].start
+    
+    # first we yeild any exon that is entirely covered by the region
+    for exon in transcript :
+      if absStart < exon.start and absEnd > exon.end :
+        yield BEDElement(exon.chrom, exon.start, exon.end)
+    
+    # if both start and end are in same exon, we can yield a single region
+    if startInd == endInd :
+      yield BEDElement(chrom, absStart, absEnd) 
+    else :
+      yield BEDElement(chrom, absStart, transcript[startInd].end)
+      yield BEDElement(chrom, transcript[endInd].start, absEnd)
+  
+  return [region for region in regionIterator(start, end, transcript, debug)]
+          
+
+def BEDElementFromString(line):
+  """
+    @summary: Given a string in BED format, parse the string and return a 
+              BEDElement object
+    @param line: the string to be parsed 
+    @return: BEDElement 
+  """
+  peices = line.split("\t")
   if len(peices) < 3 : 
     raise BEDError("BED elements must have at least chrom, start and end" +\
                    " found only " + str(len(peices)) + " in " + line)
@@ -156,40 +278,119 @@ def BEDElementFromString(line, delim = DEFAULT_DELIM):
   name = None 
   score = None 
   strand = None 
+  thickStart = None
+  thickEnd = None 
+  colour = None 
+  blockCount = None 
+  blockSizes = None 
+  blockStarts = None 
   
   if len(peices) >= 4 != None : name = peices[3]
   if len(peices) >= 5 != None : score = peices[4]
   if len(peices) >= 6 != None : strand = peices[5]
+  if len(peices) >= 7 != None : thickStart = peices[6]
+  if len(peices) >= 8 != None : thickEnd = peices[7]
+  if len(peices) >= 9 != None : colour = peices[8]
+  if len(peices) >= 10 != None : blockCount = peices[9]
+  if len(peices) >= 11 != None : blockSizes = peices[10]
+  if len(peices) >= 12 != None : blockStarts = peices[11]
   
-  return BEDElement(chrom, start, end, name, score, strand)
+  return BEDElement(chrom, start, end, name, score, strand, thickStart,
+                    thickEnd, colour, blockCount, blockSizes, blockStarts)
   
 
 class BEDElement :
-  def __init__(self, chrom, start, end, name, score, strand, delim = DEFAULT_DELIM):
+  def __init__(self, chrom, start, end, name = None, score = None, 
+               strand = None, thickStart = None, thickEnd = None, 
+               colour = None, blockCount = None, blockSizes = None,
+               blockStarts = None):
     """
-      ...
+      @summary: Constructor for the BEDElement class
+      @note: only the first three parameters are required 
+      @note: if any parameter is omitted, no default will be set for it
+             (it will just be = None) and it won't appear in any output.
+      @note: if any parameter is provided, all parameters that proceed 
+             it must also be provided. 
+      @note: BEDElements are inclusive of the start, but not the end 
+             coordinate 
     """
-    # the basic read info
+    # the basic read info -- we must get at least this much 
+    if chrom == None or start == None or end == None :
+      raise BEDError("Must provided at least chrom, start, end for BED element")
     self.chrom = chrom.strip()
     self.start = int(start)
     self.end = int(end)
     
     # we might get the following too...
+    # name:
     self.name = None
-    self.score = None
-    self.strand = None    
     if name != None: self.name = name.strip()
+    
+    # score
+    if score != None and name == None :
+      raise BEDError("If score is provided, must also provide name")
+    self.score = None
     if score != None : self.score = int(score)
+    
+    # strand 
+    if strand != None and (name == None or score == None) :
+      raise BEDError("If strand is provided, must also provide name and score")
+    self.strand = None  
     if strand != None : self.strand = strand.strip()
     
-    # we use this to keep track of the reads that map to this exon
-    self.readsMapped = []
+    # thickStart
+    if thickStart != None and (name == None or score == None or strand == None) :
+      raise BEDError("If thickStart is provided, must also provide name, " +\
+                     "score and strand")
+    self.thickStart = None
+    if thickStart != None : self.thickStart = int(thickStart)
     
-    # use this to keep track of whether this read has mapped to any genes yet
-    self.mapped = False
+    # thickEnd
+    if thickEnd != None and (name == None or score == None or strand == None \
+                             or thickStart == None) :
+      raise BEDError("If thickEnd is provided, must also provide name, " +\
+                     "score, strand and thickStart")
+    self.thickEnd = None
+    if thickEnd != None : self.thickEnd = int(thickEnd)
     
-    # just remember what delimiters we used, so we can re-construct the string later
-    self.delim = delim 
+    # colour
+    if colour != None and (name == None or score == None or strand == None \
+                             or thickStart == None or thickEnd == None) :
+      raise BEDError("If colour is provided, must also provide name, " +\
+                     "score, strand, thickStart and thickEnd")
+    self.colour = None
+    if colour != None : self.colour = colour
+    
+    # blockCount
+    if blockCount != None and (name == None or score == None or strand == None \
+                             or thickStart == None or thickEnd == None \
+                             or colour == None) :
+      raise BEDError("If colour is provided, must also provide name, " +\
+                     "score, strand, thickStart, thickEnd, colour")
+    self.blockCount = None
+    if blockCount != None : self.blockCount = blockCount
+    
+    # blockSizes
+    if blockSizes != None and (name == None or score == None or strand == None \
+                             or thickStart == None or thickEnd == None \
+                             or colour == None or blockCount == None) :
+      raise BEDError("If blockSizes is provided, must also provide name, " +\
+                     "score, strand, thickStart, thickEnd, colour and " +\
+                     "blockCount")
+    self.blockSizes = None
+    if blockSizes != None : self.blockSizes = blockSizes
+    
+    # blockStarts
+    if blockStarts != None and (name == None or score == None or strand == None \
+                             or thickStart == None or thickEnd == None \
+                             or colour == None or blockCount == None \
+                             or blockSizes == None) :
+      raise BEDError("If blockStarts is provided, must also provide name, " +\
+                     "score, strand, thickStart, thickEnd, colour, " +\
+                     "blockCount and blockSizes")
+    self.blockStarts = None
+    if blockStarts != None : self.blockStarts = blockStarts
+
   
   def __eq__(self, e):
     if e == None : return False
@@ -201,15 +402,23 @@ class BEDElement :
     return (self.end - self.start) + 1      
         
   def __str__(self):
-    res = self.chrom + self.delim + str(self.start) + self.delim + str(self.end)
-    if self.name != None : res += (self.delim + self.name)
-    if self.score != None : res += (self.delim + str(self.score))
-    if self.strand != None : res += (self.delim + self.strand)
-     
+    """
+      @summary: Produce a string representation of the BED element. Only 
+                those fields which we have values for will be output. 
+    """
+    delim = "\t"
+    res = self.chrom + delim + str(self.start) + delim + str(self.end)
+    if self.name != None : res += (delim + str(self.name))
+    if self.score != None : res += (delim + str(self.score))
+    if self.strand != None : res += (delim + str(self.strand))
+    if self.thickStart != None : res += (delim + str(self.thickStart))
+    if self.thickEnd != None : res += (delim + str(self.thickEnd))
+    if self.colour != None : res += (delim + str(self.colour))
+    if self.blockCount != None : res += (delim + str(self.blockCount))
+    if self.blockSizes != None : res += (delim + str(self.blockSizes))
+    if self.blockStarts != None : res += (delim + str(self.blockStarts))
+    
     return  res
-                
-  def readCountsAsString(self):
-    return self.name + " = " +str(self.readsMapped)
   
   def distance(self, e):
     dist = 0
@@ -274,7 +483,7 @@ class BEDElement :
 
 class BEDUnitTests(unittest.TestCase):
   """
-    Unit tests for fqsplit 
+    @summary: Unit tests for functions and classes in this module  
   """
   
   def setUp(self):
@@ -282,7 +491,6 @@ class BEDUnitTests(unittest.TestCase):
     
   def testInterection(self):
     pass
-    
       
   def testSizeOfOverlap(self):
       ## region 2 entirely inside region 1 -- ans = size of region 2
@@ -298,6 +506,37 @@ class BEDUnitTests(unittest.TestCase):
   def testDistance(self):
     pass
   
+  def testToGenomicCoordinates(self):
+    debug = False
+    exon1 = BEDElement("chr1", 101, 110)
+    exon2 = BEDElement("chr1", 120, 130)
+    exon3 = BEDElement("chr1", 170, 175)
+    
+    transcript = [exon1,exon2,exon3]
+    sortKey = lambda x : x.start
+    
+    res1 = toGenomicCoordinates(8, 15, transcript, debug = debug)
+    res2 = toGenomicCoordinates(8, 24, transcript, debug = debug)
+    res3 = toGenomicCoordinates(0, 3, transcript, debug = debug)
+    for res in [res1,res2,res3] : res.sort(key = sortKey)
+    
+    expect1 = [BEDElement("chr1", 109, 110), BEDElement("chr1", 120, 126)]
+    expect2 = [BEDElement("chr1", 109, 110), BEDElement("chr1", 120, 130), 
+               BEDElement("chr1", 170, 175)]
+    expect3 = [BEDElement("chr1", 101, 104)]
+    for expect in [expect1, expect2, expect3] : expect.sort(key = sortKey)
+    
+    if debug :
+      for expect, got in [(expect1, res1), (expect2, res2), (expect3, res3)] :
+        sys.stderr.write("expect: \n")
+        for e in expect : sys.stderr.write("\t" + str(e) + "\n")
+        sys.stderr.write("got: \n")
+        for e in got : sys.stderr.write("\t" + str(e) + "\n")
+        sys.stderr.write("\n")
+    
+    self.assertTrue(res1 == expect1)
+    self.assertTrue(res2 == expect2)
+    self.assertTrue(res3 == expect3)
 
 if __name__ == "__main__":
     unittest.main(argv = [sys.argv[0]])

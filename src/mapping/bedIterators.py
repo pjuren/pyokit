@@ -287,9 +287,6 @@ class BEDIteratorUnitTests(unittest.TestCase):
   
   def setUp(self):
     pass
-    
-  def testInterection(self):
-    pass
 
   def testBEDUniqueFilter(self):
     debug = False

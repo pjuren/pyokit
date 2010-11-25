@@ -1,3 +1,44 @@
+#!/usr/bin/python
+
+""" 
+  Date of Creation: 4th November 2010     
+                       
+  Description:   Provides dummy file streams that behave like real files
+                 in most respects, but can be initialised just by providing
+                 their content as strings
+
+  Copyright (C) 2010  
+  University of Southern California,
+  Philip J. Uren,
+  Andrew D. Smith
+  
+  Authors: Philip J. Uren, Andrew D. Smith
+  
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  
+  --------------------
+  
+  Known Bugs:    None
+  
+  Revision 
+  History:       None   
+  
+  TODO:          * Class and method headers are missing
+"""
+
+
+
 class DummyInputStream :
   def __init__(self, lines, name = None):
     if type(lines).__name__ == "str" :
