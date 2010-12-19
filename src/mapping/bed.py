@@ -295,6 +295,14 @@ def BEDElementFromString(line):
   if len(peices) >= 11 != None : blockSizes = peices[10]
   if len(peices) >= 12 != None : blockStarts = peices[11]
   
+  # some programs output things that are meant to be BED format, 
+  # but don't obey the rules... we're going to ignore thickStart 
+  # and thickEnd values that are not ints
+  try : int(thickStart)
+  except : thickStart = None 
+  try : int(thickEnd)
+  except : thickEnd = None 
+  
   return BEDElement(chrom, start, end, name, score, strand, thickStart,
                     thickEnd, colour, blockCount, blockSizes, blockStarts)
   
