@@ -79,6 +79,9 @@
                      parsing. Cleaned up some old code
                  24th Novemeber 2010 -- Philip Uren
                    * added toGenomicCoordinates and associated unit tests
+                 20th December 2010 -- Philip Uren
+                   * allow parsing to ignore data that doesn't match BED spec 
+                     (e.g. things that should be numbers, but aren't)
   
   TODO:         
                 * finish unit tests
