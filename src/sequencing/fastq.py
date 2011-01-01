@@ -37,6 +37,8 @@
                    * fixed fastqiterator getting stuck with empty files
                  20th September -- Philip Uren
                    * added mutable string option for fastqIterator 
+                 1st January 2011 -- Philip Uren
+                   * added verbose option for fastq iterator 
   
   
   TODO:          None
@@ -67,7 +69,7 @@ def _isQualityHead(line):
   if line[0] == '+' : return True
   return False
       
-def fastqIterator(fn, useMutableString = False):
+def fastqIterator(fn, useMutableString = False, verbose = False):
   """
     DESCRP: A generator function which yields reads from <filename>
             the iterator is exhausted when all reads have been 
@@ -84,6 +86,19 @@ def fastqIterator(fn, useMutableString = False):
   fh = fn
   if type(fh).__name__ == "str" : fh = open(fh)
   
+  # try to get an idea of how much data we have...
+  if verbose :
+    try :
+      totalLines = linesInFile(fh.name)
+      pind = ProgressIndicator(totalToDo = totalLines / 4, 
+                               messagePrefix = "completed", 
+                               messageSuffix = "of processing " +\
+                                               filehandle.name)
+    except AttributeError :
+      sys.stderr.write("fastqIterator -- warning: " +\
+                       "unable to show progress for stream")
+      verbose = False
+  
   while True :
     # either we have a sequence header left over from the 
     # prev call, or we need to read a new one from the file... 
@@ -94,6 +109,7 @@ def fastqIterator(fn, useMutableString = False):
     if prevLine == None :
       while seqHeader.strip() == "" :
         nl = fh.readline()
+        if verbose : pind.done += 1
         if nl == "" : 
            ## we're looking for a sequence header, but we're getting eof --
            ## file is empty!
@@ -109,6 +125,7 @@ def fastqIterator(fn, useMutableString = False):
     seqdata = ""
     while line == None or not _isQualityHead(line) :
       line = fh.readline()
+      if verbose : pind.done += 1
       if line == "" : 
         raise FastqFileFormatError("ran out of lines before finding qual head: ")
       if not _isQualityHead(line) : seqdata += line.strip()
@@ -119,11 +136,13 @@ def fastqIterator(fn, useMutableString = False):
     qualdata = ""
     while line == None or not _isSequenceHead(line) :
       line = fh.readline()
+      if verbose : pind.done += 1
       if line == "" : break
       elif not _isSequenceHead(line) : qualdata += line.strip()
       
     # package it all up..
     yield FastqRead(name, seqdata, qualdata, useMutableString)
+    if verbose : pind.showProgress()
     
     # remember where we stopped for next call, or finish 
     prevLine = line
