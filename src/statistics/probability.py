@@ -38,24 +38,53 @@
 """
 
 import random, unittest, sys
+from datastruct.intervalTree import IntervalTree
 
-def weightedChoice(candidates, weights):
+class WeightedRandom:
   """
-    @summary: given a list of objects and a weight for each one, choose an item
-              randomly with probability based on the weights
-    @param candidates: list of objects to choose from
-    @param weights: list of weights (float or int) for each item in candidates
-                    weights need not be normalised 
+    Given a list of objects and a weight for each object, this class allows
+    the random choice of an object (with replacement) such that
+    the propbability of getting an object is proportional to it weight 
+    relative to the other objects.
   """
-  cumWeights = []
-  total = 0
-  for weight in weights:
-    total = total + weight
-    cumWeights.append(total)
-  rnd = random.uniform(0, total)
-  for candidate, cumWeight in zip(candidates, cumWeights):
-    if rnd <= cumWeight:
-      return candidate
+  
+  class Interval :
+    def __init__(self, start, end, obj):
+      self.start = start
+      self.end = end
+      self.obj = obj
+    def __str__(self):
+      return str(self.start) + " to " + str(self.end) + " = " + str(self.obj)
+  
+  def __init__(self, candidates, weights):
+    if len(candidates) != len(weights) :
+      raise ProbabilityError("number of weights doesn't equal number of " +\
+                             "objects")
+    self._intervalTree = self._buildTree(weights, candidates)
+    self._maxVal = sum(weights)
+    
+  def _buildTree(self, weights, candidates):
+    """
+      @summary: build interval tree from cumulative weights
+    """
+    intervals = []
+    total = 0.0
+    for i in range(0, len(weights)) :
+      weight = weights[i]
+      obj = candidates[i]
+      start = total
+      end = total + weight
+      intervals.append(WeightedRandom.Interval(start, end, obj))
+      total = total + weight
+    return IntervalTree(intervals)
+    
+  def choose(self):
+    rnd = random.uniform(0, self._maxVal)
+    objs = self._intervalTree.intersectingPoint(rnd)
+    if len(objs) != 1 :
+      raise ProbabilityError("random choice failed, " + str(len(objs)) +\
+                             " objects in same cumulative probability range!")
+    return objs[0].obj
 
   
 def generateProbabilities(num):
@@ -90,8 +119,9 @@ class ProbabilityTests(unittest.TestCase):
     items = ["a","b","c"]
     weights = [0.1, 0.3, 0.6]
     counts = {"a":0, "b":0, "c":0}
+    r = WeightedRandom(items, weights)
     for i in range(numIter) :
-      counts[weightedChoice(items, weights)] += 1
+      counts[r.choose()] += 1
      
     self.assertAlmostEqual(counts["a"] / float(numIter), 0.1, precision)
     self.assertAlmostEqual(counts["b"] / float(numIter), 0.3, precision)

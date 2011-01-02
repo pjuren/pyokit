@@ -46,6 +46,8 @@
 
 from collections import deque
 from fastqread import FastqRead
+from util.progressIndicator import ProgressIndicator
+from util.fileUtils import linesInFile
 
 class FastqFileFormatError(Exception):
   def __init__(self, msg):
@@ -90,10 +92,10 @@ def fastqIterator(fn, useMutableString = False, verbose = False):
   if verbose :
     try :
       totalLines = linesInFile(fh.name)
-      pind = ProgressIndicator(totalToDo = totalLines / 4, 
+      pind = ProgressIndicator(totalToDo = totalLines, 
                                messagePrefix = "completed", 
                                messageSuffix = "of processing " +\
-                                               filehandle.name)
+                                               fh.name)
     except AttributeError :
       sys.stderr.write("fastqIterator -- warning: " +\
                        "unable to show progress for stream")
