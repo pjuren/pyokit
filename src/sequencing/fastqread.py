@@ -85,6 +85,17 @@ class FastqRead(FastRead):
     
   def truncate(self, size):
     self.trimRight(len(self) - size)
+    
+  def qualityToSolexa(self):
+    """
+      @summary: convert quality data from sanger to solexa format. Note that
+                no checking is done to make sure the data was originally in 
+                sanger format; if it wasn't, the result will be junk
+    """
+    newqual = ""
+    for val in self.sequenceQual :
+      newqual += chr(ord(val) + 26)
+    self.sequenceQual = newqual 
         
   def trimRight(self, amount):
     """
