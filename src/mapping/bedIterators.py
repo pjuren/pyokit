@@ -33,9 +33,12 @@
   History:
                  28th October 2010 -- Philip Uren 
                    * Created module with code from existing BED module 
+                 06th January 2011 -- Philip Uren
+                   * moved intervalTree method here
   
   TODO:         
                 * finish unit tests
+                * add unit test for intervalTrees method 
 
 """
 
@@ -62,6 +65,48 @@ class BEDError(Exception):
     self.value = msg
   def __str__(self):
     return repr(self.value)
+
+  
+def intervalTrees(reffh, verbose = False):
+  """
+    @summary: Build a dictionary of interval trees indexed by chrom from
+              a BED stream
+    @param reffh: a stream allowing iteration over lines in BED format,
+                  or a filename for a BED file
+    @param verbose: output progress messages to sys.stderr if True
+  """
+  if type(reffh).__name__ == "str" : fh = open(reffh)
+  else : fh = reffh
+  
+  # load all the regions and split them into lists for each chrom
+  elements = {}
+  if verbose and fh != sys.stdin :
+    totalLines = linesInFile(fh.name)
+    pind = ProgressIndicator(totalToDo = totalLines, 
+                                   messagePrefix = "completed", 
+                                   messageSuffix = "of loading " + fh.name)      
+  for element in BEDIterator(fh):
+    if not element.chrom in elements : elements[element.chrom] = []
+    elements[element.chrom].append(element)
+    if verbose and fh != sys.stdin:
+      pind.done += 1
+      pind.showProgress()
+    
+  # create an interval tree for each list
+  trees = {}
+  if verbose:
+    totalLines = len(elements)
+    pind = ProgressIndicator(totalToDo = totalLines, 
+                                   messagePrefix = "completed", 
+                                   messageSuffix = "of making interval trees")
+  for chrom in elements :
+    trees[chrom] = IntervalTree(elements[chrom])
+    if verbose:
+      pind.done += 1
+      pind.showProgress()
+      
+  return trees
+
 
 def BEDDuplicateIterator(fh1, fh2, removeJuncTags=False, removePETags=False, 
                        verbose=False):

@@ -46,13 +46,65 @@ from mapping.wigIterators import wigIterator, ITERATOR_SORTED_START
 from util.fileUtils import linesInFile, openFD
 from testing.dummyfiles import DummyInputStream, DummyOutputStream
 from datastruct.genomicMap import GenomicMap, GenomicMapError 
+from wig import WigElement
 
 DEFAULT_BUFFER_SIZE = 1000000
-DEFAULT_CHUNK_SIZE = math.ceil(DEFAULT_BUFFER_SIZE / 100)
+DEFAULT_CHUNK_PORTION = 1.5
+DEFAULT_CHUNK_SIZE = math.ceil(DEFAULT_BUFFER_SIZE / DEFAULT_CHUNK_PORTION)
+DEFAULT_MISSING_VAL = 0
+
+class DummyIterator :
+  def __init__(self, it):
+    self.iterator = it
+    self.lastChrom = None
+    self.lastPos = None
+    
+  def ahead(self, chrom, pos):
+    """
+      returns true if the item would lie further ahead
+    """
+    if self.lastChrom == None or self.lastPos == None : return False
+    if self.lastChrom < chrom : return True
+    if self.lastChrom > chrom : return False
+    if self.lastPos < pos : return True
+    return False
+  
+  def next(self):
+    n = self.iterator.next()
+    self.lastChrom = n.chrom
+    self.lastPos = n.start
+    return n
+
+class CircWig :
+  def __init__(self, fn, verbose = False):
+    self.fn = fn
+    self.verbose = verbose  
+    self.resetIterator()
+    
+  def resetIterator(self):
+    it = wigIterator(self.fn, sortedby = ITERATOR_SORTED_START, verbose = self.verbose)
+    self.dummy = DummyIterator(it)
+  
+  def setIterator(self, chrom, pos):
+    """
+      set iterator relative to desired pos -- if it's behind, we 
+      make a new iterator at the start of the file, if it's ahead we 
+      return the iterator that is still unfinished 
+    """
+    print "setting iterator relative to " + str(chrom) + "," + str(pos)
+    if not self.dummy.ahead(chrom, pos) :
+      print "desired spot is not ahead of last spot: " + str(self.dummy.lastChrom) + ", " + str(self.dummy.lastPos) 
+      self.resetIterator()
+  
+  def __iter__(self) :
+    return self.dummy
+    
+  
+    
 
 class BufferedWig:
   def __init__(self, fn, bufferSize = DEFAULT_BUFFER_SIZE, 
-               chunkSize = DEFAULT_CHUNK_SIZE, debug = False):
+               chunkSize = DEFAULT_CHUNK_SIZE, verbose = False, debug = False):
     """
       @summary: constructor for a BufferedWig object
       @param fn: file descriptor for the underlying wig data. 
@@ -66,18 +118,33 @@ class BufferedWig:
     """
     self.debug = debug
     if bufferSize != DEFAULT_BUFFER_SIZE and chunkSize == DEFAULT_CHUNK_SIZE:
-      chunkSize = math.ceil(bufferSize / float(100))
+      chunkSize = math.ceil(bufferSize / float(DEFAULT_CHUNK_PORTION))
     
+    # debugging info 
+    self.misses = 0
+    
+    self.verbose = verbose
+    
+    self.missingVal = DEFAULT_MISSING_VAL
     self.chunkSize = chunkSize
     self.bufferSize = bufferSize
     self.fn = fn
     self.vals = {}
     self.buffer = GenomicMap()
     
+    self.bufferMin = (None, None)
+    self.bufferMax = (None, None)
+    
+    self.circwig = CircWig(self.fn, self.verbose)
+    
+    print "buffer is " + str(self.bufferSize)
+    print "chunk size: " + str(self.chunkSize) 
+    
   def getItem(self, chrom, loc):
     """
       @summary: get the value of the item on chromosome <chrom> at location
-                <loc> -- if it's not in the buffer, it'll be loaded first
+                <loc> -- if it's not in the buffer, it'll be loaded first,
+                if it's not in the wig, <self.missingVal> will be returned
       @note: the item is assumed to be only 1 position in length, with and
              end at start + 1
       @param chrom: the chromosome that the desired item is on
@@ -86,10 +153,44 @@ class BufferedWig:
     try :
       return self.buffer.getValue(chrom, loc)
     except GenomicMapError :
-      self.loadItem(chrom, loc)
-      return self.buffer.getValue(chrom, loc)
+      if self.debug :
+        des = str(chrom) + ", " + str(loc)
+        longdes = des + " in \n" #+ str(self.buffer) 
+        #sys.stderr.write("failed to find " + longdes + "\n")
+      
+      # need to figure out whether we missed on this item because it
+      # just isn't in the buffer (but might be in the wig elsewhere) or
+      # because it's not in the wig at all...
+      if self._inBuffer(chrom, loc) :
+        if self.debug :
+          pass
+          #sys.stderr.write(des + " should be in buffer ") #+ str(self.buffer) + "\n")
+        return WigElement(chrom, loc, loc+1, self.missingVal)
+      self._loadItem(chrom, loc)
+      try :
+        if self.debug :
+          longdes = des + " in \n" #+ str(self.buffer) 
+          sys.stderr.write("trying again for " + longdes + "\n")
+        r = self.buffer.getValue(chrom, loc)
+        if self.debug :
+          longdes = des + " in \n" #+ str(self.buffer) 
+          sys.stderr.write("success for " + longdes + "\n")
+        return r
+      except GenomicMapError :
+        if self.debug : sys.stderr.write("failed again, there is no entry in the wig for " + des + "\n")
+        return WigElement(chrom, loc, loc+1, self.missingVal)
+  
+  def _inBuffer(self, chrom, loc):
+    minChrom, minPos = self.bufferMin
+    maxChrom, maxPos = self.bufferMax
+    if minChrom == None or maxChrom == None or minPos == None or maxPos == None:
+      return False
+    if chrom < minChrom or chrom > maxChrom : return False
+    if chrom == minChrom and loc < minPos : return False
+    if chrom == maxChrom and loc > maxPos : return False
+    return True
 
-  def loadItem(self, chrom, loc):
+  def _loadItem(self, chrom, loc):
     """
       @summary: load the item on <chrom> at location <loc> into the buffer;
                 Other surrounding items will also be loaded until the buffer
@@ -99,6 +200,10 @@ class BufferedWig:
       @note: the item is assumed to be just 1 position long, with an 
              end at start + 1
     """
+    self.misses += 1
+    self.circwig.setIterator(chrom, loc)
+    self.bufferMin = (chrom, loc)
+    
     # if the buffer is full, make some space
     if len(self.buffer) >= self.bufferSize :
       if self.debug :
@@ -106,18 +211,114 @@ class BufferedWig:
                          str(self.chunkSize) + " items \n")
       self.buffer.flush(self.chunkSize)
       if self.debug :
-        sys.stderr.write("buffer now looks like: \n" +\
-                         str(self.buffer) + "\n")
+        sys.stderr.write("buffer now has " + str(len(self.buffer)) + " items")
       
     # find the item we need then keep loading items until we fill up the
     # buffer again or we run out of items
     if self.debug : 
       sys.stderr.write("loading new data... ")
     adding = False
-    for item in wigIterator(openFD(self.fn), sortedby = ITERATOR_SORTED_START) :
+    first = True
+    for item in self.circwig :
       if len(self.buffer) >= self.bufferSize : break
-      if item.chrom == chrom and item.start == loc : 
+      if adding == False and item.chrom == chrom and item.start >= loc : 
         adding = True
-      if adding : self.buffer.addValue(item, item.chrom, item.start)
+      if adding and not self.buffer.hasValue(item.chrom, item.start): 
+        self.buffer.addValue(item, item.chrom, item.start)
+      first = False
+    self.bufferMax = (item.chrom, item.start)
     if self.debug : 
-      sys.stderr.write("buffer now looks like: \n" + str(self.buffer) + "\n")
+      sys.stderr.write("buffer now has " + str(len(self.buffer)) + " items")
+      
+
+class BufferedWigUnitTests(unittest.TestCase):
+  """
+    Unit tests for deadzone adjust 
+  """
+  
+  def setUp(self):
+    # 59424 and 59427 are missing 
+    self.input = "chr1" + "\t" + "59420" + "\t" + "59421" + "\t" + "1" + "\n" +\
+                 "chr1" + "\t" + "59421" + "\t" + "59422" + "\t" + "2" + "\n" +\
+                 "chr1" + "\t" + "59422" + "\t" + "59423" + "\t" + "3" + "\n" +\
+                 "chr1" + "\t" + "59423" + "\t" + "59424" + "\t" + "4" + "\n" +\
+                 "chr1" + "\t" + "59425" + "\t" + "59426" + "\t" + "6" + "\n" +\
+                 "chr1" + "\t" + "59426" + "\t" + "59427" + "\t" + "7" + "\n" +\
+                 "chr1" + "\t" + "59428" + "\t" + "59429" + "\t" + "9" + "\n" +\
+                 "chr1" + "\t" + "59429" + "\t" + "59430" + "\t" + "0" + "\n" +\
+                 "chr2" + "\t" + "10000" + "\t" + "10001" + "\t" + "0" + "\n"
+    
+  def testInBuffer(self):
+    """
+      the desired item is in the buffer
+    """
+    infh = DummyInputStream(self.input)
+    bw = BufferedWig(infh, bufferSize = 2, debug = False)
+    self.assertTrue(bw.getItem("chr1", 59420).score == 1)
+    self.assertTrue(bw.getItem("chr1", 59421).score == 2)
+    self.assertTrue(bw.misses == 1)
+    
+  def testInWigNotInBuffer(self):
+    """
+      the desired item is in the wig, but hasn't been loaded yet
+    """
+    infh = DummyInputStream(self.input)
+    bw = BufferedWig(infh, bufferSize = 2, debug = False)
+    self.assertTrue(bw.getItem("chr1", 59422).score == 3)
+    self.assertTrue(bw.misses == 1)
+    self.assertTrue(bw.getItem("chr1", 59429).score == 0)
+    self.assertTrue(bw.misses == 2)
+  
+  def testNotInWig(self):
+    """
+      the desired item does not exist in the wig at all
+    """
+    infh = DummyInputStream(self.input)
+    bw = BufferedWig(infh, bufferSize = 2, debug = False)
+    
+    # case 1 -- it would have been in the buffer, so we shouldn't go looking for it
+    bw.getItem("chr1", 59423)
+    self.assertTrue(bw.getItem("chr1", 59424).score == DEFAULT_MISSING_VAL)
+    self.assertTrue(bw.misses == 1)
+    
+    # case 2 -- it wouldn't be in the buffer, so we go looking
+    self.assertTrue(bw.getItem("chr1", 59427).score == DEFAULT_MISSING_VAL)
+    self.assertTrue(bw.misses == 2)
+    
+  def testAfterEndOfChrom(self):
+    """
+      asking for an item beyond the end of the chrom should not cause
+      reloads
+    """
+    infh = DummyInputStream(self.input)
+    bw = BufferedWig(infh, bufferSize = 2, debug = False)
+    bw.getItem("chr1", 59429)
+    self.assertTrue(bw.getItem("chr1", 59490).score == DEFAULT_MISSING_VAL)
+    self.assertTrue(bw.getItem("chr2", 10000).score == 0)
+    self.assertTrue(bw.misses == 1)
+    
+  def testBeforeFirstItem(self):
+    """
+      asking for an item that falls before the first item in the wig 
+      should cause miss the first time, but not again
+    """
+    infh = DummyInputStream(self.input)
+    bw = BufferedWig(infh, bufferSize = 2, debug = False)
+    self.assertTrue(bw.getItem("chr1", 10).score == DEFAULT_MISSING_VAL)
+    self.assertTrue(bw.misses == 1)
+    self.assertTrue(bw.getItem("chr1", 90).score == DEFAULT_MISSING_VAL)
+    self.assertTrue(bw.misses == 1)
+  
+  def testPassedVal(self):
+    """
+      asking for a value that we already passed
+    """
+    infh = DummyInputStream(self.input)
+    bw = BufferedWig(infh, bufferSize = 2, debug = False)
+    bw.getItem("chr1", 59428)
+    self.assertTrue(bw.getItem("chr1", 59426).score == 7)
+    self.assertTrue(bw.getItem("chr2", 10000).score == 0)
+    self.assertTrue(bw.misses == 3)
+    
+if __name__ == "__main__":
+    unittest.main(argv = [sys.argv[0]])

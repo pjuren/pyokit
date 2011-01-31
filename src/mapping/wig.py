@@ -56,6 +56,12 @@ class WigElement :
     else : sc = str(self.score) 
     return self.chrom + "\t" + str(self.start) + "\t" + str(self.end) +\
            "\t" + sc
+           
+  def before(self, w2):
+    if w2 == None : return False
+    if self.chrom < w2.chrom or (self.chrom == w2.chrom and \
+                                 self.start < w2.start) : return True
+    return False
     
 def wigElementFromString(s):
   parts = s.split("\t")

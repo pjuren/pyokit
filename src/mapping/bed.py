@@ -82,6 +82,9 @@
                  20th December 2010 -- Philip Uren
                    * allow parsing to ignore data that doesn't match BED spec 
                      (e.g. things that should be numbers, but aren't)
+                 06th January 2011 -- Philip Uren
+                   * moved intervalTree method from this file to 
+                     mapping.bedIterators
   
   TODO:         
                 * finish unit tests
@@ -102,46 +105,6 @@ class BEDError(Exception):
     self.value = msg
   def __str__(self):
     return repr(self.value)
-
-def intervalTrees(reffh, verbose = False):
-  """
-    @summary: Build a dictionary of interval trees indexed by chrom from
-              a BED stream
-    @param reffh: a stream allowing iteration over lines in BED format,
-                  or a filename for a BED file
-    @param verbose: output progress messages to sys.stderr if True
-  """
-  if type(reffh).__name__ == "str" : fh = open(reffh)
-  else : fh = reffh
-  
-  # load all the regions and split them into lists for each chrom
-  elements = {}
-  if verbose and fh != sys.stdin :
-    totalLines = linesInFile(fh.name)
-    pind = ProgressIndicator(totalToDo = totalLines, 
-                                   messagePrefix = "completed", 
-                                   messageSuffix = "of loading " + fh.name)      
-  for element in BEDIterator(fh):
-    if not element.chrom in elements : elements[element.chrom] = []
-    elements[element.chrom].append(element)
-    if verbose and fh != sys.stdin:
-      pind.done += 1
-      pind.showProgress()
-    
-  # create an interval tree for each list
-  trees = {}
-  if verbose:
-    totalLines = len(elements)
-    pind = ProgressIndicator(totalToDo = totalLines, 
-                                   messagePrefix = "completed", 
-                                   messageSuffix = "of making interval trees")
-  for chrom in elements :
-    trees[chrom] = IntervalTree(elements[chrom])
-    if verbose:
-      pind.done += 1
-      pind.showProgress()
-      
-  return trees
 
 def intervalTreesFromList(inElements, verbose = False):
   elements = {}
@@ -311,6 +274,10 @@ def BEDElementFromString(line):
   
 
 class BEDElement :
+  POSITIVE_STRAND = "+"
+  NEGATIVE_STRAND = "-"
+  DEFAULT_STRAND = POSITIVE_STRAND
+  
   def __init__(self, chrom, start, end, name = None, score = None, 
                strand = None, thickStart = None, thickEnd = None, 
                colour = None, blockCount = None, blockSizes = None,
@@ -489,6 +456,16 @@ class BEDElement :
     if e.start >= self.start and e.start <= self.end : return True
     if e.end >= self.start and e.end <= self.end : return True
     return False
+  
+  def isPositiveStrand(self):
+    if self.strand == None and self.DEFAULT_STRAND == self.POSITIVE_STRAND :
+      return True
+    return self.strand == self.POSITIVE_STRAND 
+  
+  def isNegativeStrand(self):
+    if self.strand == None and self.DEFAULT_STRAND == self.NEGATIVE_STRAND :
+      return True
+    return self.strand == self.NEGATIVE_STRAND
     
 
 

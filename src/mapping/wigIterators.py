@@ -32,15 +32,17 @@
   Revision 
   History:       16th November 2010 -- Philip Uren
                    * added sorting parameter to wigIterator
+                 23rd December 2010 -- Philip Uren
+                   * added pairedWigIterator
   
-  TODO:          * Class and method headers are missing
+  TODO:          * Class, method and function comment headers are incomplete 
 """
 
 ITERATOR_SORTED_START = 1
 
 import sys, unittest
 from util.fileUtils import openFD, getFDName
-from mapping.wig import wigElementFromString, WigError
+from mapping.wig import wigElementFromString, WigError, WigElement
 from testing.dummyfiles import DummyInputStream, DummyOutputStream
 from util.fileUtils import linesInFile
 from util.progressIndicator import ProgressIndicator
@@ -75,12 +77,15 @@ def wigIterator(fd, verbose = False, sortedby = None):
     
     line = line.strip()
     if line == "" : continue 
-    e = wigElementFromString(line)
+    try :
+      e = wigElementFromString(line)
+    except :
+      raise WigError("failed parsing '" + line + "' as wig element")
     
     # on same chrom as the prev item, make sure order is right
     if prev != None and sortedby != None and e.chrom == prev.chrom :
       if sortedby == ITERATOR_SORTED_START and prev.start > e.start :
-        raise BEDError("bed file " + filehandle.name +\
+        raise WigError("bed file " + fd.name +\
                        " not sorted by start index - saw item " +\
                        str(prev) + " before " + str(e))
     
@@ -88,7 +93,7 @@ def wigIterator(fd, verbose = False, sortedby = None):
     if prev != None and prev.chrom != e.chrom :
       if (sortedby == ITERATOR_SORTED_START) and\
          (e.chrom in chromsSeen or prev.chrom > e.chrom) :
-        raise BEDError("BED file " + filehandle.name +\
+        raise WigError("BED file " + fd.name +\
                        " not sorted by chrom")
       chromsSeen.add(e.chrom) 
     
@@ -96,6 +101,64 @@ def wigIterator(fd, verbose = False, sortedby = None):
     yield e
     prev = e
     
+def pairedWigIterator(wgs1, wgs2, missingVal = 0, verbose = False, debug = False):
+  """
+    @summary: iterate over two wig streams, returning matching pairs from each
+              file. If a match is missing for a given item in one file then 
+              it is assumed that item has the value <missingVal>, which by
+              default is 0. 
+    @note: streams must be sorted by chrom and start coordinate.
+    @note: size of each wig element must be the same as its pair, else an 
+           exception is raised
+  """
+  BOTH, FIRST, SECOND = 0, 1, 2
+  wigi1 = wigIterator(wgs1, verbose = verbose, sortedby = ITERATOR_SORTED_START)
+  wigi2 = wigIterator(wgs2, verbose = verbose, sortedby = ITERATOR_SORTED_START)
+  citem1, citem2 = None, None
+  pitem1, pitem2 = None, None
+  next = BOTH
+  
+  while True :
+    # try to get items
+    if next == BOTH or next == FIRST :
+      try :
+        citem1 = wigi1.next()
+      except StopIteration:
+        citem1 = None
+    if next == BOTH or next == SECOND : 
+      try :
+        citem2 = wigi2.next()
+      except StopIteration:
+        citem2 = None
+    
+    if debug : print "got items: " + str(citem1) + " and " + str(citem2)
+    
+    # if both streams are exhausted, we're done
+    if citem1 == None and citem2 == None : break
+    
+    # if we got two things that match, yield them and remember that next time 
+    # we want something from both streams
+    if citem1 != None and citem2 != None and \
+       citem1.start == citem2.start and citem1.end == citem2.end and \
+       citem1.chrom == citem2.chrom :
+      next = BOTH
+      if debug : print "output: " + str(citem1) + " and " + str(citem2) + "\n"
+      yield citem1, citem2
+      continue 
+    
+    # we got non-matching items, the smaller one can be yielded with a dummy
+    # wig element for the missing value, the larger needs to be kept so we 
+    # can check for it's match further along the stream
+    if citem2 == None or (citem1 != None and citem1.before(citem2)) :
+      next = FIRST
+      p1 = citem1 
+      p2 = WigElement(citem1.chrom, citem1.start, citem1.end, missingVal)
+    elif citem1 == None or (citem2 != None and citem2.before(citem1)) :
+      next = SECOND
+      p1 = WigElement(citem2.chrom, citem2.start, citem2.end, missingVal)
+      p2 = citem2
+    if debug : print "output: " + str(p1) + " and " + str(p2) + "\n"
+    yield p1, p2
     
 class WigIteratorUnitTests(unittest.TestCase):
   """
@@ -133,6 +196,47 @@ class WigIteratorUnitTests(unittest.TestCase):
     
     self.assertTrue(out == expect)
     
+  def testPairedWigIterator(self):
+    debug = False
+    wigIn1 = "chr1 \t 10 \t 20 \t 01\n" +\
+             "chr1 \t 20 \t 30 \t 02\n" +\
+             "chr1 \t 30 \t 40 \t 03\n" +\
+             "chr2 \t 40 \t 50 \t 04\n" +\
+             "chr3 \t 70 \t 80 \t 05\n" +\
+             "chr4 \t 10 \t 20 \t 06\n" 
+    wigIn2 = "chr1 \t 10 \t 20 \t 99\n" +\
+             "chr1 \t 30 \t 40 \t 98\n" +\
+             "chr2 \t 40 \t 50 \t 97\n" +\
+             "chr2 \t 50 \t 60 \t 96\n" +\
+             "chr3 \t 70 \t 80 \t 95\n" +\
+             "chr5 \t 10 \t 20 \t 94\n" 
+    expect = [("chr1\t10\t20\t1", "chr1\t10\t20\t99"),
+              ("chr1\t20\t30\t2", "chr1\t20\t30\t-1"),
+              ("chr1\t30\t40\t3", "chr1\t30\t40\t98"),
+              ("chr2\t40\t50\t4", "chr2\t40\t50\t97"),
+              ("chr2\t50\t60\t-1", "chr2\t50\t60\t96"),
+              ("chr3\t70\t80\t5", "chr3\t70\t80\t95"),
+              ("chr4\t10\t20\t6", "chr4\t10\t20\t-1"),
+              ("chr5\t10\t20\t-1", "chr5\t10\t20\t94")]
+    
+    out = []
+    for e1,e2 in pairedWigIterator(DummyInputStream(wigIn1), 
+                                   DummyInputStream(wigIn2), 
+                                   missingVal = -1, debug = debug) :
+      out.append((str(e1), str(e2)))
+    
+    out.sort()
+    expect.sort()     
+
+    if debug :
+      print "out ------ "
+      for l in out : print l
+      print "-------"
+      print "expect ------ "
+      for l in expect : print l
+      print "-------"
+    
+    self.assertTrue(out == expect)
 
 if __name__ == "__main__":
     unittest.main(argv = [sys.argv[0]])
