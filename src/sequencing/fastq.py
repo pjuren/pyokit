@@ -38,12 +38,17 @@
                  20th September -- Philip Uren
                    * added mutable string option for fastqIterator 
                  1st January 2011 -- Philip Uren
-                   * added verbose option for fastq iterator 
+                   * added verbose option for fastq iterator
+                 4th January 2011 -- Philip Uren
+                   * amended iterator to allow quality data to contain the '@'
+                     symbol, as occurs is the Sanger quality data
   
   
   TODO:          None
 """
 
+import sys, unittest, os
+from testing.dummyfiles import DummyInputStream, DummyOutputStream
 from collections import deque
 from fastqread import FastqRead
 from util.progressIndicator import ProgressIndicator
@@ -55,12 +60,22 @@ class FastqFileFormatError(Exception):
   def __str__(self):
     return repr(self.value)
 
-def _isSequenceHead(line):
+def _isSequenceHead(line, prevLine = None):
   """
     DESCRP: Returns true if <line> is the header line of a fastq read sequence
   """
+  # if we know the previous line and it's a quality header, don't call this
+  # a sequence header -- the reason is that sanger format uses the '@' 
+  # symbol in it's quality data and we don't want to mistake that for the 
+  # a sequence header if it happens to appear as the first character
+  #print "check if " + line + " is seq header, with prev line as " + str(prevLine)
+  #if prevLine != None and _isQualityHead(prevLine) : return False
+  #print "\tpassed prev line is qual header check" 
+  
   if len(line) < 1 : return False
+  #print "\tpassed empty line test"
   if line[0] == '@' : return True
+  #print "\tfirst char not an '@', so it's not a seq header.."
   return False
 
 def _isQualityHead(line):
@@ -71,22 +86,85 @@ def _isQualityHead(line):
   if line[0] == '+' : return True
   return False
       
-def fastqIterator(fn, useMutableString = False, verbose = False):
+      
+def fastqIteratorSimple(fn, verbose = False):
   """
-    DESCRP: A generator function which yields reads from <filename>
-            the iterator is exhausted when all reads have been 
-            read from <filename>
-    PARAMS: fn  -  if this is a string, we treat it as a filename, else
-                   we treat it as a file-like object, with a readline()
-                   method
-            useMutableString -- if True, underlying sequence objects are
-                                constructed as mutable strings, making
-                                it possible to rapidly modify them 
-                                
+    @summary: process a fastq file, but don't take into consideration
+              the possibility of data or quality spanning 
+              more than one line
+    @param fn: filename or stream to read data from
+    @param verbose: if true, output additional status messages to 
+                    stderr about progress
   """
-  prevLine = None
   fh = fn
   if type(fh).__name__ == "str" : fh = open(fh)
+  
+  # try to get an idea of how much data we have...
+  if verbose :
+    try :
+      totalLines = linesInFile(fh.name)
+      pind = ProgressIndicator(totalToDo = totalLines, 
+                               messagePrefix = "completed", 
+                               messageSuffix = "of processing " +\
+                                               fh.name)
+    except AttributeError :
+      sys.stderr.write("fastqIterator -- warning: " +\
+                       "unable to show progress for stream")
+      verbose = False
+  
+  while True :
+    # read four lines.. if we can't get four lines, something is wrong
+    lines = []
+    gotLines = 0
+    while gotLines < 4 :
+      l = fh.readline()
+      if verbose : 
+        pind.done += 1
+        pind.showProgress()
+      
+      if l == "" :
+        # end of file found... 
+        if gotLines == 0 :
+          # ok, not in the middle of a sequence
+          break
+        else :
+          raise FastqFileFormatError("reached end of file in the " + 
+                                     "middle of sequence data")
+      
+      l = l.strip()
+      if l == "" : continue 
+      lines.append(l)
+      gotLines += 1
+    
+    # couldn't get any more data.. we're done
+    if gotLines == 0 : break
+    
+    # got our 4 lines, assemble our read..
+    # first check that names match
+    if lines[0][1:] != lines[2][1:] : 
+      raise FastqFileFormatError("names in sequence don't match : " +\
+                                 str(lines[0][1:]) + " != " + str(lines[2][1:]))
+    name = lines[0][1:]
+    seq = lines[1]
+    qual = lines[3]
+    yield FastqRead(name, seq, qual)
+    
+def fastqIterator(fn, useMutableString = False, verbose = False, debug = False, sanger = False) :
+  it = fastqIteratorSimple(fn, verbose = verbose)
+  for s in it : yield s
+
+def fastqIteratorComplex(fn, useMutableString = False, verbose = False, debug = False, sanger = False):
+  """
+    @summary: process a fastq file, taking into consideration the 
+              possibility that sequence or quality data might span
+              more than one line 
+    @param fn: filename or stream to read data from
+    @param verbose: if true, output additional status messages to 
+                    stderr about progress
+  """
+  fh = fn
+  if type(fh).__name__ == "str" : fh = open(fh)
+  prevLine = None
   
   # try to get an idea of how much data we have...
   if verbose :
@@ -122,7 +200,6 @@ def fastqIterator(fn, useMutableString = False, verbose = False):
         
     # now we need to read lines until we hit a quality header
     # this is our sequence data
-    
     line = None
     seqdata = ""
     while line == None or not _isQualityHead(line) :
@@ -134,13 +211,21 @@ def fastqIterator(fn, useMutableString = False, verbose = False):
       
     # <line> is now a qual header, keep reading until we see 
     # a sequence header.. or we run out of lines.. this is our quality data
-    line = None
+    if debug: sys.stderr.write("found quality header: " + line.strip() + "\n")
+    prevLine = line
     qualdata = ""
-    while line == None or not _isSequenceHead(line) :
+    while not _isSequenceHead(line, prevLine) :
+      prevLine = line
       line = fh.readline()
       if verbose : pind.done += 1
       if line == "" : break
-      elif not _isSequenceHead(line) : qualdata += line.strip()
+      elif not _isSequenceHead(line, prevLine) : qualdata += line.strip()
+    if debug: 
+      sys.stderr.write("finished reading quality data, found: " + qualdata.strip() + "\n")
+      sys.stderr.write("loop terminated with line: " + line.strip() + "\n")
+      sys.stderr.write("prev when loop termianted was: " + prevLine.strip() + "\n")
+    if qualdata.strip() == "" : 
+      raise FastqFileFormatError("missing quality data..") 
       
     # package it all up..
     yield FastqRead(name, seqdata, qualdata, useMutableString)
@@ -148,4 +233,102 @@ def fastqIterator(fn, useMutableString = False, verbose = False):
     
     # remember where we stopped for next call, or finish 
     prevLine = line
+    if debug : sys.stderr.write("setting prev line to: " + str(prevLine) + "\n")
     if prevLine == "" : break
+    
+    
+class FastQUintTests(unittest.TestCase):
+  def SetUp(self):
+    sanger1 = ()
+  
+  def testSangerQual(self):
+    """
+      @summary: test sequences in sanger format that contain the '@' 
+                symbol within their quality strings 
+    """
+    debug = False
+    
+    seq1Name = "SRR034466/SRR034466.sra.106 YL_CLIP_2_1_367_452 length=36"
+    seq1Data = "GTCATGTGGCCTTCTCAGCAGATTCTTTGTCGTATT"
+    seq1Qual = "@HIIIGI:@IIIIIIII.ID;7E;2DA?&71.58@$"
+    seq2Name = "SRR034466/SRR034466.sra.107 YL_CLIP_2_1_443_763 length=36"
+    seq2Data = "GGATTTCATAGTGATTGTCGTATGCCGTCTTCTTCT"
+    seq2Qual = "IIIIIIIIIIIID5IIIIIDIIIIIII)<I%72&4I"
+    
+    instr = "@" + seq1Name + "\n" +\
+            "" + seq1Data + "\n" +\
+            "+" + seq1Name + "\n" +\
+            "" + seq1Qual + "\n" +\
+            "@" + seq2Name + "\n" +\
+            "" + seq2Data + "\n" +\
+            "+" + seq2Name + "\n" +\
+            "" + seq2Qual + ""
+    expect = [FastqRead(seq1Name, seq1Data, seq1Qual),
+              FastqRead(seq2Name, seq2Data, seq2Qual)]
+
+    ins = DummyInputStream(instr)
+    
+    seqs = []
+    for seq in fastqIterator(ins):
+      seqs.append(seq)
+    
+    seqs.sort(key = lambda x: x.sequenceName)
+    expect.sort(key = lambda x: x.sequenceName)
+    
+    if debug :
+      sys.stderr.write("expect\n")
+      for seq in expect :
+        sys.stderr.write(str(seq) + "\n" + "----------------\n")
+      sys.stderr.write("got\n")
+      for seq in seqs :
+        sys.stderr.write(str(seq) + "\n" + "----------------\n")
+    
+    self.assertTrue(seqs == expect)
+    
+  
+  def testSangerQual2(self):
+    """
+      @summary: test sequences in sanger format that contain the '+' 
+                symbol within their quality strings 
+    """
+    debug = False
+    
+    seq1Name = "SRR034466/SRR034466.sra.1032 YL_CLIP_2_1_865_643 length=36"
+    seq1Data = "GACCTCCAAGTAGTCGTAAGCCTACTTCTGCTTGAA"
+    seq1Qual = "+II6DEIII/I;-&2>,H%&63$()8205$1D7$(3"
+    seq2Name = "SRR034466/SRR034466.sra.1033 YL_CLIP_2_1_845_340 length=36"
+    seq2Data = "TAGAGATAGGATTCTGGTGTGTCGTATTCCGTCTTC"
+    seq2Qual = "IIIIIIIIIIIII.IID,&@*6;2>HI$91%C(II%"
+    
+    instr = "@" + seq1Name + "\n" +\
+            "" + seq1Data + "\n" +\
+            "+" + seq1Name + "\n" +\
+            "" + seq1Qual + "\n" +\
+            "@" + seq2Name + "\n" +\
+            "" + seq2Data + "\n" +\
+            "+" + seq2Name + "\n" +\
+            "" + seq2Qual + ""
+    expect = [FastqRead(seq1Name, seq1Data, seq1Qual),
+              FastqRead(seq2Name, seq2Data, seq2Qual)]
+
+    ins = DummyInputStream(instr)
+    
+    seqs = []
+    for seq in fastqIterator(ins, debug = debug):
+      seqs.append(seq)
+    
+    seqs.sort(key = lambda x: x.sequenceName)
+    expect.sort(key = lambda x: x.sequenceName)
+    
+    if debug :
+      sys.stderr.write("expect\n")
+      for seq in expect :
+        sys.stderr.write(str(seq) + "\n" + "----------------\n")
+      sys.stderr.write("got\n")
+      for seq in seqs :
+        sys.stderr.write(str(seq) + "\n" + "----------------\n")
+    
+    self.assertTrue(seqs == expect)
+
+if __name__ == "__main__":
+    unittest.main(argv = [sys.argv[0]])

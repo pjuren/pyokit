@@ -249,7 +249,7 @@ def BEDUniqueIterator(fh1, fh2, verbose=False, best=False):
     
     
 
-def BEDIterator(filehandle, sortedby=None, verbose=False):
+def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType = int):
   """
     @summary: Get an iterator for a BED file
     @param filehandle: stream of BED formated data 
@@ -286,7 +286,7 @@ def BEDIterator(filehandle, sortedby=None, verbose=False):
       pind.showProgress()
       
     if line.strip() == "": continue
-    e = BEDElementFromString(line)
+    e = BEDElementFromString(line, scoreType)
     
     # sorting by name?
     if sortedby == ITERATOR_SORTED_NAME and prev != None and prev.name > e.name :

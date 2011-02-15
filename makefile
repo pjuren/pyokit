@@ -1,3 +1,6 @@
+# change this to point to the python install where you
+# want to install the library
+PYTHON_PATH=python
 
 # build the python egg
 build :

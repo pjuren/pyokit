@@ -66,7 +66,13 @@ class GenomicMap:
           removed += 1
         except GenomicMapError :
           pass
-    
+  
+  def hasValue(self, chrom, start, end = None):
+    if end == None : end = start + 1
+    if (not chrom in self.vals) or (not (start,end) in self.vals[chrom]) :
+      return False
+    return True
+      
   def getValue(self, chrom, start, end = None):
     if end == None : end = start + 1
     if (not chrom in self.vals) or (not (start,end) in self.vals[chrom]) :

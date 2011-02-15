@@ -59,6 +59,9 @@
 import unittest, sys
 from fastread import FastRead
 
+# this is the offset needed to shift Sanger fastq quality scores into solexa 
+SANGER_SOLEXA_OFFSET = 31
+
 class FastqReadError(Exception):
   def __init__(self, msg):
     self.value = msg
@@ -94,7 +97,7 @@ class FastqRead(FastRead):
     """
     newqual = ""
     for val in self.sequenceQual :
-      newqual += chr(ord(val) + 26)
+      newqual += chr(ord(val) + SANGER_SOLEXA_OFFSET)
     self.sequenceQual = newqual 
         
   def trimRight(self, amount):

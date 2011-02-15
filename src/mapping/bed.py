@@ -226,7 +226,7 @@ def toGenomicCoordinates(start, end, transcript, debug = False):
   return [region for region in regionIterator(start, end, transcript, debug)]
           
 
-def BEDElementFromString(line):
+def BEDElementFromString(line, scoreType=int):
   """
     @summary: Given a string in BED format, parse the string and return a 
               BEDElement object
@@ -270,7 +270,7 @@ def BEDElementFromString(line):
   except : thickEnd = None 
   
   return BEDElement(chrom, start, end, name, score, strand, thickStart,
-                    thickEnd, colour, blockCount, blockSizes, blockStarts)
+                    thickEnd, colour, blockCount, blockSizes, blockStarts, scoreType)
   
 
 class BEDElement :
@@ -281,7 +281,7 @@ class BEDElement :
   def __init__(self, chrom, start, end, name = None, score = None, 
                strand = None, thickStart = None, thickEnd = None, 
                colour = None, blockCount = None, blockSizes = None,
-               blockStarts = None):
+               blockStarts = None, scoreType = int):
     """
       @summary: Constructor for the BEDElement class
       @note: only the first three parameters are required 
@@ -308,7 +308,7 @@ class BEDElement :
     if score != None and name == None :
       raise BEDError("If score is provided, must also provide name")
     self.score = None
-    if score != None : self.score = int(score)
+    if score != None : self.score = scoreType(score)
     
     # strand 
     if strand != None and (name == None or score == None) :
