@@ -41,6 +41,7 @@
   TODO:          None
 """
 
+import sys, os
 from collections import deque
 from fastaread import FastaRead
 from util.progressIndicator import ProgressIndicator
@@ -85,12 +86,13 @@ def fastaIterator(fn, useMutableString = False, verbose = False):
   
   if verbose :
     try :
-      total = 0
-      for s in fastaIterator(fn.name, verbose = False) : total += 1
+      #total = 0
+      #for s in fastaIterator(fn.name, verbose = False) : total += 1
+      total = os.path.getsize(fh.name)
       pind = ProgressIndicator(totalToDo = total, 
                                      messagePrefix = "completed", 
                                      messageSuffix = "of processing " +\
-                                                      fn.name)
+                                                      fh.name)
     except AttributeError :
       sys.stderr.write("Warning: " +\
                        "unable to show progress for stream")
@@ -126,7 +128,7 @@ def fastaIterator(fn, useMutableString = False, verbose = False):
       
     # package it all up..
     if verbose :
-      pind.done += 1
+      pind.done = fh.tell()
       pind.showProgress()
     yield FastaRead(name, seqdata, useMutableString)
     

@@ -269,8 +269,7 @@ def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType = int):
   
   if verbose :
     try :
-      totalLines = linesInFile(filehandle.name)
-      pind = ProgressIndicator(totalToDo = totalLines, 
+      pind = ProgressIndicator(totalToDo = os.path.getsize(filehandle.name), 
                                      messagePrefix = "completed", 
                                      messageSuffix = "of processing " +\
                                                       filehandle.name)
@@ -282,7 +281,7 @@ def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType = int):
   
   for line in filehandle :
     if verbose :
-      pind.done += 1
+      pind.done = filehandle.tell()
       pind.showProgress()
       
     if line.strip() == "": continue

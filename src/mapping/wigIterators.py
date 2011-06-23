@@ -101,6 +101,8 @@ def wigIterator(fd, verbose = False, sortedby = None):
     yield e
     prev = e
     
+
+    
 def pairedWigIterator(wgs1, wgs2, missingVal = 0, verbose = False, debug = False):
   """
     @summary: iterate over two wig streams, returning matching pairs from each

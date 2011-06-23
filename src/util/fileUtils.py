@@ -1,4 +1,36 @@
+import sys, os
 from copy import copy
+from util.progressIndicator import ProgressIndicator
+
+def genericFileIterator(fn, verbose=False):
+  """
+    @summary: iterate over a file, returning non-blank lines
+    @param fn: either a string representing the name of the file or a file object
+    @param verbose: if True, output status messages to stderr
+  """
+  if type(fn).__name__ == "str" : fh = open(fn)
+  else : fh = fn
+  
+  if verbose :
+    try :
+      pind = ProgressIndicator(totalToDo = os.path.getsize(fh.name), 
+                               messagePrefix = "completed", 
+                               messageSuffix = "of processing " +\
+                                               fh.name)
+      junk = fh.tell()
+    except :
+      sys.stderr.write("Cannot show progress for stream.. doesn't behave like a file")
+      verbose = False
+      
+  for line in fh : 
+    if verbose :
+      pind.done = fh.tell()
+      pind.showProgress()
+    line = line.strip()
+    if line == "" : continue 
+    yield line
+    
+
 
 def getUniqueFilename(dir = None, base = None):
   """

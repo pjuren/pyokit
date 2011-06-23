@@ -377,7 +377,7 @@ class BEDElement :
            self.score == e.score and self.strand == e.strand
         
   def __len__(self):
-    return (self.end - self.start) + 1      
+    return (self.end - self.start)       
         
   def __str__(self):
     """
@@ -443,8 +443,8 @@ class BEDElement :
     if self.start >= e.start and self.end <= e.end : return len(self)
     
     # partial overlap
-    if e.start > self.start : return (self.end - e.start + 1)
-    if self.start > e.start : return (e.end - self.start + 1)
+    if e.start > self.start : return (self.end - e.start)
+    if self.start > e.start : return (e.end - self.start)
     
     
   def intersects(self, e):
@@ -466,8 +466,17 @@ class BEDElement :
     if self.strand == None and self.DEFAULT_STRAND == self.NEGATIVE_STRAND :
       return True
     return self.strand == self.NEGATIVE_STRAND
-    
-
+  
+  def transcriptKey(self):
+    """
+      @summary: returns a string that uniquely identifies the name, chrom and
+                strand of this element, assuming this identifies an exon and 
+                has a name of the format refSeq_exon_details
+    """
+    refseq = self.name
+    if self.name.find("_exon_") != -1 : refseq = self.name.split("_exon_")
+    return refseq + self.strand + self.chrom
+     
 
 class BEDUnitTests(unittest.TestCase):
   """
