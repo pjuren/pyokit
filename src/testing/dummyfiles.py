@@ -32,12 +32,13 @@
   Known Bugs:    None
   
   Revision 
-  History:       None   
+  History:       30th June 2011 -- Philip J. Uren 
+                   * fixed bug in eq and neq when comparing to None
   
   TODO:          * Class and method headers are missing
 """
 
-
+import sys
 
 class DummyInputStream :
   def __init__(self, lines, name = None):
@@ -64,9 +65,11 @@ class DummyInputStream :
     return self.lines.__iter__()
   
   def __eq__(self, o):
+    if o == None : return False
     if o == sys.stdin: return True
     return False
   def __ne__(self, o):
+    if o == None : return True
     if o == sys.stdin: return False
     return True
   

@@ -375,6 +375,17 @@ class BEDElement :
     return self.chrom == e.chrom and self.start == e.start and\
            self.end == e.end and self.name == e.name and\
            self.score == e.score and self.strand == e.strand
+           
+  def sameRegion(self, e):
+    """
+      @summary: return true if self and e are for the same region 
+                (ignores differences in non-region related fields)
+    """
+    if e == None : return False
+    return self.chrom == e.chrom and self.start == e.start and\
+           self.end == e.end and self.name == e.name and\
+           self.strand == e.strand
+    
         
   def __len__(self):
     return (self.end - self.start)       
