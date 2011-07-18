@@ -226,14 +226,19 @@ def toGenomicCoordinates(start, end, transcript, debug = False):
   return [region for region in regionIterator(start, end, transcript, debug)]
           
 
-def BEDElementFromString(line, scoreType=int):
+def BEDElementFromString(line, scoreType=int, dropAfter = None):
   """
     @summary: Given a string in BED format, parse the string and return a 
               BEDElement object
-    @param line: the string to be parsed 
+    @param line: the string to be parsed
+    @param dropAfter: an int indicating that any fields after and including this
+                      field should be ignored as they don't conform to the BED 
+                      format. By default, None, meaning we use all fields. Index
+                      from zero.
     @return: BEDElement 
   """
   peices = line.split("\t")
+  if dropAfter != None : peices = peices[0:dropAfter]
   if len(peices) < 3 : 
     raise BEDError("BED elements must have at least chrom, start and end" +\
                    " found only " + str(len(peices)) + " in " + line)

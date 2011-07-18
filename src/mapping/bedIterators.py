@@ -192,7 +192,7 @@ def BEDDuplicateIterator(fh1, fh2, removeJuncTags=False, removePETags=False,
         bf1List, bf2List = [], []
       break
 
-def BEDUniqueIterator(fh1, fh2, verbose=False, best=False):
+def BEDUniqueIterator(fh1, fh2, verbose=False, best=False, dropAfter=None):
   """
     @summary: returns an iterator which will yield pairs of reads (r1, r2)
               for which r1 does not appear in fh2 and r2 does not appear in
@@ -206,6 +206,10 @@ def BEDUniqueIterator(fh1, fh2, verbose=False, best=False):
     @param best: If True, when encountering two reads with the same name, 
                  we'll output the one with the better (smaller) score, unless
                  they both get the same score, then we'll skip them
+    @param dropAfter: an int indicating that any fields after and including this
+                      field should be ignored as they don't conform to the BED 
+                      format. By default, None, meaning we use all fields. Index
+                      from zero.
   """
   
   def next(iterator):
@@ -213,8 +217,8 @@ def BEDUniqueIterator(fh1, fh2, verbose=False, best=False):
     try : return iterator.next()
     except StopIteration : return None   
   
-  bit1 = BEDIterator(fh1, sortedby=ITERATOR_SORTED_NAME, verbose=verbose)
-  bit2 = BEDIterator(fh2, sortedby=ITERATOR_SORTED_NAME, verbose=verbose)
+  bit1 = BEDIterator(fh1, sortedby=ITERATOR_SORTED_NAME, verbose=verbose, dropAfter=dropAfter)
+  bit2 = BEDIterator(fh2, sortedby=ITERATOR_SORTED_NAME, verbose=verbose, dropAfter=dropAfter)
   bf1, bf2 = None, None
   bf1_Q, bf2_Q = Queue(), Queue()
   bf1_exhausted, bf2_exhausted = False, False
@@ -249,7 +253,7 @@ def BEDUniqueIterator(fh1, fh2, verbose=False, best=False):
     
     
 
-def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType = int):
+def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType = int, dropAfter=None):
   """
     @summary: Get an iterator for a BED file
     @param filehandle: stream of BED formated data 
@@ -260,6 +264,10 @@ def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType = int):
                      if == ITERATOR_SORTED_END, element must be sorted
                            by chrom and end index
     @param verbose: if True, output additional progress messages to stderr
+    @param dropAfter: an int indicating that any fields after and including this
+                      field should be ignored as they don't conform to the BED 
+                      format. By default, None, meaning we use all fields. Index
+                      from zero.
     @return: iterator where subsequent calls to next() yield the next BED 
              element in the stream
   """
@@ -285,7 +293,7 @@ def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType = int):
       pind.showProgress()
       
     if line.strip() == "": continue
-    e = BEDElementFromString(line, scoreType)
+    e = BEDElementFromString(line, scoreType, dropAfter=dropAfter)
     
     # sorting by name?
     if sortedby == ITERATOR_SORTED_NAME and prev != None and prev.name > e.name :
@@ -496,6 +504,46 @@ class BEDIteratorUnitTests(unittest.TestCase):
     run(sorteds)
     # should raise an exception..
     self.assertRaises(BEDError, run, unsorteds)
+    
+  def testBEDIteratorDropAfter(self):
+    """
+      make sure we can drop parts after a certain field in a BED file and 
+      not screw everything else up..
+    """
+    debug=False
+    infs =  "chr12" + "\t" + "83810028" + "\t" + "83810066" + "\t" +\
+              "SRR189775.10000" + "\t" + "9" + "\t" + "-" + "\t" +\
+              "TTTTTTTTTTTTTTTAAATTCTTCGAATGCCGTTTTCT" + "\t" +\
+              "]&(2-'+0'+:34J########################\n" +\
+            "chr5" + "\t" + "177570573" + "\t" +"177570611" + "\t" +\
+              "SRR189775.10000001" + "\t" + "3" + "\t" + "+" + "\t" +\
+              "TCACCTTTTTTTCACCTTTTAATTTTATATTATTTATC" + "\t" +\
+              "K79:77:79797:7797<;>BC979:77B?997:79:7\n" +\
+            "chr4" + "\t" + "78174772" + "\t" + "78174810" + "\t" +\
+              "SRR189775.10000009" + "\t" + "0" + "\t" + "+" + "\t" +\
+              "TTTTATTTTATTTTATTTTTTTACCCTTCCTCAAACAC" +"\t" +\
+              "G77:797:77977<TS;:9:9:9:9:977<;7@?@=97\n"
+    expectOut = ["chr12" + "\t" + "83810028" + "\t" + "83810066" + "\t"
+                  "SRR189775.10000" + "\t" + "9" + "\t" + "-", 
+                "chr5" + "\t" + "177570573" + "\t" +"177570611" + "\t" +\
+                  "SRR189775.10000001" + "\t" + "3" + "\t" + "+",
+                "chr4" + "\t" + "78174772" + "\t" + "78174810" + "\t" +\
+                  "SRR189775.10000009" + "\t" + "0" + "\t" + "+"]
+    ifh = DummyInputStream(infs)
+    ofh = DummyOutputStream()
+    
+    def run(istrm, ostrm):
+      for e in BEDIterator(istrm, dropAfter=6) : ostrm.write(str(e) + "\n")
+    run(ifh,ofh)
+    gotOutput = [x.strip() for x in ofh.itemsWritten()]
+    
+    if debug :
+      sys.stderr.write("expected -------\n")
+      for e in expectOut : sys.stderr.write(e + "\n")
+      sys.stderr.write("got ------------\n")
+      for e in gotOutput : sys.stderr.write(e + "\n")
+    
+    self.assertTrue(gotOutput == expectOut)
   
 
 if __name__ == "__main__":
