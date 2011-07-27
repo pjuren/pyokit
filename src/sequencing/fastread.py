@@ -98,6 +98,11 @@ class MutableString :
   
 
 class FastRead:
+  DNA_COMPLEMENTS = {"A":"T", "T":"A", "C":"G", "G":"C", "N":"N", 
+                     "a":"t", "t":"a", "c":"g", "g":"c", "n":"n"}
+  RNA_COMPLEMENTS = {"A":"U", "U":"A", "C":"G", "G":"C", "N":"N",
+                     "a":"u", "u":"a", "c":"g", "g":"c", "n":"n"}
+  
   def __init__(self, seqName, seqData, useMutableString = False):
     """
       @summary: Constructor
@@ -139,6 +144,17 @@ class FastRead:
       if self.sequenceData[self_start + i] == other.sequenceData[other_start + i] : 
         count += 1
     return count
+  
+  def reverseComplement(self):
+    """
+      @summary: reverse complement this sequence 
+    """
+    isRNA = self.isRNA()
+    tmp = ""
+    for n in self.sequenceData : 
+      if isRNA : tmp += FastRead.RNA_COMPLEMENTS[n]
+      else : tmp += FastRead.DNA_COMPLEMENTS[n]
+    self.sequenceData = tmp[::-1]
     
   def __len__(self):
     """
@@ -413,6 +429,11 @@ class FastReadUnitTests(unittest.TestCase):
     one.sequenceName = "old"
     self.assertTrue(one != two)
     
+  def testReverseComplement(self):
+    input = FastRead("name", "ACTGCTAGCATGCGNN")
+    expect = FastRead("name", "NNCGCATGCTAGCAGT")
+    input.reverseComplement()
+    self.assertTrue(input == expect)
   
 if __name__ == "__main__":
     unittest.main()
