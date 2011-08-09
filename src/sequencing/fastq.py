@@ -42,6 +42,10 @@
                  4th January 2011 -- Philip Uren
                    * amended iterator to allow quality data to contain the '@'
                      symbol, as occurs is the Sanger quality data
+                 9th August 2011 -- Philip J. Uren 
+                   * changed simple fastq iterator to check file size using the
+                     os function; makes starting the iterator on large files
+                     nuch faster. 
   
   
   TODO:          None
@@ -102,7 +106,7 @@ def fastqIteratorSimple(fn, verbose = False):
   # try to get an idea of how much data we have...
   if verbose :
     try :
-      totalLines = linesInFile(fh.name)
+      totalLines = os.path.getsize(fh.name)
       pind = ProgressIndicator(totalToDo = totalLines, 
                                messagePrefix = "completed", 
                                messageSuffix = "of processing " +\
@@ -119,7 +123,7 @@ def fastqIteratorSimple(fn, verbose = False):
     while gotLines < 4 :
       l = fh.readline()
       if verbose : 
-        pind.done += 1
+        pind.done = fh.tell()
         pind.showProgress()
       
       if l == "" :
