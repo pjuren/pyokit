@@ -177,6 +177,20 @@ class MafIndex :
       self.blockCache = MafBlock(None, None, fh)
     return self.blockCache.getColumn(genomicCoord)
   
+  def getColumnAsDictionary(self, chrom, genomicCoord):
+    # first see if it's a reference to what we already have loaded
+    if self.blockCache == None or not (self.blockCache.chrom == chrom and genomicCoord >= self.blockCache.start and genomicCoord < self.blockCache.end) :
+      indexLoc = None
+      for e in self.indexElements :
+        if genomicCoord >= e.start and genomicCoord <  e.end :
+          indexLoc = e
+          break
+      if indexLoc == None : raise ValueError(str(genomicCoord) + " not in " + self.maf_fn)
+      fh = open(self.maf_fn)
+      fh.seek(indexLoc.score)
+      self.blockCache = MafBlock(None, None, fh)
+    return self.blockCache.getColumnAsDictionary(genomicCoord)
+  
 class MafFile :
   def __init__(self, fn):
     self.fn = fn
@@ -224,5 +238,12 @@ class MafDir :
       #print "loading " + maf + " and " + ind
       self.mafIndexCached = MafIndex(maf, ind)
     return self.mafIndexCached.getColumn(chrom, genomicCoord)
+  
+  def getColumnAsDictionary(self, chrom, genomicCoord):
+    maf, ind = self.getFilesFor(chrom, genomicCoord)
+    if self.mafIndexCached == None or not (self.mafIndexCached.maf_fn == maf and self.mafIndexCached.mafind_fn == ind) :
+      #print "loading " + maf + " and " + ind
+      self.mafIndexCached = MafIndex(maf, ind)
+    return self.mafIndexCached.getColumnAsDictionary(chrom, genomicCoord)
 
   
