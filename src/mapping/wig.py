@@ -31,9 +31,11 @@
   Known Bugs:    None
   
   Revision 
-  History:       None   
+  History:       18th Oct 2011 -- Philip J. Uren
+                   * added < operator
   
   TODO:          * Class and method headers are missing
+                 * Allow choice of ordering by end 
 """
 
 import sys, unittest
@@ -46,23 +48,39 @@ class WigError(Exception):
 
 class WigElement :
   def __init__(self, chrom, start, end, score):
+    """
+      @summary: constructor for WigElement objects
+    """
     self.chrom = chrom
     self.start = start
     self.end = end
     self.score = score
   
   def __str__(self):
+    """
+      @summary: get string representation of WigElement object
+    """
     if float(int(self.score)) == self.score : sc = str(int(self.score))
     else : sc = str(self.score) 
     return self.chrom + "\t" + str(self.start) + "\t" + str(self.end) +\
            "\t" + sc
            
-  def before(self, w2):
+  def before(self, w2) :
+    """
+      @summary: return true if self is before w2
+      @deprecated: use < operator 
+    """
     if w2 == None : return False
     if self.chrom < w2.chrom or (self.chrom == w2.chrom and \
                                  self.start < w2.start) : return True
     return False
-    
+  
+  def __lt__(self, rhs) :
+    """
+      @summary: less than operator for WigElements
+    """
+    return self.before(rhs)
+
 def wigElementFromString(s):
   parts = s.split("\t")
   return WigElement(parts[0].strip(), int(parts[1]), int(parts[2]), float(parts[3]))

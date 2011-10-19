@@ -34,6 +34,8 @@
                    * added sorting parameter to wigIterator
                  23rd December 2010 -- Philip Uren
                    * added pairedWigIterator
+                 18th October 2011 -- Philip Uren
+                   * added fixed step wig file iterator 
   
   TODO:          * Class, method and function comment headers are incomplete 
 """
@@ -101,6 +103,61 @@ def wigIterator(fd, verbose = False, sortedby = None):
     yield e
     prev = e
     
+def fixedWigIterator(fd, verbose=False, sortedby = None):
+  """
+    @summary: 
+  """
+  if verbose :
+    try :
+      totalLines = linesInFile(fd)
+      pind = ProgressIndicator(totalToDo = totalLines, 
+                               messagePrefix = "completed", 
+                               messageSuffix = "of processing " +\
+                                               getFDName(fd))
+    except AttributeError :
+      sys.stderr.write("WigIterator -- warning: " +\
+                       "unable to show progress for stream")
+      verbose = False   
+      
+  chromsSeen = set()
+  prev = None
+  
+  currentChrom, at, step = None, None, None
+  fh = openFD(fd)
+  for line in fh : 
+    line = line.strip()
+    if line == "" : continue
+    elif line.split()[0] == "track" : continue 
+    elif line.split()[0] == "fixedStep" :
+      currentChrom = line.split()[1].split("=")[1]
+      at = int(line.split()[2].split("=")[1])
+      step = int(line.split()[3].split("=")[1])
+    else :
+      val = float(line)
+      e = WigElement(currentChrom, at, at+step, val)
+    
+      # on same chrom as the prev item, make sure order is right
+      if prev != None and sortedby != None and e.chrom == prev.chrom :
+        if sortedby == ITERATOR_SORTED_START and prev.start > e.start :
+          raise WigError("bed file " + fd.name +\
+                         " not sorted by start index - saw item " +\
+                         str(prev) + " before " + str(e))
+    
+      # starting a new chrom.. make sure we haven't already seen it
+      if prev != None and prev.chrom != e.chrom :
+        if (sortedby == ITERATOR_SORTED_START) and\
+           (e.chrom in chromsSeen or prev.chrom > e.chrom) :
+          raise WigError("BED file " + fd.name +\
+                         " not sorted by chrom")
+        chromsSeen.add(e.chrom) 
+    
+      # all good..
+      yield e
+      prev = e
+      at += step
+      if verbose :
+        pind.done += 1
+        pind.showProgress()
 
     
 def pairedWigIterator(wgs1, wgs2, missingVal = 0, verbose = False, debug = False):
@@ -183,6 +240,41 @@ class WigIteratorUnitTests(unittest.TestCase):
     
     out = []
     for element in wigIterator(DummyInputStream(wigIn)) :
+      out.append(str(element))
+    
+    out.sort()
+    expect.sort()     
+
+    if debug :
+      print "out ------ "
+      for l in out : print l
+      print "-------"
+      print "expect ------ "
+      for l in expect : print l
+      print "-------"
+    
+    self.assertTrue(out == expect)
+    
+  def testFixedWigIterator(self):
+    debug = False
+    wigIn = "fixedStep chrom=chr1 start=1 step=1\n" +\
+            "5\n" +\
+            "3\n" +\
+            "fixedStep chrom=chr2 start=30 step=2\n" +\
+            "2\n" +\
+            "4\n" +\
+            "fixedStep chrom=chr4 start=10 step=1\n" +\
+            "6\n" +\
+            "0.5\n"
+    expect = ["chr1" + "\t" +  "1" + "\t" +  "2" +"\t" + "5",
+              "chr1" + "\t" +  "2" + "\t" +  "3" +"\t" + "3",
+              "chr2" + "\t" + "30" + "\t" + "32" +"\t" + "2",
+              "chr2" + "\t" + "32" + "\t" + "34" +"\t" + "4",
+              "chr4" + "\t" + "10" + "\t" + "11" +"\t" + "6",
+              "chr4" + "\t" + "11" + "\t" + "12" +"\t" + "0.5"] 
+    
+    out = []
+    for element in fixedWigIterator(DummyInputStream(wigIn)) :
       out.append(str(element))
     
     out.sort()
