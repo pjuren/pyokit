@@ -188,15 +188,16 @@ class IndexedWig :
     seenChroms = set()
     lastIndexSeen = -1
     
-    try :
-      pind = ProgressIndicator(totalToDo = os.path.getsize(self.handle.name), 
-                                     messagePrefix = "completed", 
-                                     messageSuffix = "of building index for " +\
-                                                      self.handle.name)
-    except :
-      sys.stderr.write("IndexedWig -- warning: " +\
-                       "unable to show progress for stream\n")
-      self.verbose = False      
+    if self.verbose :
+      try :
+        pind = ProgressIndicator(totalToDo = os.path.getsize(self.handle.name), 
+                                       messagePrefix = "completed", 
+                                       messageSuffix = "of building index for " +\
+                                                        self.handle.name)
+      except :
+        sys.stderr.write("IndexedWig -- warning: " +\
+                         "unable to show progress for stream\n")
+        self.verbose = False      
     
     ### note, for loop seems to buffer the file and so tell() gives a 
     ### location that is not where the current line was read from, so 
@@ -375,7 +376,7 @@ class TestIndexedWig(unittest.TestCase):
     answers = [wigElementFromString(l) for l in self.input if l.strip() != ""]
     shuffle(answers)
     
-    iwig = IndexedWig(infh, 2, 2, debug)
+    iwig = IndexedWig(infh, 2, 2, debug, verbose=False)
     if debug : sys.stderr.write("iwig structure is: \n" + str(iwig) + "\n")
     print "done"
     for e in answers : 
