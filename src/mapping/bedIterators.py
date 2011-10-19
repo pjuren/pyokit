@@ -196,7 +196,7 @@ def BEDUniqueIterator(fh1, fh2, verbose=False, best=False, dropAfter=None):
   """
     @summary: returns an iterator which will yield pairs of reads (r1, r2)
               for which r1 does not appear in fh2 and r2 does not appear in
-              fh1. Either r1 or r2 may be None (both not both) if one of 
+              fh1. Either r1 or r2 may be None (but not both) if one of 
               file1 or file2 has fewer unique entries than the other. 
               reads are compared by name, other attributes are ignored 
     @param fh1: BED formated stream, must be sorted by name
@@ -343,12 +343,12 @@ class BEDIteratorUnitTests(unittest.TestCase):
   def testBEDUniqueFilter(self):
     debug = False
     end1 = "chr1 \t 10 \t 14 \t read1\n" +\
-                "chr1 \t 30 \t 34 \t read2\n" +\
-                "chr1 \t 11 \t 15 \t read3"
+           "chr1 \t 30 \t 34 \t read2\n" +\
+           "chr1 \t 11 \t 15 \t read3\n"
     end2 = "chr1 \t 15 \t 19 \t read1\n" +\
-                "chr1 \t 80 \t 84 \t read2\n" +\
-                "chr1 \t 80 \t 84 \t read4\n" +\
-                "chr1 \t 80 \t 84 \t read5\n"
+           "chr1 \t 80 \t 84 \t read2\n" +\
+           "chr1 \t 80 \t 84 \t read4\n" +\
+           "chr1 \t 80 \t 84 \t read5\n"
     keep1 = ["chr1\t11\t15\tread3"]
     keep2 = ["chr1\t80\t84\tread4",
              "chr1\t80\t84\tread5"]
