@@ -107,13 +107,13 @@ def fixedWigIterator(fd, verbose=False, sortedby = None):
   """
     @summary: 
   """
+  fh = openFD(fd)
   if verbose :
     try :
-      totalLines = linesInFile(fd)
-      pind = ProgressIndicator(totalToDo = totalLines, 
-                               messagePrefix = "completed", 
-                               messageSuffix = "of processing " +\
-                                               getFDName(fd))
+      pind = ProgressIndicator(totalToDo = os.path.getsize(fh.name), 
+                                     messagePrefix = "completed", 
+                                     messageSuffix = "of processing " +\
+                                                      fh.name)
     except AttributeError :
       sys.stderr.write("WigIterator -- warning: " +\
                        "unable to show progress for stream")
@@ -123,7 +123,6 @@ def fixedWigIterator(fd, verbose=False, sortedby = None):
   prev = None
   
   currentChrom, at, step = None, None, None
-  fh = openFD(fd)
   for line in fh : 
     line = line.strip()
     if line == "" : continue

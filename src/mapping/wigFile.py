@@ -58,9 +58,9 @@ class WigFile :
     self.filename = filename
     self.itrees = {}
     self.verbose = verbose
-    self._load(self.verbose)
+    self.__load(self.verbose)
   
-  def _load(self, verbose=False):
+  def __load(self, verbose=False):
     """
       @summary: load the contents of a wig file into this object
     """
