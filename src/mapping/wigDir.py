@@ -105,7 +105,7 @@ class WigDir :
     if type(dir).__name__ == "str" : 
       for f in os.listdir(dir) :
         name = os.path.splitext(f)[0]
-        self.files[name] = open(f)
+        self.files[name] = open(os.path.join(dir,f))
     else :
       for f in dir :
         if type(f).__name__ == "str" : f = open(f)
