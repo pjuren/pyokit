@@ -34,6 +34,9 @@
   Revision 
   History:       30th June 2011 -- Philip J. Uren 
                    * fixed bug in eq and neq when comparing to None
+                 30th Sep 2011 -- Philip J. Uren
+                   * added tell and seek for DummyInputStream
+                   * changed iterator structure for DummyInputStream
   
   TODO:          * Class and method headers are missing
 """
@@ -60,9 +63,21 @@ class DummyInputStream :
   
   def reset(self):
     self.current = 0
+    
+  def tell(self):
+    return self.current
+  
+  def seek(self, s):
+    self.current = s
   
   def __iter__(self):
-    return self.lines.__iter__()
+    #return self.lines.__iter__()
+    return self
+  
+  def next(self):
+    self.current += 1
+    if self.current > (len(self.lines) - 1) : raise StopIteration 
+    return self.lines[self.current-1]
   
   def __eq__(self, o):
     if o == None : return False
