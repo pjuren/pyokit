@@ -63,6 +63,7 @@ def openFD(fd):
   """
   if type(fd).__name__ == "str" : return open(fd)
   if type(fd).__name__ == "file" : return open(fd.name)
+  if type(fd).__name__ == "mmap" : return fd
   nfd = copy(fd)
   nfd.reset()
   return nfd
