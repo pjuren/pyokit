@@ -43,6 +43,7 @@ class WigDir :
     self.extension = extension
     self.files = {}               
     self.currentlyLoaded = None
+    self.verbose=verbose
     self.__load(dir, verbose)
   
   def contains(self, chrom, point):
@@ -64,7 +65,7 @@ class WigDir :
     """
     fh = self.__chromToFileHandle(chrom)
     if fh == None : return None
-    if self.currentlyLoaded != fh : self.__loadFile(fh)
+    if self.currentlyLoaded != fh : self.__loadFile(fh, verbose=self.verbose)
     return self.currentlyLoaded.getElement(chrom, point) 
           
   def getScore(self, chrom, point):
@@ -112,7 +113,7 @@ class WigDir :
         name = os.path.splitext(f.name)[0]
         self.files[name] = f
         
-  def __loadFile(self, filename):
+  def __loadFile(self, filename, verbose=False):
     """
       @summary: load the specified file.
       @param filename: if a string, we treat it as a name and try to open a 
@@ -125,7 +126,7 @@ class WigDir :
     else : 
       fh = filename
       fh.seek(0)
-    self.currentlyLoaded = WigFile(fh)
+    self.currentlyLoaded = WigFile(fh, verbose=verbose)
     
     
 class WigDirUnitTests(unittest.TestCase):

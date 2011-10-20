@@ -58,14 +58,14 @@ class WigFile :
     self.filename = filename
     self.itrees = {}
     self.verbose = verbose
-    self.__load(self.verbose)
+    self.__load(verbose=self.verbose)
   
   def __load(self, verbose=False):
     """
       @summary: load the contents of a wig file into this object
     """
     byChrom = {}
-    for e in wigIterator(self.filename, verbose) :
+    for e in wigIterator(self.filename, verbose=verbose) :
       if not e.chrom in byChrom : byChrom[e.chrom] = []
       byChrom[e.chrom].append(e)
     for chrom in byChrom : 
