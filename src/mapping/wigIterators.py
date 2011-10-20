@@ -36,6 +36,7 @@
                    * added pairedWigIterator
                  18th October 2011 -- Philip Uren
                    * added fixed step wig file iterator 
+                   * allowed wigIterator to automatically determine file type
   
   TODO:          * Class, method and function comment headers are incomplete 
 """
@@ -49,7 +50,24 @@ from testing.dummyfiles import DummyInputStream, DummyOutputStream
 from util.fileUtils import linesInFile
 from util.progressIndicator import ProgressIndicator
 
-def wigIterator(fd, verbose = False, sortedby = None):
+def wigIterator(fd, verbose=False, sortedby=None):
+  # peak at the first line to see if it's a regular wig, or 
+  # fixed-step wig
+  fh = openFD(fd)
+  at = fh.tell()
+  line = None
+  while(line==None) :
+    l = fh.readline()
+    if l.strip() != "" : line = l
+  
+  fh.seek(at) 
+  if line.split("\t")[0] == "fixedStep" : 
+    return fixedWigIterator(fd,verbose,sortedby)
+  else :
+    return regularWigIterator(fd,verbose,sortedby)
+  
+
+def regularWigIterator(fd, verbose = False, sortedby = None):
   """
     @param sortedBy: if not None, should be one of ITERATOR_SORTED_BY_START
                      indicating an order that the input stream must be 
