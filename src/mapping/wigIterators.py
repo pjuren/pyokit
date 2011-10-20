@@ -140,15 +140,19 @@ def fixedWigIterator(fd, verbose=False, sortedby = None):
   chromsSeen = set()
   prev = None
   
+  #NUMBERS = set(['1','2','3','4','5','6','7','8','9','0','.'])
   currentChrom, at, step = None, None, None
   for line in fh : 
     line = line.strip()
     if line == "" : continue
-    elif line.split()[0] == "track" : continue 
-    elif line.split()[0] == "fixedStep" :
-      currentChrom = line.split()[1].split("=")[1]
-      at = int(line.split()[2].split("=")[1])
-      step = int(line.split()[3].split("=")[1])
+    
+    if line[0] == 't' or line[0] == 'f' :
+      parts = line.split()
+      if parts[0] == "track" : continue 
+      elif parts[0] == "fixedStep" :
+        currentChrom = parts[1].split("=")[1]
+        at = int(parts[2].split("=")[1])
+        step = int(parts[3].split("=")[1])
     else :
       val = float(line)
       e = WigElement(currentChrom, at, at+step, val)

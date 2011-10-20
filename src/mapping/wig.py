@@ -39,6 +39,7 @@
 """
 
 import sys, unittest
+import weakref
 
 class WigError(Exception):
   def __init__(self, msg):
@@ -46,11 +47,15 @@ class WigError(Exception):
   def __str__(self):
     return repr(self.value)
 
-class WigElement :
+class WigElement(object):
+  # define the WigElements slots -- saves us lots of memory
+  # waste with the dynamic dictionary for names!
+  __slots__ = ['chrom', 'start', 'end', 'score']
+  
   def __init__(self, chrom, start, end, score):
     """
       @summary: constructor for WigElement objects
-    """
+    """ 
     self.chrom = chrom
     self.start = start
     self.end = end
