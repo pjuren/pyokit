@@ -43,7 +43,7 @@
 
 ITERATOR_SORTED_START = 1
 
-import sys, unittest
+import sys, unittest, os
 from util.fileUtils import openFD, getFDName
 from mapping.wig import wigElementFromString, WigError, WigElement
 from testing.dummyfiles import DummyInputStream, DummyOutputStream
