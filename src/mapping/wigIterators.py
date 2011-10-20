@@ -173,7 +173,7 @@ def fixedWigIterator(fd, verbose=False, sortedby = None):
       prev = e
       at += step
       if verbose :
-        pind.done += 1
+        pind.done = fh.tell()
         pind.showProgress()
 
     
