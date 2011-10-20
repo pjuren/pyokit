@@ -61,7 +61,7 @@ def wigIterator(fd, verbose=False, sortedby=None):
     if l.strip() != "" : line = l
   
   fh.seek(at) 
-  if line.split("\t")[0] == "fixedStep" : 
+  if line.split()[0] == "fixedStep" : 
     return fixedWigIterator(fd,verbose,sortedby)
   else :
     return regularWigIterator(fd,verbose,sortedby)
