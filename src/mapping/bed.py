@@ -160,7 +160,8 @@ def toGenomicCoordinates(start, end, transcript, debug = False):
     # do some quick error checking..
     totalSize = sum([x.end - x.start for x in transcript])
     if start < 0 or end > totalSize :
-      raise BEDError("gave start and end as " + str(start) + "," +str(end) + " -- transcript is " + str(totalSize) + " long")
+      raise BEDError("gave start and end as " + str(start) + "," +str(end) +\
+                     " -- transcript is " + str(totalSize) + " long")
     
     # sort the exons into order and figure out where the gene is
     transcript.sort(key = lambda x : x.start)
@@ -179,7 +180,7 @@ def toGenomicCoordinates(start, end, transcript, debug = False):
       junctions.append(cumulative)
       
     if debug :
-      sys.stderr.write("identified exon boundaries at: " + str(junctions) + "\n")
+      sys.stderr.write("identified exon boundaries at: "+str(junctions)+"\n")
       
     # now figure out which exon the start and end are in
     startInd, endInd = None, None
@@ -380,6 +381,16 @@ class BEDElement :
     return self.chrom == e.chrom and self.start == e.start and\
            self.end == e.end and self.name == e.name and\
            self.score == e.score and self.strand == e.strand
+           
+  def __lt__(self, rhs):
+    """
+      @summary: is self < rhs? default comparison by end 
+    """
+    if rhs == None : return False
+    if self.chrom < rhs.chrom : return True
+    if self.chrom > rhs.chrom : return False
+    if self.end < rhs.end : return True
+    return False
            
   def sameRegion(self, e):
     """

@@ -35,6 +35,9 @@
                    * Created module with code from existing BED module 
                  06th January 2011 -- Philip Uren
                    * moved intervalTree method here
+                 20th Decemeber 2011 -- Philip Uren
+                   * added paired iterator, fixed minor indentation style 
+                     issues, added new unit tests
   
   TODO:         
                 * finish unit tests
@@ -42,17 +45,15 @@
 
 """
 
-import sys
-import os
-import unittest
-import copy
+import sys, os, unittest, copy
+from operator import itemgetter, attrgetter
 from Queue import Queue
 
 from testing.dummyfiles import DummyInputStream, DummyOutputStream
 from util.progressIndicator import ProgressIndicator
 from util.fileUtils import linesInFile
 from datastruct.intervalTree import IntervalTree
-from bed import BEDElementFromString
+from bed import BEDElementFromString, BEDElement
 
 DEFAULT_DELIM = "\t"
 ITERATOR_SORTED_START = 1
@@ -107,6 +108,157 @@ def intervalTrees(reffh, verbose = False):
       
   return trees
 
+
+def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType = int, 
+                dropAfter=None):
+  """
+    @summary: Get an iterator for a BED file
+    @param filehandle: stream of BED formated data 
+    @param sortedby: if None, order is not checked.
+                     if == ITERATOR_SORTED_START, elements in file must
+                           be sorted by chrom and start index (an exception 
+                           is raised if they are not)
+                     if == ITERATOR_SORTED_END, element must be sorted
+                           by chrom and end index
+    @param verbose: if True, output additional progress messages to stderr
+    @param dropAfter: an int indicating that any fields after and including this
+                      field should be ignored as they don't conform to the BED 
+                      format. By default, None, meaning we use all fields. Index
+                      from zero.
+    @return: iterator where subsequent calls to next() yield the next BED 
+             element in the stream
+  """
+  chromsSeen = set()
+  prev = None
+  if type(filehandle).__name__ == "str" : filehandle = open(filehandle)
+  
+  if verbose :
+    try :
+      pind = ProgressIndicator(totalToDo = os.path.getsize(filehandle.name), 
+                                     messagePrefix = "completed", 
+                                     messageSuffix = "of processing " +\
+                                                      filehandle.name)
+    except AttributeError :
+      sys.stderr.write("BEDIterator -- warning: " +\
+                       "unable to show progress for stream")
+      verbose = False      
+
+  
+  for line in filehandle :
+    if verbose :
+      pind.done = filehandle.tell()
+      pind.showProgress()
+      
+    if line.strip() == "": continue
+    e = BEDElementFromString(line, scoreType, dropAfter=dropAfter)
+    
+    # sorting by name?
+    if sortedby == ITERATOR_SORTED_NAME and prev != None and prev.name > e.name :
+      raise BEDError("bed file " + filehandle.name +\
+                       " not sorted by element name" +\
+                       " found " + e.name + " after " +\
+                       prev.name)
+    
+    # first item
+    if prev == None :
+      chromsSeen.add(e.chrom)
+    
+    # on same chrom as the prev item, make sure order is right
+    if prev != None and sortedby != None and e.chrom == prev.chrom :
+      if sortedby == ITERATOR_SORTED_START and prev.start > e.start :
+        raise BEDError("bed file " + filehandle.name +\
+                       " not sorted by start index - saw item " +\
+                       str(prev) + " before " + str(e))
+      if sortedby == ITERATOR_SORTED_END and prev.end > e.end :
+        raise BEDError("bed file " + filehandle.name +\
+                       " not sorted by end index - saw item " +\
+                       str(prev) + " before " + str(e))
+    
+    # starting a new chrom.. make sure we haven't already seen it
+    if prev != None and prev.chrom != e.chrom :
+      if (sortedby == ITERATOR_SORTED_START or 
+          sortedby == ITERATOR_SORTED_END or
+          sortedby == ITERATOR_SORTED_CHROM) and\
+         (e.chrom in chromsSeen or prev.chrom > e.chrom) :
+        raise BEDError("BED file " + filehandle.name +\
+                       " not sorted by chrom")
+      chromsSeen.add(e.chrom) 
+    
+    # all good..
+    yield e
+    prev = e
+
+
+
+def pairedBEDIterator(inputStreams, mirror=False, mirrorScore=None, 
+                      ignoreStrand=False, ignoreScore=True, ignoreName=True,
+                      sortedby=ITERATOR_SORTED_END, scoreType=float, 
+                      verbose=False):
+  """
+    @summary:
+    @param inputStreams: a list of input streams in BED format
+    @param mirror: if true, add missing elements so all streams contain the
+                   same elements. Inserted elements will have the same
+    @param ignoreStrand: ignore strand when comparing elements for equality?
+    @param ignoreScore: ignore score when comparing elements for equality?
+    @param ignoreScore: ignore name when comparing elements for equality?
+    @param sortedby: must be set to one of the sorting orders for BED streams;
+                     we require the streams to be sorted in some fashion.
+    @param scoreType: interpret scores as what type? Defaults to float, which 
+                      is generally the most flexible. 
+  """
+  
+  # let's build our sorting order...
+  sortOrder = ["chrom"]
+  if sortedby == ITERATOR_SORTED_START : 
+    sortOrder.append("start")
+    sortOrder.append("end")
+  elif sortedby == ITERATOR_SORTED_END : 
+    sortOrder.append("end")
+    sortOrder.append("start")
+  if not ignoreStrand : sortOrder.append("strand")
+  if not ignoreName : sortOrder.append("name")
+  if not ignoreScore : sortOrder.append("score")
+  keyFunc = attrgetter(*sortOrder)
+  
+  def next(iterator):
+    """ little internal function to return the next item, or None """
+    try : return iterator.next()
+    except StopIteration : return None
+    
+  
+  bIterators = [BEDIterator(bfh, verbose=verbose, 
+                            sortedby=sortedby, 
+                            scoreType=scoreType) for bfh in inputStreams]
+  elements = [next(it) for it in bIterators]
+  
+  while True :
+    assert(len(elements) >= 2)
+    if None not in elements and len(set([keyFunc(x) for x in elements])) == 1 : 
+      # All equal -- yield and move on for all streams 
+      yield [e for e in elements]
+      elements = [next(it) for it in bIterators]
+    else :
+      # something wasn't equal.. find the smallest thing, it's about to drop
+      # out of range and will never have the chance to match anything again
+      minElement = min([x for x in elements if x != None], key=keyFunc)
+      minIndices = [i for i in range(0, len(elements)) 
+                    if elements[i] != None and 
+                       keyFunc(elements[i]) == keyFunc(minElement)]
+      if mirror :
+        # mirror the min item for any streams in which it doesn't match
+        score = minElement.score if mirrorScore == None else mirrorScore
+        yield [elements[i] if i in minIndices 
+               else BEDElement(minElement.chrom, minElement.start,
+                               minElement.end, minElement.name,
+                               score, minElement.strand, scoreType=scoreType)
+               for i in range(0,len(elements))]
+      
+      # move the smallest element onwards now, we're done with it
+      for index in minIndices : elements[index] = next(bIterators[index])
+    
+    # stop once all streams are exhausted
+    if reduce(lambda x,y:x and y, [e == None for e in elements]) : break 
 
 def BEDDuplicateIterator(fh1, fh2, removeJuncTags=False, removePETags=False, 
                        verbose=False):
@@ -217,8 +369,10 @@ def BEDUniqueIterator(fh1, fh2, verbose=False, best=False, dropAfter=None):
     try : return iterator.next()
     except StopIteration : return None   
   
-  bit1 = BEDIterator(fh1, sortedby=ITERATOR_SORTED_NAME, verbose=verbose, dropAfter=dropAfter)
-  bit2 = BEDIterator(fh2, sortedby=ITERATOR_SORTED_NAME, verbose=verbose, dropAfter=dropAfter)
+  bit1 = BEDIterator(fh1, sortedby=ITERATOR_SORTED_NAME, verbose=verbose, 
+                     dropAfter=dropAfter)
+  bit2 = BEDIterator(fh2, sortedby=ITERATOR_SORTED_NAME, verbose=verbose, 
+                     dropAfter=dropAfter)
   bf1, bf2 = None, None
   bf1_Q, bf2_Q = Queue(), Queue()
   bf1_exhausted, bf2_exhausted = False, False
@@ -253,92 +407,89 @@ def BEDUniqueIterator(fh1, fh2, verbose=False, best=False, dropAfter=None):
     
     
 
-def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType = int, dropAfter=None):
-  """
-    @summary: Get an iterator for a BED file
-    @param filehandle: stream of BED formated data 
-    @param sortedby: if None, order is not checked.
-                     if == ITERATOR_SORTED_START, elements in file must
-                           be sorted by chrom and start index (an exception 
-                           is raised if they are not)
-                     if == ITERATOR_SORTED_END, element must be sorted
-                           by chrom and end index
-    @param verbose: if True, output additional progress messages to stderr
-    @param dropAfter: an int indicating that any fields after and including this
-                      field should be ignored as they don't conform to the BED 
-                      format. By default, None, meaning we use all fields. Index
-                      from zero.
-    @return: iterator where subsequent calls to next() yield the next BED 
-             element in the stream
-  """
-  chromsSeen = set()
-  prev = None
-  if type(filehandle).__name__ == "str" : filehandle = open(filehandle)
-  
-  if verbose :
-    try :
-      pind = ProgressIndicator(totalToDo = os.path.getsize(filehandle.name), 
-                                     messagePrefix = "completed", 
-                                     messageSuffix = "of processing " +\
-                                                      filehandle.name)
-    except AttributeError :
-      sys.stderr.write("BEDIterator -- warning: " +\
-                       "unable to show progress for stream")
-      verbose = False      
-
-  
-  for line in filehandle :
-    if verbose :
-      pind.done = filehandle.tell()
-      pind.showProgress()
-      
-    if line.strip() == "": continue
-    e = BEDElementFromString(line, scoreType, dropAfter=dropAfter)
-    
-    # sorting by name?
-    if sortedby == ITERATOR_SORTED_NAME and prev != None and prev.name > e.name :
-      raise BEDError("bed file " + filehandle.name +\
-                       " not sorted by element name" +\
-                       " found " + e.name + " after " +\
-                       prev.name)
-    
-    # first item
-    if prev == None :
-      chromsSeen.add(e.chrom)
-    
-    # on same chrom as the prev item, make sure order is right
-    if prev != None and sortedby != None and e.chrom == prev.chrom :
-      if sortedby == ITERATOR_SORTED_START and prev.start > e.start :
-        raise BEDError("bed file " + filehandle.name +\
-                       " not sorted by start index - saw item " +\
-                       str(prev) + " before " + str(e))
-      if sortedby == ITERATOR_SORTED_END and prev.end > e.end :
-        raise BEDError("bed file " + filehandle.name +\
-                       " not sorted by end index")
-    
-    # starting a new chrom.. make sure we haven't already seen it
-    if prev != None and prev.chrom != e.chrom :
-      if (sortedby == ITERATOR_SORTED_START or 
-          sortedby == ITERATOR_SORTED_END or
-          sortedby == ITERATOR_SORTED_CHROM) and\
-         (e.chrom in chromsSeen or prev.chrom > e.chrom) :
-        raise BEDError("BED file " + filehandle.name +\
-                       " not sorted by chrom")
-      chromsSeen.add(e.chrom) 
-    
-    # all good..
-    yield e
-    prev = e
 
 
 
 class BEDIteratorUnitTests(unittest.TestCase):
   """
-    Unit tests for fqsplit 
+    @summary: Unit tests for bed iterators 
   """
   
   def setUp(self):
     pass
+  
+  def testPairedIterator(self):
+    debug=False
+    
+    in1 = "chr1"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"1"+"\t"+"+"+"\n" +\
+          "chr1"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"2"+"\t"+"-"+"\n" +\
+          "chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"3"+"\t"+"+"+"\n" +\
+          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"4"+"\t"+"-"+"\n"
+    in2 = "chr1"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"1"+"\t"+"+"+"\n" +\
+          "chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"2"+"\t"+"+"+"\n" +\
+          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"3"+"\t"+"-"+"\n" 
+    in3 = "chr1"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"1"+"\t"+"+"+"\n" +\
+          "chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"2"+"\t"+"+"+"\n" +\
+          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"3"+"\t"+"-"+"\n" +\
+          "chr3"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"4"+"\t"+"+"+"\n"
+    
+    # first, ignore strand, name and score and don't mirror missing elements
+    e1 = ["chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"3"+"\t"+"+",
+          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"4"+"\t"+"-"]
+    e2 = ["chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"2"+"\t"+"+",
+          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"3"+"\t"+"-"]
+    e3 = ["chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"2"+"\t"+"+",
+          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"3"+"\t"+"-"]
+    instms = [DummyInputStream(x) for x in [in1,in2,in3]]
+    allOut = [x for x in pairedBEDIterator(instms, mirror=False, 
+                                           mirrorScore=None, ignoreStrand=True, 
+                                           ignoreScore=True, ignoreName=True)]
+    got1, got2, got3 = [], [], []
+    for x1, x2, x3 in allOut : 
+      got1.append(x1); got2.append(x2); got3.append(x3)
+    for g,e in [(got1, [BEDElementFromString(x, scoreType=float) for x in e1]), 
+                (got2, [BEDElementFromString(x, scoreType=float) for x in e2]), 
+                (got3, [BEDElementFromString(x, scoreType=float) for x in e3])]:
+      if debug : 
+        sys.stderr.write("expect\n" + "\n".join([str(x) for x in e]) + "\n")
+        sys.stderr.write("got\n" + "\n".join([str(x) for x in g]) + "\n")
+      assert(g==e)
+      
+    # now, same sort order but include strand, and mirror missing elements 
+    # using a score of 0
+    e1 = ["chr1"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"1"+"\t"+"+",
+          "chr1"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"0"+"\t"+"+",
+          "chr1"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"2"+"\t"+"-",
+          "chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"3"+"\t"+"+",
+          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"4"+"\t"+"-",
+          "chr3"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"0"+"\t"+"+"]
+    e2 = ["chr1"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"1"+"\t"+"+",
+          "chr1"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"0"+"\t"+"+",
+          "chr1"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"0"+"\t"+"-",
+          "chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"2"+"\t"+"+",
+          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"3"+"\t"+"-",
+          "chr3"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"0"+"\t"+"+"] 
+    e3 = ["chr1"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"0"+"\t"+"+",
+          "chr1"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"1"+"\t"+"+",
+          "chr1"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"0"+"\t"+"-",
+          "chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"2"+"\t"+"+",
+          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"3"+"\t"+"-",
+          "chr3"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"4"+"\t"+"+"]
+    instms = [DummyInputStream(x) for x in [in1,in2,in3]]
+    allOut = [x for x in pairedBEDIterator(instms, mirror=True, 
+                                           mirrorScore=0, ignoreStrand=False, 
+                                           ignoreScore=True, ignoreName=True)]
+    got1, got2, got3 = [], [], []
+    for x1, x2, x3 in allOut : 
+      got1.append(x1); got2.append(x2); got3.append(x3)
+    for g,e in [(got1, [BEDElementFromString(x, scoreType=float) for x in e1]), 
+                (got2, [BEDElementFromString(x, scoreType=float) for x in e2]), 
+                (got3, [BEDElementFromString(x, scoreType=float) for x in e3])]:
+      if debug : 
+        sys.stderr.write("expect\n" + "\n".join([str(x) for x in e]) + "\n")
+        sys.stderr.write("got\n" + "\n".join([str(x) for x in g]) + "\n")
+      assert(g==e)
+     
 
   def testBEDUniqueFilter(self):
     debug = False
