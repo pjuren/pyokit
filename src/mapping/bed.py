@@ -31,66 +31,91 @@
   Known Bugs:    None
   
   Revision 
-  History:       18th August 2010 -- Philip Uren
+  History:       
+  
+"""  
+"""              18th August 2010 -- Philip Uren
                    * added BEDIterator 
                    * updated header details 
                    * added testSizeOfOverlap unit test
-                 20th August 2010 -- Philip Uren
+"""
+"""              20th August 2010 -- Philip Uren
                    * added check for same chrom to intersection test
-                 13th September 2010 -- Philip Uren
+"""
+"""              13th September 2010 -- Philip Uren
                    * modified BEDElement and BEDElementFromString to allow 
                      BED elements to have only chrom, start and end 
                    * cleaned details of junction reads
-                 16th September 2010 -- Philip Uren
-                   * added check for sorted order to BEDIterator 
-                 17th September 2010 -- Philip Uren
-                   * added intervalTree function 
-                 24th September 2010 -- Philip Uren
+"""
+"""              16th September 2010 -- Philip Uren
+                   * added check for sorted order to BEDIterator
+""" 
+"""              17th September 2010 -- Philip Uren
+                   * added intervalTree function
+""" 
+"""              24th September 2010 -- Philip Uren
                    * fixed bugs with checking for sorted BED files when 
-                     not required 
-                 1st October 2010 -- Philip Uren
+                     not required
+"""
+"""              1st October 2010 -- Philip Uren
                    * added ability to check BED file is sorted by read name
                    * added BEDUniqueFilter
                    * added unit tests for above two items
                    * added missing exception class 
                    * added unit test for BED file being sorted by start
                    * added verbose option to BEDIterator
-                 2nd October 2010 -- Philip Uren
+"""
+"""              2nd October 2010 -- Philip Uren
                    * added BEDDuplicateFilter and associated unit tests
-                 19th October 2010 -- Philip Uren
+"""
+"""              19th October 2010 -- Philip Uren
                    * added best option for BEDUniqueFilter
-                   * changed type for score from float to int 
-                 22nd October 2010 -- Philip Uren
+                   * changed type for score from float to int
+"""                    
+"""              22nd October 2010 -- Philip Uren
                    * fixed bug in BEDIterator when passing string instead of
                      stream 
                    * added detail to the exception raised when BED elements 
-                     appear not to have enough parts to them 
-                 23rd October 2010 -- Philip Uren
+                     appear not to have enough parts to them
+""" 
+"""              23rd October 2010 -- Philip Uren
                    * added BEDIterator sorting order of chromosome 
-                   * added unit test for above 
-                 27th October 2010 -- Philip Uren
+                   * added unit test for above
+""" 
+"""              27th October 2010 -- Philip Uren
                    * moved to smithlab_py 
                    * changed usage of progress indicator to use new class
-                 28th October 2010 -- Philip Uren 
+"""
+"""              28th October 2010 -- Philip Uren 
                    * changed unit test for overlap
-                   * removed iterators to a new module 
-                 16th November 2010 -- Philip Uren
+                   * removed iterators to a new module
+""" 
+"""              16th November 2010 -- Philip Uren
                    * added support for colours and more error checking on 
                      parsing. Cleaned up some old code
-                 24th Novemeber 2010 -- Philip Uren
+"""
+"""              24th Novemeber 2010 -- Philip Uren
                    * added toGenomicCoordinates and associated unit tests
-                 20th December 2010 -- Philip Uren
+"""
+"""              20th December 2010 -- Philip Uren
                    * allow parsing to ignore data that doesn't match BED spec 
                      (e.g. things that should be numbers, but aren't)
-                 06th January 2011 -- Philip Uren
+"""
+"""              06th January 2011 -- Philip Uren
                    * moved intervalTree method from this file to 
                      mapping.bedIterators
-  
+"""
+"""              28th December 2011 -- Philip Uren
+                   * simplified element subtraction code, allowed multiple 
+                     elements to be subtracted at same time, added unit tests
+                     for subtraction
+""" 
+
+"""  
   TODO:         
                 * finish unit tests
                 * lots of duplication between intervalTreesFromList and 
                   intervalTrees that should be removed  
-
 """
 
 import sys, os, unittest, copy
@@ -431,35 +456,58 @@ class BEDElement :
       dist = max(self.start, e.start) - min(self.end, e.end)
     return dist
   
-  def subtract(self, e):
-    """ 
-      subtracts the region defined by e from this region -- if e is entirely inside self, then e is treated as extending to 
-      the closest of either start or end. If self is entirely inside e, then we arbitrarily set self to size 0 by setting end = start 
+  
+  def __singleIntersect(self, e):
     """
-    es = e.start
-    ee = e.end
+      @summary: this is a private method which will return a list of regions
+                that represent the result of subtracting e from self. The 
+                list might be empty if self is totally contained in e, or 
+                may contain two elements if e is totally contained in self. 
+                otherwise there'll be one element.
+    """
+    if e.chrom != self.chrom or e.end < self.start or e.start > self.end :
+      # no intersection
+      return [copy.copy(self)]
+    if e.start <= self.start and e.end >= self.end :
+      # whole self is removed.
+      return []
+    if e.start > self.start and e.end < self.end :
+      # splits self in two
+      r1 = copy.copy(self)
+      r2 = copy.copy(self)
+      r1.end = e.start
+      r2.start = e.end
+      return [r1,r2]
+    if e.start <= self.start : 
+      # cuts off start of self
+      r = copy.copy(self)
+      r.start = e.end
+      return [r]
+    if e.end >= self.end :
+      # cuts off end of self
+      r = copy.copy(self)
+      r.end = e.start
+      return [r]
+    # oops, we screwed up if we got to here.. 
+    raise BEDError("fatal error - failed BED subtraction of " +\
+                   str(e) + " from " + str(self))
     
-    # check that they overlap...
-    if not self.intersects(e) :
-      return
-    
-    # handle case where e is inside self
-    if es >= self.start and es <= self.start and ee >= self.start and ee <= self.end :
-      sdiff = math.abs(self.start - es)
-      ediff = math.abs(self.end - ee)
-      if sdiff > ediff : ee = self.end
-      else : es = self.start
-    
-    # handle case where self is inside e 
-    if self.start <= ee and self.start >= es and self.end >= es and self.end <= ee :
-      self.end = self.start
-      return
-    
-    # general case - some overlap by neither includes the other entirely 
-    toShrinkEnd = self.end - es 
-    toShrinkStart = ee - self.start
-    if toShrinkEnd < toShrinkStart : self.end = es
-    else : self.start = ee
+  
+  def subtract(self, es):
+    """ 
+      @summary: subtracts the BED elements in es from self
+      @param es: a list of BED elements (or anything with chrom, start, end)
+      @return: a list of BED elements which represent what is left of 
+               self after the subtraction. This might be an empty list.
+    """
+    workingSet = [self]
+    for e in es : 
+      newWorkingSet = []
+      for w in workingSet :
+        newWorkingSet += w.__singleIntersect(e)
+      workingSet = newWorkingSet
+    return workingSet
+
     
   def sizeOfOverlap(self, e):
     # no overlap
@@ -525,7 +573,25 @@ class BEDUnitTests(unittest.TestCase):
                        region2.sizeOfOverlap(region1))
   
   def testSubtract(self):
-    pass
+    debug = False
+    a = BEDElement("chr1",10,100)
+    b1 = BEDElement("chr1",1,8)
+    b2 = BEDElement("chr1",15,20)
+    b3 = BEDElement("chr1",50,60)
+    b4 = BEDElement("chr1",90,120)
+    c1 = BEDElement("chr2",30,40)
+    
+    res = a.subtract([b1,b2,b3,b4,c1])
+    expect = [BEDElement("chr1",10,15),
+              BEDElement("chr1",20,50),
+              BEDElement("chr1",60,90)]
+    res.sort()
+    expect.sort()
+    if debug :
+      sys.stderr.write("\nDebugging BED subtraction test\n")
+      sys.stderr.write("expect\n" + "\n".join([str(x) for x in expect]) + "\n")
+      sys.stderr.write("got\n" + "\n".join([str(x) for x in res]) + "\n")
+    assert(res == expect)
   
   def testDistance(self):
     pass
