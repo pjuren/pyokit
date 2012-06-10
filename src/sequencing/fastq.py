@@ -153,8 +153,8 @@ def fastqIteratorSimple(fn, verbose = False, allowNameMissmatch = False):
     qual = lines[3]
     yield FastqRead(name, seq, qual)
     
-def fastqIterator(fn, useMutableString = False, verbose = False, debug = False, sanger = False) :
-  it = fastqIteratorSimple(fn, verbose = verbose)
+def fastqIterator(fn, useMutableString = False, verbose = False, debug = False, sanger = False, allowNameMissmatch = False) :
+  it = fastqIteratorSimple(fn, verbose = verbose, allowNameMissmatch = allowNameMissmatch)
   for s in it : yield s
 
 def fastqIteratorComplex(fn, useMutableString = False, verbose = False, debug = False, sanger = False):
