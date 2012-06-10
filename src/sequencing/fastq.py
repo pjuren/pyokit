@@ -91,7 +91,7 @@ def _isQualityHead(line):
   return False
       
       
-def fastqIteratorSimple(fn, verbose = False):
+def fastqIteratorSimple(fn, verbose = False, allowNameMissmatch = False):
   """
     @summary: process a fastq file, but don't take into consideration
               the possibility of data or quality spanning 
@@ -145,7 +145,7 @@ def fastqIteratorSimple(fn, verbose = False):
     
     # got our 4 lines, assemble our read..
     # first check that names match
-    if lines[0][1:] != lines[2][1:] : 
+    if lines[0][1:] != lines[2][1:] and not allowNameMissmatch: 
       raise FastqFileFormatError("names in sequence don't match : " +\
                                  str(lines[0][1:]) + " != " + str(lines[2][1:]))
     name = lines[0][1:]
