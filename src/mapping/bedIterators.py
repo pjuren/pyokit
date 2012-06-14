@@ -67,6 +67,18 @@ class BEDError(Exception):
   def __str__(self):
     return repr(self.value)
 
+def intervalTreesFromBEDList(list):
+  # split by chromosome
+  byChrom = {} 
+  for e in list :
+    if not e.chrom in byChrom : byChrom[e.chrom] = []
+    byChrom[e.chrom].append(e)
+    
+  # create an interval tree for each list
+  trees = {}
+  for chrom in byChrom :
+    trees[chrom] = IntervalTree(byChrom[chrom], openEnded=True)
+  return trees
   
 def intervalTrees(reffh, verbose = False):
   """
@@ -101,7 +113,7 @@ def intervalTrees(reffh, verbose = False):
                                    messagePrefix = "completed", 
                                    messageSuffix = "of making interval trees")
   for chrom in elements :
-    trees[chrom] = IntervalTree(elements[chrom])
+    trees[chrom] = IntervalTree(elements[chrom], openEnded=True)
     if verbose:
       pind.done += 1
       pind.showProgress()
