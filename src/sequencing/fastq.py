@@ -97,6 +97,8 @@ def fastqIteratorSimple(fn, verbose = False, allowNameMissmatch = False):
               the possibility of data or quality spanning 
               more than one line
     @param fn: filename or stream to read data from
+    @param ignoreNameMismatch: don't throw error if name in sequence data 
+                               and quality data parts of a read don't match
     @param verbose: if true, output additional status messages to 
                     stderr about progress
   """
