@@ -150,7 +150,7 @@ def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType = int,
                                      messagePrefix = "completed", 
                                      messageSuffix = "of processing " +\
                                                       filehandle.name)
-    except AttributeError :
+    except (AttributeError, OSError) as e :
       sys.stderr.write("BEDIterator -- warning: " +\
                        "unable to show progress for stream")
       verbose = False      
