@@ -402,7 +402,7 @@ class BEDElement :
 
   
   def __hash__(self):
-    return str(self)
+    return hash(str(self))
   
   def __eq__(self, e):
     if e == None : return False
