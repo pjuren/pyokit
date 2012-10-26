@@ -401,6 +401,9 @@ class BEDElement :
     if blockStarts != None : self.blockStarts = blockStarts
 
   
+  def __hash__(self):
+    return str(self)
+  
   def __eq__(self, e):
     if e == None : return False
     return self.chrom == e.chrom and self.start == e.start and\
