@@ -459,6 +459,14 @@ class BEDElement :
       dist = max(self.start, e.start) - min(self.end, e.end)
     return dist
   
+  def signedDistance(self, e):
+    """ distance from self to e, with sign """
+    dist = 0
+    if not e.intersects(self) :
+      dist = max(self.start, e.start) - min(self.end, e.end)
+      if e < self : dist = dist * -1
+    return dist
+  
   
   def __singleIntersect(self, e):
     """

@@ -80,7 +80,7 @@ def intervalTreesFromBEDList(list):
     trees[chrom] = IntervalTree(byChrom[chrom], openEnded=True)
   return trees
   
-def intervalTrees(reffh, verbose = False):
+def intervalTrees(reffh, scoreType = int, verbose = False):
   """
     @summary: Build a dictionary of interval trees indexed by chrom from
               a BED stream
@@ -98,7 +98,7 @@ def intervalTrees(reffh, verbose = False):
     pind = ProgressIndicator(totalToDo = totalLines, 
                                    messagePrefix = "completed", 
                                    messageSuffix = "of loading " + fh.name)      
-  for element in BEDIterator(fh):
+  for element in BEDIterator(fh, scoreType=scoreType, verbose=verbose):
     if not element.chrom in elements : elements[element.chrom] = []
     elements[element.chrom].append(element)
     if verbose and fh != sys.stdin:
