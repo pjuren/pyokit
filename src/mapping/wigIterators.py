@@ -42,6 +42,7 @@
 """
 
 ITERATOR_SORTED_START = 1
+ITERATOR_SORTED_END = 2
 
 import sys, unittest, os
 from util.fileUtils import openFD, getFDName
@@ -49,8 +50,9 @@ from mapping.wig import wigElementFromString, WigError, WigElement
 from testing.dummyfiles import DummyInputStream, DummyOutputStream
 from util.fileUtils import linesInFile
 from util.progressIndicator import ProgressIndicator
+from operator import itemgetter, attrgetter
 
-def wigIterator(fd, verbose=False, sortedby=None):
+def wigIterator(fd, verbose=False, sortedby=None, scoreType=int):
   # peak at the first line to see if it's a regular wig, or 
   # fixed-step wig
   fh = openFD(fd)
@@ -64,10 +66,10 @@ def wigIterator(fd, verbose=False, sortedby=None):
   if line.split()[0] == "fixedStep" : 
     return fixedWigIterator(fd,verbose,sortedby)
   else :
-    return regularWigIterator(fd,verbose,sortedby)
+    return regularWigIterator(fd,verbose,sortedby,scoreType=int)
   
 
-def regularWigIterator(fd, verbose = False, sortedby = None):
+def regularWigIterator(fd, verbose = False, sortedby = None, scoreType=int):
   """
     @param sortedBy: if not None, should be one of ITERATOR_SORTED_BY_START
                      indicating an order that the input stream must be 
@@ -97,10 +99,7 @@ def regularWigIterator(fd, verbose = False, sortedby = None):
     
     line = line.strip()
     if line == "" : continue 
-    try :
-      e = wigElementFromString(line)
-    except :
-      raise WigError("failed parsing '" + line + "' as wig element")
+    e = wigElementFromString(line, scoreType=scoreType)
     
     # on same chrom as the prev item, make sure order is right
     if prev != None and sortedby != None and e.chrom == prev.chrom :
@@ -181,64 +180,72 @@ def fixedWigIterator(fd, verbose=False, sortedby = None):
         pind.showProgress()
 
     
-def pairedWigIterator(wgs1, wgs2, missingVal = 0, verbose = False, debug = False):
+def pairedWigIterator(inputStreams, mirror=False, mirrorScore=None, 
+                      ignoreScore=True, sortedby=ITERATOR_SORTED_END, 
+                      scoreType=int, verbose = False, debug = False):
   """
-    @summary: iterate over two wig streams, returning matching pairs from each
-              file. If a match is missing for a given item in one file then 
-              it is assumed that item has the value <missingVal>, which by
-              default is 0. 
-    @note: streams must be sorted by chrom and start coordinate.
-    @note: size of each wig element must be the same as its pair, else an 
-           exception is raised
+    @summary: iterate over multiple wig streams, and yield a list of wig 
+              elements that match for each location (locations with 0 matching 
+              items are skipped)
+    @param inputStrams: TODO
+    @param mirror:      TODO
+    @param mirrorScore: TODO
+    @param ignoreScore: Don't consider score when determining if two elements
+                        are equal
+    @param sortedby:    TODO
+    @param scoreType:   TODO
+    @param verbose:     TODO
+    @param debug:       TODO
+    @note: streams must be sorted -- sortedby parameter determines what sorting 
+           order will be acceptable 
   """
-  BOTH, FIRST, SECOND = 0, 1, 2
-  wigi1 = wigIterator(wgs1, verbose = verbose, sortedby = ITERATOR_SORTED_START)
-  wigi2 = wigIterator(wgs2, verbose = verbose, sortedby = ITERATOR_SORTED_START)
-  citem1, citem2 = None, None
-  pitem1, pitem2 = None, None
-  next = BOTH
+  # let's build our sorting order...
+  sortOrder = ["chrom"]
+  if sortedby == ITERATOR_SORTED_START : 
+    sortOrder.append("start")
+    sortOrder.append("end")
+  elif sortedby == ITERATOR_SORTED_END : 
+    sortOrder.append("end")
+    sortOrder.append("start")
+  if not ignoreScore : sortOrder.append("score")
+  keyFunc = attrgetter(*sortOrder)
+  
+  def next(iterator):
+    """ little internal function to return the next item, or None """
+    try : return iterator.next()
+    except StopIteration : return None
+    
+  wIterators = [wigIterator(fh, verbose=verbose, sortedby=sortedby, 
+                            scoreType=scoreType) for fh in inputStreams]
+  elements = [next(it) for it in wIterators]
   
   while True :
-    # try to get items
-    if next == BOTH or next == FIRST :
-      try :
-        citem1 = wigi1.next()
-      except StopIteration:
-        citem1 = None
-    if next == BOTH or next == SECOND : 
-      try :
-        citem2 = wigi2.next()
-      except StopIteration:
-        citem2 = None
+    assert(len(elements) >= 2)
+    if None not in elements and len(set([keyFunc(x) for x in elements])) == 1 :
+      # All equal -- yield and move on for all streams
+      yield [e for e in elements]
+      elements = [next(it) for it in wIterators]
+    else :
+      # something wasn't equal.... find the smallest thing, it's about 
+      # to drop out of range...
+      minElement = min([x for x in elements if x != None], key=keyFunc)
+      minIndices = [i for i in range(0, len(elements))
+                    if elements[i] != None and 
+                       keyFunc(elements[i]) == keyFunc(minElement)]
+      if mirror :
+        # mirror the min item for any streams in which it doesn't match 
+        score = minElement.score if mirrorScore == None else mirrorScore 
+        yield [elements[i] if i in minIndices 
+               else WigElement(minElement.chrom, minElement.start, 
+                               minElement.end, score)
+               for i in range(0, len(elements))]
+        
+      # move the smallest element onwards now, we're done with it
+      for index in minIndices : elements[index] = next(wIterators[index])
     
-    if debug : print "got items: " + str(citem1) + " and " + str(citem2)
-    
-    # if both streams are exhausted, we're done
-    if citem1 == None and citem2 == None : break
-    
-    # if we got two things that match, yield them and remember that next time 
-    # we want something from both streams
-    if citem1 != None and citem2 != None and \
-       citem1.start == citem2.start and citem1.end == citem2.end and \
-       citem1.chrom == citem2.chrom :
-      next = BOTH
-      if debug : print "output: " + str(citem1) + " and " + str(citem2) + "\n"
-      yield citem1, citem2
-      continue 
-    
-    # we got non-matching items, the smaller one can be yielded with a dummy
-    # wig element for the missing value, the larger needs to be kept so we 
-    # can check for it's match further along the stream
-    if citem2 == None or (citem1 != None and citem1.before(citem2)) :
-      next = FIRST
-      p1 = citem1 
-      p2 = WigElement(citem1.chrom, citem1.start, citem1.end, missingVal)
-    elif citem1 == None or (citem2 != None and citem2.before(citem1)) :
-      next = SECOND
-      p1 = WigElement(citem2.chrom, citem2.start, citem2.end, missingVal)
-      p2 = citem2
-    if debug : print "output: " + str(p1) + " and " + str(p2) + "\n"
-    yield p1, p2
+    # stop once all strams are exhuasted 
+    if reduce(lambda x,y:x and y, [e == None for e in elements]) : break 
+      
     
 class WigIteratorUnitTests(unittest.TestCase):
   """
@@ -335,9 +342,10 @@ class WigIteratorUnitTests(unittest.TestCase):
               ("chr5\t10\t20\t-1", "chr5\t10\t20\t94")]
     
     out = []
-    for e1,e2 in pairedWigIterator(DummyInputStream(wigIn1), 
-                                   DummyInputStream(wigIn2), 
-                                   missingVal = -1, debug = debug) :
+    for e1,e2 in pairedWigIterator([DummyInputStream(wigIn1), 
+                                   DummyInputStream(wigIn2)],
+                                   mirrorScore = -1, mirror=True,
+                                   debug = debug) :
       out.append((str(e1), str(e2)))
     
     out.sort()

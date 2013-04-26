@@ -86,9 +86,12 @@ class WigElement(object):
     """
     return self.before(rhs)
 
-def wigElementFromString(s):
+def wigElementFromString(s, scoreType=int):
   parts = s.split("\t")
-  return WigElement(parts[0].strip(), int(parts[1]), int(parts[2]), float(parts[3]))
+  if (len(parts) < 4) :
+    raise WigError("failed to parse " + s + " as wig element, too few fields")
+  return WigElement(parts[0].strip(), int(parts[1]), int(parts[2]), 
+                    scoreType(parts[3]))
 
 
 if __name__ == "__main__":

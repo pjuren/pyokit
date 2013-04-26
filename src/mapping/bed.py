@@ -162,6 +162,123 @@ def intervalTreesFromList(inElements, verbose = False):
   return trees
 
 
+def collapseRegions(s):
+  """
+    @summary: given a set of intervals with chromosome, start and end field, 
+              collapse into a set of non-overlapping intervals. Intervals
+              must be sorted by chromosome and then start coordinate.
+    @return:  list of intervals that define the collapsed regions. Note that
+              these are all new objects, no existing object from s is returned
+              or altered. Returned regions will all have name "X", strand +
+              and score 0
+    @param s: list of genomic regions to collapse 
+    @raise BEDError: if the input regions are not correctly sorted (chromosome 
+                     then start) 
+    @note: O(n) time, O(n) space
+  """
+  debug = False
+  
+  if len(s) == 0 or len(s) == 1 : return copy.deepcopy(s)
+  
+  res = []
+  current = copy.copy(s[0])
+  current.strand = '+'
+  current.score = 0
+  current.name = "X"
+  for i in range(1, len(s)) :
+    if debug :
+      sys.stderr.write("processing " + str(s[i]) + "\n")
+      sys.stderr.write("\tcurrent is: " + str(current) + "\n")
+    
+    # make sure things are sorted.. 
+    if (s[i].chrom < s[i-1].chrom) or \
+       (s[i].chrom == s[i-1].chrom and s[i].start < s[i-1].start) :
+      raise BEDError("collapsing regions failed. saw this region: " +\
+                     str(s[i-1]) + " before this one: " + str(s[i]))
+      
+    # because of sorting order, we know that nothing else exists with 
+    # start less than s[i] which we haven't already seen.
+    if s[i].start > current.end or s[i].chrom != current.chrom : 
+      res.append(current)
+      current = copy.copy(s[i])
+      current.strand = '+'
+      current.score = 0
+      current.name = "X"
+    else :
+      current.end = max(s[i].end, current.end)
+      
+  # don't forget the last one...
+  res.append(current)
+  
+  return res
+    
+    
+def regionsIntersection(s1, s2):
+  """
+    @summary: given two lists of genomic regions with chromosome, start and end 
+              coordinates, return a new list of regions which is the 
+              intersection of those two sets. Lists must be sorted by 
+              chromosome and start index
+    @return: new list that represents the intersection of the two input lists.
+             output regions will all have name "X", be one strand "+" and have
+             score 0
+    @param s1: first list of genomic regions
+    @param s2: second list of genomic regions
+    @raise BEDError: if the input regions are not sorted correctly (by 
+                     chromosome and start index)
+    @note: O(n) time, O(n) space; informally, might use up to 3x space of 
+           input 
+  """
+  debug = False
+  
+  # we don't need to explicitly check for sorting because sorted order is 
+  # a post-condition of the collapsing function
+  s1_c = collapseRegions(s1)
+  s2_c = collapseRegions(s2)
+  
+  if len(s1_c) == 0 or len(s2_c) == 0 : return []
+  
+  res = []
+  j = 0
+  for i in range(0, len(s1_c)) :
+    if debug :
+      sys.stderr.write("processing from s1_c : " + str(s1_c[i]) + "\n")
+    
+    # find first thing in s2_c with end in or after s1_c[i]
+    hits = True
+    if debug : sys.stderr.write("i = " + str(i) + " and j = " + str(j) + "\n")
+    while j < len(s2_c) and \
+          (s2_c[j].chrom < s1_c[i].chrom or \
+          (s2_c[j].chrom == s1_c[i].chrom and s2_c[j].end <= s1_c[i].start)) : 
+      j += 1
+    # nothing intersects if we hit the end of s2, or the end of the chrom, 
+    # or we're still on the same chrom but start after the end of s2_c[i]
+    if j >= len(s2_c) or s2_c[j].chrom > s1_c[i].chrom or \
+       (s2_c[j].chrom == s1_c[i].chrom and s2_c[j].start >= s1_c[i].end) : 
+      continue 
+    
+    # now everything at or after j in s2_c that starts before
+    # the end of s1_c must overlap with it
+    while s2_c[j].start < s1_c[i].end :
+      s = max(s1_c[i].start, s2_c[j].start)
+      e = min(s1_c[i].end, s2_c[j].end)
+      overlap = BEDElement(s1_c[i].chrom,s,e,"X",0,"+")
+      if debug : sys.stderr.write("\tadding to overlaps: " +\
+                                  str(overlap) + "\n")
+      res.append(overlap)
+      j += 1
+      if j >= len(s2_c) or s2_c[j].chrom != s1_c[i].chrom : break
+    
+    # it's possible the last intersecting element runs on to the 
+    # next element from s1_c, so...
+    j -= 1
+    if debug : sys.stderr.write("\tmoving s2_c index back to " +\
+                                str(s2_c[j]) + "\n")
+  
+  return res
+    
+
+
 def toGenomicCoordinates(start, end, transcript, debug = False):
   """
     @summary: transform transcript coordinates into genomic coordinates,
@@ -571,9 +688,81 @@ class BEDUnitTests(unittest.TestCase):
   
   def setUp(self):
     pass
+  
+  def testCollapse(self):
+    debug = False
+    elements = ["chr1"+"\t"+"10"+"\t"+"20"+"\t"+"R01"+"\t"+"0"+"\t"+"+",
+                "chr1"+"\t"+"30"+"\t"+"40"+"\t"+"R02"+"\t"+"1"+"\t"+"+",
+                "chr1"+"\t"+"35"+"\t"+"50"+"\t"+"R03"+"\t"+"0"+"\t"+"+",
+                "chr1"+"\t"+"45"+"\t"+"65"+"\t"+"R04"+"\t"+"0"+"\t"+"+",
+                "chr1"+"\t"+"55"+"\t"+"60"+"\t"+"R05"+"\t"+"3"+"\t"+"-",
+                "chr1"+"\t"+"70"+"\t"+"80"+"\t"+"R06"+"\t"+"0"+"\t"+"+",
+                "chr1"+"\t"+"75"+"\t"+"95"+"\t"+"R07"+"\t"+"0"+"\t"+"+",
+                "chr1"+"\t"+"85"+"\t"+"90"+"\t"+"R08"+"\t"+"1"+"\t"+"-",
+                "chr2"+"\t"+"40"+"\t"+"60"+"\t"+"R10"+"\t"+"0"+"\t"+"+",
+                "chr3"+"\t"+"10"+"\t"+"20"+"\t"+"R11"+"\t"+"4"+"\t"+"+",
+                "chr3"+"\t"+"20"+"\t"+"30"+"\t"+"R12"+"\t"+"0"+"\t"+"-"]
+    expect_str = ["chr1"+"\t"+"10"+"\t"+"20"+"\t"+"X"+"\t"+"0"+"\t"+"+",
+                  "chr1"+"\t"+"30"+"\t"+"65"+"\t"+"X"+"\t"+"0"+"\t"+"+",
+                  "chr1"+"\t"+"70"+"\t"+"95"+"\t"+"X"+"\t"+"0"+"\t"+"+",
+                  "chr2"+"\t"+"40"+"\t"+"60"+"\t"+"X"+"\t"+"0"+"\t"+"+",
+                  "chr3"+"\t"+"10"+"\t"+"30"+"\t"+"X"+"\t"+"0"+"\t"+"+"]
+    input = [BEDElementFromString(x) for x in elements]
+    expect = [BEDElementFromString(x) for x in expect_str]
+    got = collapseRegions(input)
+    if debug :
+      sys.stderr.write("expect:\n")
+      sys.stderr.write("\n".join([str(x) for x in expect]) + "\n")
+      sys.stderr.write("got:\n")
+      sys.stderr.write("\n".join([str(x) for x in got]) + "\n")
+    self.assertEqual(expect, got)
     
-  def testInterection(self):
-    pass
+  def testRegionsIntersection(self):
+    debug = False
+    s1_elements = ["chr1"+"\t"+"40" +"\t"+"90" +"\t"+"R11" +"\t"+"0"+"\t"+"+",
+                   "chr1"+"\t"+"100"+"\t"+"120"+"\t"+"R12" +"\t"+"3"+"\t"+"+",
+                   "chr1"+"\t"+"160"+"\t"+"190"+"\t"+"R13" +"\t"+"1"+"\t"+"-",
+                   "chr1"+"\t"+"200"+"\t"+"210"+"\t"+"R14" +"\t"+"0"+"\t"+"-",
+                   "chr2"+"\t"+"10" +"\t"+"20" +"\t"+"R15" +"\t"+"0"+"\t"+"-",
+                   "chr3"+"\t"+"10" +"\t"+"80" +"\t"+"R16" +"\t"+"1"+"\t"+"+",
+                   "chr4"+"\t"+"20" +"\t"+"30" +"\t"+"R17" +"\t"+"1"+"\t"+"+",
+                   "chr4"+"\t"+"40" +"\t"+"50" +"\t"+"R18" +"\t"+"1"+"\t"+"-",
+                   "chr5"+"\t"+"40" +"\t"+"50" +"\t"+"R19" +"\t"+"1"+"\t"+"-"]
+    s2_elements = ["chr1"+"\t"+"10" +"\t"+"20" +"\t"+"R21" +"\t"+"0"+"\t"+"+",
+                   "chr1"+"\t"+"30" +"\t"+"50" +"\t"+"R22" +"\t"+"1"+"\t"+"-",
+                   "chr1"+"\t"+"60" +"\t"+"70" +"\t"+"R23" +"\t"+"0"+"\t"+"+",
+                   "chr1"+"\t"+"80" +"\t"+"110"+"\t"+"R24" +"\t"+"4"+"\t"+"+",
+                   "chr1"+"\t"+"130"+"\t"+"140"+"\t"+"R25" +"\t"+"0"+"\t"+"+",
+                   "chr1"+"\t"+"150"+"\t"+"170"+"\t"+"R26" +"\t"+"1"+"\t"+"-",
+                   "chr1"+"\t"+"180"+"\t"+"220"+"\t"+"R27" +"\t"+"0"+"\t"+"-",
+                   "chr2"+"\t"+"30" +"\t"+"40" +"\t"+"R28" +"\t"+"0"+"\t"+"-",
+                   "chr3"+"\t"+"20" +"\t"+"30" +"\t"+"R29" +"\t"+"0"+"\t"+"-",
+                   "chr3"+"\t"+"40" +"\t"+"50" +"\t"+"R210"+"\t"+"0"+"\t"+"-",
+                   "chr3"+"\t"+"60" +"\t"+"70" +"\t"+"R211"+"\t"+"0"+"\t"+"+",
+                   "chr4"+"\t"+"10" +"\t"+"60" +"\t"+"R212"+"\t"+"0"+"\t"+"+",
+                   "chr5"+"\t"+"10" +"\t"+"20" +"\t"+"R213"+"\t"+"1"+"\t"+"-"]
+    expect_str =  ["chr1"+"\t"+"40" +"\t"+"50" +"\t"+"X"   +"\t"+"0"+"\t"+"+",
+                   "chr1"+"\t"+"60" +"\t"+"70" +"\t"+"X"   +"\t"+"0"+"\t"+"+",
+                   "chr1"+"\t"+"80" +"\t"+"90" +"\t"+"X"   +"\t"+"0"+"\t"+"+",
+                   "chr1"+"\t"+"100"+"\t"+"110"+"\t"+"X"   +"\t"+"0"+"\t"+"+",
+                   "chr1"+"\t"+"160"+"\t"+"170"+"\t"+"X"   +"\t"+"0"+"\t"+"+",
+                   "chr1"+"\t"+"180"+"\t"+"190"+"\t"+"X"   +"\t"+"0"+"\t"+"+",
+                   "chr1"+"\t"+"200"+"\t"+"210"+"\t"+"X"   +"\t"+"0"+"\t"+"+",
+                   "chr3"+"\t"+"20" +"\t"+"30" +"\t"+"X"   +"\t"+"0"+"\t"+"+",
+                   "chr3"+"\t"+"40" +"\t"+"50" +"\t"+"X"   +"\t"+"0"+"\t"+"+",
+                   "chr3"+"\t"+"60" +"\t"+"70" +"\t"+"X"   +"\t"+"0"+"\t"+"+",
+                   "chr4"+"\t"+"20" +"\t"+"30" +"\t"+"X"   +"\t"+"0"+"\t"+"+",
+                   "chr4"+"\t"+"40" +"\t"+"50" +"\t"+"X"   +"\t"+"0"+"\t"+"+"]
+    input_s1 = [BEDElementFromString(x) for x in s1_elements]
+    input_s2 = [BEDElementFromString(x) for x in s2_elements]
+    expect = [BEDElementFromString(x) for x in expect_str]
+    got = regionsIntersection(input_s1, input_s2)
+    if debug :
+      sys.stderr.write("expect:\n")
+      sys.stderr.write("\n".join([str(x) for x in expect]) + "\n")
+      sys.stderr.write("got:\n")
+      sys.stderr.write("\n".join([str(x) for x in got]) + "\n")
+    self.assertEqual(expect, got)
       
   def testSizeOfOverlap(self):
       ## region 2 entirely inside region 1 -- ans = size of region 2
