@@ -66,7 +66,7 @@ def wigIterator(fd, verbose=False, sortedby=None, scoreType=int):
   if line.split()[0] == "fixedStep" : 
     return fixedWigIterator(fd,verbose,sortedby)
   else :
-    return regularWigIterator(fd,verbose,sortedby,scoreType=int)
+    return regularWigIterator(fd,verbose,sortedby,scoreType=scoreType)
   
 
 def regularWigIterator(fd, verbose = False, sortedby = None, scoreType=int):
