@@ -523,9 +523,12 @@ class BEDElement :
   
   def __eq__(self, e):
     if e == None : return False
-    return self.chrom == e.chrom and self.start == e.start and\
-           self.end == e.end and self.name == e.name and\
-           self.score == e.score and self.strand == e.strand
+    try :
+      return  self.chrom == e.chrom and self.start == e.start and\
+              self.end == e.end and self.name == e.name and\
+              self.score == e.score and self.strand == e.strand
+    except AttributeError :
+      return False
            
   def __lt__(self, rhs):
     """
