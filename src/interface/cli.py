@@ -38,8 +38,7 @@
   TODO:          None
 """
 
-import sys
-import getopt
+import sys, copy, getopt
 
 DEFAULT_TYPE = str
 
