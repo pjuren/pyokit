@@ -223,6 +223,10 @@ class CLI :
   
   def getArgument(self, num):
     return self.args[num]
+  
+  def getAllArguments(self):
+    # don't leak a reference to the internal variable args
+    return copy.copy(self.args)
 
   def _optlist(self):
     res = ""
