@@ -1,6 +1,6 @@
 import sys, os
 from copy import copy
-from util.progressIndicator import ProgressIndicator
+from pyokit.util.progressIndicator import ProgressIndicator
 
 def genericFileIterator(fn, verbose=False):
   """

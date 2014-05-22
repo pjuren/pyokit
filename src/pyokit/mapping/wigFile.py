@@ -38,9 +38,9 @@
 """
 
 import sys, unittest
-from mapping.wigIterators import wigIterator
-from datastruct.intervalTree import IntervalTree
-from testing.dummyfiles import DummyInputStream, DummyOutputStream
+from pyokit.mapping.wigIterators import wigIterator
+from pyokit.datastruct.intervalTree import IntervalTree
+from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
 
 class WigFileError(Exception):
   def __init__(self, msg):

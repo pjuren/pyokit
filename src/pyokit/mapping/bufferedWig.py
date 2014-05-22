@@ -42,11 +42,11 @@
 
 import sys, os, unittest, math
 
-from mapping.wigIterators import wigIterator, ITERATOR_SORTED_START
-from util.fileUtils import linesInFile, openFD
-from testing.dummyfiles import DummyInputStream, DummyOutputStream
-from datastruct.genomicMap import GenomicMap, GenomicMapError 
-from wig import WigElement
+from pyokit.mapping.wigIterators import wigIterator, ITERATOR_SORTED_START
+from pyokit.util.fileUtils import linesInFile, openFD
+from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
+from pyokit.datastruct.genomicMap import GenomicMap, GenomicMapError 
+from pyokit.wig import WigElement
 
 DEFAULT_BUFFER_SIZE = 1000000
 DEFAULT_CHUNK_PORTION = 1.5

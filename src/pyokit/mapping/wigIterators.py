@@ -45,11 +45,11 @@ ITERATOR_SORTED_START = 1
 ITERATOR_SORTED_END = 2
 
 import sys, unittest, os
-from util.fileUtils import openFD, getFDName
-from mapping.wig import wigElementFromString, WigError, WigElement
-from testing.dummyfiles import DummyInputStream, DummyOutputStream
-from util.fileUtils import linesInFile
-from util.progressIndicator import ProgressIndicator
+from pyokit.util.fileUtils import openFD, getFDName
+from pyokit.mapping.wig import wigElementFromString, WigError, WigElement
+from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
+from pyokit.util.fileUtils import linesInFile
+from pyokit.util.progressIndicator import ProgressIndicator
 from operator import itemgetter, attrgetter
 
 def wigIterator(fd, verbose=False, sortedby=None, scoreType=int):

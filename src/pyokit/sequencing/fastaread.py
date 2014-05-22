@@ -53,7 +53,7 @@
 """
 
 import unittest, sys
-from fastread import FastRead
+from pyokit.sequencing.fastread import FastRead
 
 class FastaReadError(Exception):
   def __init__(self, msg):

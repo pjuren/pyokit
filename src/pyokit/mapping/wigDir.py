@@ -35,8 +35,8 @@
 """
 
 import sys, unittest, os
-from testing.dummyfiles import DummyInputStream, DummyOutputStream
-from mapping.wigFile import WigFile
+from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
+from pyokit.mapping.wigFile import WigFile
 
 class WigDir :
   def __init__(self, dir, extension="wig", verbose=False):

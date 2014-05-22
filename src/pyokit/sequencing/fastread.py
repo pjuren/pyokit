@@ -56,7 +56,7 @@
 """
 
 import unittest, sys, os
-from util.progressIndicator import ProgressIndicator 
+from pyokit.util.progressIndicator import ProgressIndicator 
 
 class MutableString :
   def __init__(self, strng):

@@ -49,11 +49,11 @@ import sys, os, unittest, copy
 from operator import itemgetter, attrgetter
 from Queue import Queue
 
-from testing.dummyfiles import DummyInputStream, DummyOutputStream
-from util.progressIndicator import ProgressIndicator
-from util.fileUtils import linesInFile
-from datastruct.intervalTree import IntervalTree
-from bed import BEDElementFromString, BEDElement
+from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
+from pyokit.util.progressIndicator import ProgressIndicator
+from pyokit.util.fileUtils import linesInFile
+from pyokit.datastruct.intervalTree import IntervalTree
+from pyokit.mapping.bed import BEDElementFromString, BEDElement
 
 DEFAULT_DELIM = "\t"
 ITERATOR_SORTED_START = 1

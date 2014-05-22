@@ -120,10 +120,10 @@
 
 import sys, os, unittest, copy
 
-from testing.dummyfiles import DummyInputStream, DummyOutputStream
-from util.progressIndicator import ProgressIndicator
-from util.fileUtils import linesInFile
-from datastruct.intervalTree import IntervalTree
+from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
+from pyokit.util.progressIndicator import ProgressIndicator
+from pyokit.util.fileUtils import linesInFile
+from pyokit.datastruct.intervalTree import IntervalTree
 
 class BEDError(Exception):
   def __init__(self, msg):

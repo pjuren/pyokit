@@ -43,8 +43,8 @@
 
 import sys, os
 from collections import deque
-from fastaread import FastaRead
-from util.progressIndicator import ProgressIndicator
+from pyokit.sequencing.fastaread import FastaRead
+from pyokit.util.progressIndicator import ProgressIndicator
 
 def numSequences(fileh):
   """

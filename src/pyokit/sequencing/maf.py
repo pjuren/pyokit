@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
 import sys, os, random
-from mapping.bedIterators import BEDIterator
-from datastruct.intervalTree import IntervalTree
-from interface.cli import CLI, Option
+from pyokit.mapping.bedIterators import BEDIterator
+from pyokit.datastruct.intervalTree import IntervalTree
+from pyokit.interface.cli import CLI, Option
 
 DEFAULT_VERBOSITY = False
 

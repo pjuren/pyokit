@@ -57,7 +57,7 @@
 """
 
 import unittest, sys
-from fastread import FastRead
+from pyokit.sequencing.fastread import FastRead
 
 # this is the offset needed to shift Sanger fastq quality scores into solexa 
 SANGER_SOLEXA_OFFSET = 31

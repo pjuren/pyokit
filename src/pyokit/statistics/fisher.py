@@ -38,9 +38,9 @@
 
 import sys, os, unittest, copy
 
-from testing.dummyfiles import DummyInputStream, DummyOutputStream
-from util.progressIndicator import ProgressIndicator
-from util.fileUtils import linesInFile
+from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
+from pyokit.util.progressIndicator import ProgressIndicator
+from pyokit.util.fileUtils import linesInFile
 from rpy2.robjects import r
 
 def fisherExactTest(a, b, c, d, alternative="two.sided"):

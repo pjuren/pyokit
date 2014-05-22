@@ -44,10 +44,10 @@
 import sys, math, os, unittest, time
 from random import shuffle
 from heapq import *
-from testing.dummyfiles import DummyInputStream, DummyOutputStream
-from mapping.wig import wigElementFromString
-from datastruct.intervalTree import IntervalTree
-from util.progressIndicator import ProgressIndicator 
+from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
+from pyokit.mapping.wig import wigElementFromString
+from pyokit.datastruct.intervalTree import IntervalTree
+from pyokit.util.progressIndicator import ProgressIndicator 
 
 class IndexedWigError(Exception):
   def __init__(self, msg):

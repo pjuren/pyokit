@@ -51,12 +51,15 @@
   TODO:          None
 """
 
+# base packes imports
 import sys, unittest, os
-from testing.dummyfiles import DummyInputStream, DummyOutputStream
 from collections import deque
-from fastqread import FastqRead
-from util.progressIndicator import ProgressIndicator
-from util.fileUtils import linesInFile
+
+# pyokit imports
+from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
+from pyokit.sequencing.fastqread import FastqRead
+from pyokit.util.progressIndicator import ProgressIndicator
+from pyokit.util.fileUtils import linesInFile
 
 class FastqFileFormatError(Exception):
   def __init__(self, msg):

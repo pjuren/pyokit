@@ -2,29 +2,29 @@
 import unittest
 
 ########### MAPPING LIBRARIES ############
-from mapping.bed import *          
-from mapping.bedIterators import * 
+from pyokit.mapping.bed import *          
+from pyokit.mapping.bedIterators import * 
 
-from mapping.wig import *
-from mapping.wigDir import *
-from mapping.wigFile import *
-from mapping.indexedWig import *
-from mapping.wigIterators import *
+from pyokit.mapping.wig import *
+from pyokit.mapping.wigDir import *
+from pyokit.mapping.wigFile import *
+from pyokit.mapping.indexedWig import *
+from pyokit.mapping.wigIterators import *
 
 ######### SEQUENCING LIBRARIES ###########
-from sequencing.fasta import *
-from sequencing.fastaread import *
-from sequencing.fastq import *
-from sequencing.fastqread import *
-from sequencing.fastread import *
-from sequencing.maf import *
+from pyokit.sequencing.fasta import *
+from pyokit.sequencing.fastaread import *
+from pyokit.sequencing.fastq import *
+from pyokit.sequencing.fastqread import *
+from pyokit.sequencing.fastread import *
+from pyokit.sequencing.maf import *
 
 ############ DATA STRUCTURES #############
-from datastruct.intervalTree import *
+from pyokit.datastruct.intervalTree import *
 
 ########### TESTING AND UTILS ############
-from testing.dummyfiles import *
-from util.progressIndicator import *
+from pyokit.testing.dummyfiles import *
+from pyokit.util.progressIndicator import *
 
 
 if __name__ == "__main__":

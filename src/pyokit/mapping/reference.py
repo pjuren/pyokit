@@ -38,11 +38,11 @@
 """
 
 import sys, os, unittest
-from datastruct.intervalTree import IntervalTree
-from mapping.bedIterators import BEDIterator
-from mapping.bed import toGenomicCoordinates, BEDElement
-from mapping.transcript import Transcript, TranscriptError
-from testing.dummyfiles import DummyInputStream, DummyOutputStream
+from pyokit.datastruct.intervalTree import IntervalTree
+from pyokit.mapping.bedIterators import BEDIterator
+from pyokit.mapping.bed import toGenomicCoordinates, BEDElement
+from pyokit.mapping.transcript import Transcript, TranscriptError
+from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
 
 KEY_SEP = "___"
   
