@@ -1,0 +1,18 @@
+# ignore eclipse project files
+.project
+.cproject
+.pydevproject
+
+# ignore compiled python files
+*.pyc
+
+# ignore python eggs 
+*.egg
+
+# ignore things built as part of installation
+/build/
+/dist/
+/src/pyokit.egg-info/
+setuptools-3.5.1.zip
+
+
