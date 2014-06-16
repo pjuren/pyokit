@@ -32,7 +32,7 @@ install :
 	$(PYTHON_PATH) setup.py install
 
 clean :
-	cd src; rm -rf smithlab_py.egg-info build dist
+	rm -rf *.pyc setuptools*.egg setuptools*.zip build dist
 
 test :
 	cd src; $(PYTHON_PATH) test.py
