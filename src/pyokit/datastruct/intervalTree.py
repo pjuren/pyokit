@@ -10,10 +10,8 @@
   Copyright (C) 2010  
   University of Southern California,
   Philip J. Uren,
-  Jin H. Park,
-  Andrew D. Smith
-  
-  Authors: Philip J. Uren, Jin H. Park, Andrew D. Smith
+    
+  Authors: Philip J. Uren
   
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -27,39 +25,15 @@
   
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  
-  --------------------
-  
-  Known Bugs:    None
-  
-  Revision 
-  History:       20th July 2010  -- Philip Uren  
-                   * Added unit tests and corrected bugs in intersecting  
-                   * interval method. Expanded documentation.
-                 
-                 6th September 2010 -- Philip Uren
-                   * Added intersectingIntervalIterator method 
-                   
-                 12th September 2010 -- Philip Uren
-                   * added check for empty set of intervals at mid point
-                
-                 21st October 2010 -- Philip Uren
-                   * Added unit test for end points in intersectingPoint
-                   * fixed bug with not including end points in intervals
-                   
-                 1st October 2011 -- Philip Uren
-                   * Added ability to specify that intervals should be 
-                     treated as open at the end
-                   * simplified test for intersecting intervals 
-          
-  TODO:          None
 """
 
-import copy
-import unittest
-import random
+import copy, random, unittest
 
 class IntervalTreeError(Exception):
+  """
+    @summary: Exception class for errors that occur when building or using 
+              interval trees
+  """
   def __init__(self, value):
     self.value = value
   def __str__(self):
@@ -146,8 +120,9 @@ class IntervalTree :
       return self.data.ends
     
     if p > self.data.mid :
-      # we know all intervals in self.data begin before p (if they began after p, they would have not included mid)
-      # we just need to find those that end after p
+      # we know all intervals in self.data begin before p (if they began after 
+      # p, they would have not included mid) we just need to find those that 
+      # end after p
       endAfterP = [r for r in self.data.ends \
                    if (r.end >= p and not self.openEnded) or \
                    (r.end > p and self.openEnded)]
@@ -155,8 +130,9 @@ class IntervalTree :
       return endAfterP
     
     if p < self.data.mid :
-      # we know all intervals in self.data end after p (if they ended before p, they would have not included mid)
-      # we just need to find those that start before p
+      # we know all intervals in self.data end after p (if they ended before p, 
+      # they would have not included mid) we just need to find those that start 
+      # before p
       startBeforeP = [r for r in self.data.starts if r.start <= p]
       if self.left != None : startBeforeP.extend(self.left.intersectingPoint(p)) 
       return startBeforeP
@@ -174,15 +150,20 @@ class IntervalTree :
     # find all intervals in this node that intersect start and end
     l = []
     for x in self.data.starts :
-      xStartsAfterInterval = (x.start > end and not self.openEnded) or (x.start >= end and self.openEnded)
-      xEndsBeforeInterval = (x.end < start and not self.openEnded) or (x.end <= start and self.openEnded)
-      if ((not xStartsAfterInterval) and (not xEndsBeforeInterval)) : l.append(x)
+      xStartsAfterInterval = (x.start > end and not self.openEnded) or \
+                             (x.start >= end and self.openEnded)
+      xEndsBeforeInterval = (x.end < start and not self.openEnded) or \
+                            (x.end <= start and self.openEnded)
+      if ((not xStartsAfterInterval) and (not xEndsBeforeInterval)) : 
+        l.append(x)
 
-    # process left subtree (if we have one) if the requested interval begins before mid
+    # process left subtree (if we have one) if the requested interval begins 
+    # before mid
     if self.left != None and start <= self.data.mid:
       l += self.left.intersectingInterval(start, end)
 
-    # process right subtree (if we have one) if the requested interval ends after mid
+    # process right subtree (if we have one) if the requested interval ends 
+    # after mid
     if self.right != None and end >= self.data.mid:
       l += self.right.intersectingInterval(start, end)
 
@@ -225,7 +206,8 @@ class TestIntervalTree(unittest.TestCase):
     
     ## create some test intervals
     for i in range (0, self.NUM_TEST_INTERVALS) :
-      s = (random.random() * (self.MAX_INTERVAL - self.MIN_INTERVAL)) + self.MIN_INTERVAL 
+      s = (random.random() * (self.MAX_INTERVAL - self.MIN_INTERVAL)) +\
+          self.MIN_INTERVAL 
       e = (random.random() * (self.MAX_INTERVAL - s)) + s
       self.testIntervals.append(TestIntervalTree.TestInterval(s,e))
     self.tree = IntervalTree(self.testIntervals)
@@ -252,7 +234,8 @@ class TestIntervalTree(unittest.TestCase):
 
   def testIntersectingPoint(self):
     for i in range(0,self.NUM_TESTS) :
-      point = random.random() * (self.MAX_INTERVAL - self.MIN_INTERVAL) + self.MIN_INTERVAL
+      point = random.random() * (self.MAX_INTERVAL - self.MIN_INTERVAL) +\
+              self.MIN_INTERVAL
       
       ## do it the slow way...
       correctAnswer = []
@@ -272,7 +255,8 @@ class TestIntervalTree(unittest.TestCase):
   def testIntersectingInterval(self):
     for i in range(0,self.NUM_TESTS) :
       # create a random interval..
-      s = (random.random() * (self.MAX_INTERVAL - self.MIN_INTERVAL)) + self.MIN_INTERVAL 
+      s = (random.random() * (self.MAX_INTERVAL - self.MIN_INTERVAL)) +\
+          self.MIN_INTERVAL 
       e = (random.random() * (self.MAX_INTERVAL - s)) + s
       
       ## work out the answer the slow way - look at every interval
