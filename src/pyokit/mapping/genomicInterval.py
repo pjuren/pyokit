@@ -207,6 +207,22 @@ def regionsIntersection(s1, s2):
 ##                FUNCTIONS FOR PARSING GENOMIC INTERVALS                    ##
 ###############################################################################
 
+def parseWigString(line, scoreType=int):
+  """
+    @summary: Given a string in simple Wig format, parse the string and return
+              a GenomicInterval
+    @param line: the string to be parsed
+    @param scoreType: treat the score field as having this type.
+    @return: GenomicInterval object representing this wig line; the name of the
+             interval will be set to 'X', and it's strand to the default.
+  """
+  parts = line.split("\t")
+  if (len(parts) < 4) :
+    raise GenomicIntervalError("failed to parse " + s +\
+                               " as wig format, too few fields")
+  return GenomicInterval(parts[0].strip(), int(parts[1]), int(parts[2]), "X", 
+                         scoreType(parts[3]))
+
 def parseBEDString(line, scoreType=int, dropAfter = None):
   """
     @summary: Given a string in BED format, parse the string and return a 
@@ -221,8 +237,9 @@ def parseBEDString(line, scoreType=int, dropAfter = None):
   peices = line.split("\t")
   if dropAfter != None : peices = peices[0:dropAfter]
   if len(peices) < 3 : 
-    raise BEDError("BED elements must have at least chrom, start and end" +\
-                   " found only " + str(len(peices)) + " in " + line)
+    raise GenomicIntervalError("BED elements must have at least chrom, " +\
+                               "start and end; found only " +\
+                               str(len(peices)) + " in " + line)
   chrom = peices[0]
   start = peices[1]
   end = peices[2]
