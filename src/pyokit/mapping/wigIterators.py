@@ -46,7 +46,7 @@ ITERATOR_SORTED_END = 2
 
 import sys, unittest, os
 from pyokit.util.fileUtils import openFD, getFDName
-from pyokit.mapping.wig import wigElementFromString, WigError, WigElement
+from pyokit.mapping.genomicInterval import parseWigString, GenomicInterval
 from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
 from pyokit.util.fileUtils import linesInFile
 from pyokit.util.progressIndicator import ProgressIndicator
@@ -99,7 +99,7 @@ def regularWigIterator(fd, verbose = False, sortedby = None, scoreType=int):
     
     line = line.strip()
     if line == "" : continue 
-    e = wigElementFromString(line, scoreType=scoreType)
+    e = parseWigString(line, scoreType=scoreType)
     
     # on same chrom as the prev item, make sure order is right
     if prev != None and sortedby != None and e.chrom == prev.chrom :
@@ -120,7 +120,7 @@ def regularWigIterator(fd, verbose = False, sortedby = None, scoreType=int):
     yield e
     prev = e
     
-def fixedWigIterator(fd, verbose=False, sortedby = None):
+def fixedWigIterator(fd, verbose=False, sortedby = None, scoreType = int):
   """
     @summary: 
   """
@@ -154,7 +154,8 @@ def fixedWigIterator(fd, verbose=False, sortedby = None):
         step = int(parts[3].split("=")[1])
     else :
       val = float(line)
-      e = WigElement(currentChrom, at, at+step, val)
+      e = GenomicInterval(currentChrom, at, at+step, None, 
+                          val, scoreType = scoreType)
     
       # on same chrom as the prev item, make sure order is right
       if prev != None and sortedby != None and e.chrom == prev.chrom :
@@ -236,8 +237,8 @@ def pairedWigIterator(inputStreams, mirror=False, mirrorScore=None,
         # mirror the min item for any streams in which it doesn't match 
         score = minElement.score if mirrorScore == None else mirrorScore 
         yield [elements[i] if i in minIndices 
-               else WigElement(minElement.chrom, minElement.start, 
-                               minElement.end, score)
+               else GenomicInterval(minElement.chrom, minElement.start, 
+                                    minElement.end, None, score)
                for i in range(0, len(elements))]
         
       # move the smallest element onwards now, we're done with it
@@ -294,15 +295,15 @@ class WigIteratorUnitTests(unittest.TestCase):
             "fixedStep chrom=chr4 start=10 step=1\n" +\
             "6\n" +\
             "0.5\n"
-    expect = ["chr1" + "\t" +  "1" + "\t" +  "2" +"\t" + "5",
-              "chr1" + "\t" +  "2" + "\t" +  "3" +"\t" + "3",
-              "chr2" + "\t" + "30" + "\t" + "32" +"\t" + "2",
-              "chr2" + "\t" + "32" + "\t" + "34" +"\t" + "4",
-              "chr4" + "\t" + "10" + "\t" + "11" +"\t" + "6",
+    expect = ["chr1" + "\t" +  "1" + "\t" +  "2" +"\t" + "5.0",
+              "chr1" + "\t" +  "2" + "\t" +  "3" +"\t" + "3.0",
+              "chr2" + "\t" + "30" + "\t" + "32" +"\t" + "2.0",
+              "chr2" + "\t" + "32" + "\t" + "34" +"\t" + "4.0",
+              "chr4" + "\t" + "10" + "\t" + "11" +"\t" + "6.0",
               "chr4" + "\t" + "11" + "\t" + "12" +"\t" + "0.5"] 
     
     out = []
-    for element in fixedWigIterator(DummyInputStream(wigIn)) :
+    for element in fixedWigIterator(DummyInputStream(wigIn), scoreType=float) :
       out.append(str(element))
     
     out.sort()

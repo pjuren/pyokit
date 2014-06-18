@@ -45,7 +45,7 @@ import sys, math, os, unittest, time
 from random import shuffle
 from heapq import *
 from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
-from pyokit.mapping.wig import wigElementFromString
+from pyokit.mapping.genomicInterval import parseWigString
 from pyokit.datastruct.intervalTree import IntervalTree
 from pyokit.util.progressIndicator import ProgressIndicator 
 
@@ -137,7 +137,7 @@ class WigBlock :
         sys.stderr.write("\t" + "current line is " + str(line) + "\n")
       line = line.strip()
       if line == "": continue
-      e = wigElementFromString(line)
+      e = parseWigString(line)
       
       # we're done if we've left this block's chrom, or if we've moved beyond
       # the end of this blocks boundary.
@@ -208,7 +208,7 @@ class IndexedWig :
       rline = self.handle.readline()
       line = rline.strip()
       if line == "": continue
-      e = wigElementFromString(line)
+      e = parseWigString(line)
       
       # keep track of what chroms we've seen for checking order
       if not e.chrom in seenChroms : 
@@ -373,7 +373,7 @@ class TestIndexedWig(unittest.TestCase):
     """
     debug = False
     infh = DummyInputStream("\n".join(self.input))
-    answers = [wigElementFromString(l) for l in self.input if l.strip() != ""]
+    answers = [parseWigString(l) for l in self.input if l.strip() != ""]
     shuffle(answers)
     
     iwig = IndexedWig(infh, 2, 2, debug, verbose=False)
