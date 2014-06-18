@@ -220,7 +220,7 @@ def parseWigString(line, scoreType=int):
   if (len(parts) < 4) :
     raise GenomicIntervalError("failed to parse " + s +\
                                " as wig format, too few fields")
-  return GenomicInterval(parts[0].strip(), int(parts[1]), int(parts[2]), "X", 
+  return GenomicInterval(parts[0].strip(), int(parts[1]), int(parts[2]), None, 
                          scoreType(parts[3]))
 
 def parseBEDString(line, scoreType=int, dropAfter = None):
@@ -247,34 +247,12 @@ def parseBEDString(line, scoreType=int, dropAfter = None):
   name = None 
   score = None 
   strand = None 
-  thickStart = None
-  thickEnd = None 
-  colour = None 
-  blockCount = None 
-  blockSizes = None 
-  blockStarts = None 
   
   if len(peices) >= 4 != None : name = peices[3]
   if len(peices) >= 5 != None : score = peices[4]
   if len(peices) >= 6 != None : strand = peices[5]
-  if len(peices) >= 7 != None : thickStart = peices[6]
-  if len(peices) >= 8 != None : thickEnd = peices[7]
-  if len(peices) >= 9 != None : colour = peices[8]
-  if len(peices) >= 10 != None : blockCount = peices[9]
-  if len(peices) >= 11 != None : blockSizes = peices[10]
-  if len(peices) >= 12 != None : blockStarts = peices[11]
   
-  # some programs output things that are meant to be BED format, 
-  # but don't obey the rules... we're going to ignore thickStart 
-  # and thickEnd values that are not ints
-  try : int(thickStart)
-  except : thickStart = None 
-  try : int(thickEnd)
-  except : thickEnd = None 
-  
-  return GenomicInterval(chrom, start, end, name, score, strand, thickStart,
-                         thickEnd, colour, blockCount, blockSizes, blockStarts, 
-                         scoreType)
+  return GenomicInterval(chrom, start, end, name, score, strand, scoreType)
 
 
 ###############################################################################
@@ -287,9 +265,7 @@ class GenomicInterval :
   DEFAULT_STRAND = POSITIVE_STRAND
   
   def __init__(self, chrom, start, end, name = None, score = None, 
-               strand = None, thickStart = None, thickEnd = None, 
-               colour = None, blockCount = None, blockSizes = None,
-               blockStarts = None, scoreType = int):
+               strand = None, scoreType = int):
     """
       @summary: Constructor for the GenomicInterval class
       @note: only the first three parameters are required 
@@ -314,70 +290,17 @@ class GenomicInterval :
     if name != None: self.name = name.strip()
     
     # score
-    if score != None and name == None :
-      raise BEDError("If score is provided, must also provide name")
     self.score = None
     if score != None : self.score = scoreType(score)
     
     # strand 
-    if strand != None and (name == None or score == None) :
-      raise BEDError("If strand is provided, must also provide name and score")
     self.strand = None  
     if strand != None : self.strand = strand.strip()
-    
-    # thickStart
-    if thickStart != None and (name == None or score == None or strand == None) :
-      raise BEDError("If thickStart is provided, must also provide name, " +\
-                     "score and strand")
-    self.thickStart = None
-    if thickStart != None : self.thickStart = int(thickStart)
-    
-    # thickEnd
-    if thickEnd != None and (name == None or score == None or strand == None \
-                             or thickStart == None) :
-      raise BEDError("If thickEnd is provided, must also provide name, " +\
-                     "score, strand and thickStart")
-    self.thickEnd = None
-    if thickEnd != None : self.thickEnd = int(thickEnd)
-    
-    # colour
-    if colour != None and (name == None or score == None or strand == None \
-                             or thickStart == None or thickEnd == None) :
-      raise BEDError("If colour is provided, must also provide name, " +\
-                     "score, strand, thickStart and thickEnd")
-    self.colour = None
-    if colour != None : self.colour = colour
-    
-    # blockCount
-    if blockCount != None and (name == None or score == None or strand == None \
-                             or thickStart == None or thickEnd == None \
-                             or colour == None) :
-      raise BEDError("If colour is provided, must also provide name, " +\
-                     "score, strand, thickStart, thickEnd, colour")
-    self.blockCount = None
-    if blockCount != None : self.blockCount = blockCount
-    
-    # blockSizes
-    if blockSizes != None and (name == None or score == None or strand == None \
-                             or thickStart == None or thickEnd == None \
-                             or colour == None or blockCount == None) :
-      raise BEDError("If blockSizes is provided, must also provide name, " +\
-                     "score, strand, thickStart, thickEnd, colour and " +\
-                     "blockCount")
-    self.blockSizes = None
-    if blockSizes != None : self.blockSizes = blockSizes
-    
-    # blockStarts
-    if blockStarts != None and (name == None or score == None or strand == None \
-                             or thickStart == None or thickEnd == None \
-                             or colour == None or blockCount == None \
-                             or blockSizes == None) :
-      raise GenomicIntervalError("If blockStarts is provided, must also "    +\
-                                 "provide name, score, strand, thickStart, " +\
-                                 "thickEnd, colour, blockCount and blockSizes")
-    self.blockStarts = None
-    if blockStarts != None : self.blockStarts = blockStarts
-
+    if self.strand != None and self.strand != self.POSITIVE_STRAND and \
+       self.strand != self.NEGATIVE_STRAND :
+      raise GenomicIntervalError("Invalid strand: " + self.strand            +\
+                                 "; expected either " + self.POSITIVE_STRAND +\
+                                 " or " + self.NEGATIVE_STRAND)
   
   def __hash__(self):
     """
@@ -431,12 +354,6 @@ class GenomicInterval :
     if self.name != None : res += (delim + str(self.name))
     if self.score != None : res += (delim + str(self.score))
     if self.strand != None : res += (delim + str(self.strand))
-    if self.thickStart != None : res += (delim + str(self.thickStart))
-    if self.thickEnd != None : res += (delim + str(self.thickEnd))
-    if self.colour != None : res += (delim + str(self.colour))
-    if self.blockCount != None : res += (delim + str(self.blockCount))
-    if self.blockSizes != None : res += (delim + str(self.blockSizes))
-    if self.blockStarts != None : res += (delim + str(self.blockStarts))
     
     return  res
   
@@ -657,8 +574,8 @@ class GenomicIntervalUnitTests(unittest.TestCase):
       
   def testSizeOfOverlap(self):
     ## region 2 entirely inside region 1 -- ans = size of region 2
-    region1 = GenomicInterval("chr1", 10, 20, "read", 1, "f")
-    region2 = GenomicInterval("chr1", 10, 20, "read", 1, "f")
+    region1 = GenomicInterval("chr1", 10, 20, "read", 1, "+")
+    region2 = GenomicInterval("chr1", 10, 20, "read", 1, "+")
     self.assertEqual(region1.sizeOfOverlap(region2), len(region2))
     self.assertEqual(region1.sizeOfOverlap(region2), 
                      region2.sizeOfOverlap(region1))
