@@ -32,7 +32,7 @@ install :
 	$(PYTHON_PATH) setup.py install
 
 clean :
-	rm -rf *.pyc setuptools*.egg setuptools*.zip build dist
+	rm -rf *.pyc setuptools*.egg setuptools*.zip src/pyokit.egg-info build dist
 
 test :
 	cd src; $(PYTHON_PATH) test.py
