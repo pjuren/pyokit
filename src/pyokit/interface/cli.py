@@ -237,7 +237,7 @@ class CLI :
       @param num: the argument number to fetch.
       @raise InterfaceException: if there are fewer than num + 1 arguments. 
     """
-    if not hasArgument(num) : 
+    if not self.hasArgument(num) : 
       raise InterfaceException("Failed to retrieve argument " + str(num) +\
                                " -- not enough arguments provided")
     return self.args[num]
