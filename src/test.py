@@ -2,10 +2,9 @@
 import unittest
 
 ########### MAPPING LIBRARIES ############
-from pyokit.mapping.bed import *          
+from pyokit.mapping.genomicInterval import *          
 from pyokit.mapping.bedIterators import * 
 
-from pyokit.mapping.wig import *
 from pyokit.mapping.wigDir import *
 from pyokit.mapping.wigFile import *
 from pyokit.mapping.indexedWig import *
