@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 """
   Date of Creation: 3rd Apr 2010    
                        
@@ -7,10 +8,8 @@
   Copyright (C) 2010  
   University of Southern California,
   Philip J. Uren,
-  Jin H. Park,
-  Andrew D. Smith
   
-  Authors: Philip J. Uren, Jin H. Park, Andrew D. Smith
+  Authors: Philip J. Uren
   
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -24,25 +23,6 @@
   
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  
-  --------------------
-  
-  Known Bugs:    None
-  
-  Revision 
-  History:
-                 28th October 2010 -- Philip Uren 
-                   * Created module with code from existing BED module 
-                 06th January 2011 -- Philip Uren
-                   * moved intervalTree method here
-                 20th Decemeber 2011 -- Philip Uren
-                   * added paired iterator, fixed minor indentation style 
-                     issues, added new unit tests
-  
-  TODO:         
-                * finish unit tests
-                * add unit test for intervalTrees method 
-
 """
 
 import sys, os, unittest, copy
@@ -53,7 +33,7 @@ from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
 from pyokit.util.progressIndicator import ProgressIndicator
 from pyokit.util.fileUtils import linesInFile
 from pyokit.datastruct.intervalTree import IntervalTree
-from pyokit.mapping.bed import BEDElementFromString, BEDElement
+from pyokit.mapping.genomicInterval import parseBEDString, GenomicInterval
 
 DEFAULT_DELIM = "\t"
 ITERATOR_SORTED_START = 1
@@ -61,24 +41,19 @@ ITERATOR_SORTED_END = 2
 ITERATOR_SORTED_NAME = 3
 ITERATOR_SORTED_CHROM = 4
 
+###############################################################################
+##                           EXCEPTION CLASSES                               ##
+###############################################################################
+
 class BEDError(Exception):
   def __init__(self, msg):
     self.value = msg
   def __str__(self):
     return repr(self.value)
 
-def intervalTreesFromBEDList(list):
-  # split by chromosome
-  byChrom = {} 
-  for e in list :
-    if not e.chrom in byChrom : byChrom[e.chrom] = []
-    byChrom[e.chrom].append(e)
-    
-  # create an interval tree for each list
-  trees = {}
-  for chrom in byChrom :
-    trees[chrom] = IntervalTree(byChrom[chrom], openEnded=True)
-  return trees
+###############################################################################
+##          FUNCTIONS WHICH PROCESS WHOLE BED FILES IN ONE PASS              ##
+###############################################################################
   
 def intervalTrees(reffh, scoreType = int, verbose = False):
   """
@@ -97,8 +72,8 @@ def intervalTrees(reffh, scoreType = int, verbose = False):
     totalLines = linesInFile(fh.name)
     pind = ProgressIndicator(totalToDo = totalLines, 
                                    messagePrefix = "completed", 
-                                   messageSuffix = "of loading " + fh.name)      
-  for element in BEDIterator(fh, scoreType=scoreType, verbose=verbose):
+                                   messageSuffix = "of loading " + fh.name)
+  for element in BEDIterator(fh, scoreType=scoreType, verbose=verbose) :
     if not element.chrom in elements : elements[element.chrom] = []
     elements[element.chrom].append(element)
     if verbose and fh != sys.stdin:
@@ -120,6 +95,9 @@ def intervalTrees(reffh, scoreType = int, verbose = False):
       
   return trees
 
+###############################################################################
+##                          ITERATOR FUNCTIONS                               ##
+###############################################################################
 
 def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType = int, 
                 dropAfter=None):
@@ -162,7 +140,7 @@ def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType = int,
       pind.showProgress()
       
     if line.strip() == "": continue
-    e = BEDElementFromString(line, scoreType, dropAfter=dropAfter)
+    e = parseBEDString(line, scoreType, dropAfter=dropAfter)
     
     # sorting by name?
     if sortedby == ITERATOR_SORTED_NAME and prev != None and prev.name > e.name :
@@ -261,9 +239,10 @@ def pairedBEDIterator(inputStreams, mirror=False, mirrorScore=None,
         # mirror the min item for any streams in which it doesn't match
         score = minElement.score if mirrorScore == None else mirrorScore
         yield [elements[i] if i in minIndices 
-               else BEDElement(minElement.chrom, minElement.start,
-                               minElement.end, minElement.name,
-                               score, minElement.strand, scoreType=scoreType)
+               else GenomicInterval(minElement.chrom, minElement.start,
+                                    minElement.end, minElement.name,
+                                    score, minElement.strand, 
+                                    scoreType=scoreType)
                for i in range(0,len(elements))]
       
       # move the smallest element onwards now, we're done with it
@@ -416,11 +395,11 @@ def BEDUniqueIterator(fh1, fh2, verbose=False, best=False, dropAfter=None):
     
     if bf1_Q.empty() and bf2_Q.empty() and bf1 == None and bf2 == None:
       break
-    
-    
 
 
-
+###############################################################################
+##                        UNIT TESTS FOR THIS MODULE                         ##
+###############################################################################
 
 class BEDIteratorUnitTests(unittest.TestCase):
   """
@@ -459,9 +438,9 @@ class BEDIteratorUnitTests(unittest.TestCase):
     got1, got2, got3 = [], [], []
     for x1, x2, x3 in allOut : 
       got1.append(x1); got2.append(x2); got3.append(x3)
-    for g,e in [(got1, [BEDElementFromString(x, scoreType=float) for x in e1]), 
-                (got2, [BEDElementFromString(x, scoreType=float) for x in e2]), 
-                (got3, [BEDElementFromString(x, scoreType=float) for x in e3])]:
+    for g,e in [(got1, [parseBEDString(x, scoreType=float) for x in e1]), 
+                (got2, [parseBEDString(x, scoreType=float) for x in e2]), 
+                (got3, [parseBEDString(x, scoreType=float) for x in e3])]:
       if debug : 
         sys.stderr.write("expect\n" + "\n".join([str(x) for x in e]) + "\n")
         sys.stderr.write("got\n" + "\n".join([str(x) for x in g]) + "\n")
@@ -494,9 +473,9 @@ class BEDIteratorUnitTests(unittest.TestCase):
     got1, got2, got3 = [], [], []
     for x1, x2, x3 in allOut : 
       got1.append(x1); got2.append(x2); got3.append(x3)
-    for g,e in [(got1, [BEDElementFromString(x, scoreType=float) for x in e1]), 
-                (got2, [BEDElementFromString(x, scoreType=float) for x in e2]), 
-                (got3, [BEDElementFromString(x, scoreType=float) for x in e3])]:
+    for g,e in [(got1, [parseBEDString(x, scoreType=float) for x in e1]), 
+                (got2, [parseBEDString(x, scoreType=float) for x in e2]), 
+                (got3, [parseBEDString(x, scoreType=float) for x in e3])]:
       if debug : 
         sys.stderr.write("expect\n" + "\n".join([str(x) for x in e]) + "\n")
         sys.stderr.write("got\n" + "\n".join([str(x) for x in g]) + "\n")
@@ -567,7 +546,8 @@ class BEDIteratorUnitTests(unittest.TestCase):
     end2_infs = DummyInputStream(end2)
     
     gotOutput = []
-    for r1,r2 in BEDDuplicateIterator(end1_infs, end2_infs, removeJuncTags=True, removePETags=True):
+    for r1,r2 in BEDDuplicateIterator(end1_infs, end2_infs, removeJuncTags=True, 
+                                      removePETags=True):
       r1 = [x.name for x in r1]
       r2 = [x.name for x in r2]
       gotOutput.append((r1, r2))

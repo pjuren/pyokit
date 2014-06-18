@@ -33,6 +33,7 @@ from pyokit.util.progressIndicator import ProgressIndicator
 from pyokit.util.fileUtils import linesInFile
 from pyokit.datastruct.intervalTree import IntervalTree
 
+
 ###############################################################################
 ##                           EXCEPTION CLASSES                               ##
 ###############################################################################
@@ -43,8 +44,9 @@ class GenomicIntervalError(Exception):
   def __str__(self):
     return repr(self.value)
   
+  
 ###############################################################################
-##             FUNCTIONS FOR MANIPULATING GENOMIC INTERVALS                  ##
+##       FUNCTIONS FOR MANIPULATING COLLECTIONS OF GENOMIC INTERVALS         ##
 ###############################################################################
 
 def intervalTreesFromList(inElements, verbose = False):
@@ -53,7 +55,7 @@ def intervalTreesFromList(inElements, verbose = False):
               for each chromosome.
     @param inElements: list of genomic intervals. Members of the list must have
                        chrom, start and end fields; no other restrictions. 
-    @param verbose: TODO 
+    @param verbose: output progress messages to sys.stderr if True 
   """
   elements = {}
   if verbose :
@@ -200,6 +202,10 @@ def regionsIntersection(s1, s2):
   
   return res
           
+          
+###############################################################################
+##                FUNCTIONS FOR PARSING GENOMIC INTERVALS                    ##
+###############################################################################
 
 def parseBEDString(line, scoreType=int, dropAfter = None):
   """
@@ -257,7 +263,6 @@ def parseBEDString(line, scoreType=int, dropAfter = None):
 ###############################################################################
 ##                          GENOMIC INTERVAL CLASS                           ##
 ###############################################################################
-  
 
 class GenomicInterval :
   POSITIVE_STRAND = "+"
