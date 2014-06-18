@@ -3,15 +3,13 @@
 """
   Date of Creation: 3rd Apr 2010    
                        
-  Description:   Classes and functions for manipulating BED files
+  Description:   Classes and functions for manipulating Genomic Intervals 
 
   Copyright (C) 2010  
   University of Southern California,
   Philip J. Uren,
-  Jin H. Park,
-  Andrew D. Smith
   
-  Authors: Philip J. Uren, Jin H. Park, Andrew D. Smith
+  Authors: Philip J. Uren
   
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -25,98 +23,8 @@
   
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
   
-  --------------------
-  
-  Known Bugs:    None
-  
-  Revision 
-  History:       
-  
-"""  
-"""              18th August 2010 -- Philip Uren
-                   * added BEDIterator 
-                   * updated header details 
-                   * added testSizeOfOverlap unit test
-"""
-"""              20th August 2010 -- Philip Uren
-                   * added check for same chrom to intersection test
-"""
-"""              13th September 2010 -- Philip Uren
-                   * modified BEDElement and BEDElementFromString to allow 
-                     BED elements to have only chrom, start and end 
-                   * cleaned details of junction reads
-"""
-"""              16th September 2010 -- Philip Uren
-                   * added check for sorted order to BEDIterator
-""" 
-"""              17th September 2010 -- Philip Uren
-                   * added intervalTree function
-""" 
-"""              24th September 2010 -- Philip Uren
-                   * fixed bugs with checking for sorted BED files when 
-                     not required
-"""
-"""              1st October 2010 -- Philip Uren
-                   * added ability to check BED file is sorted by read name
-                   * added BEDUniqueFilter
-                   * added unit tests for above two items
-                   * added missing exception class 
-                   * added unit test for BED file being sorted by start
-                   * added verbose option to BEDIterator
-"""
-"""              2nd October 2010 -- Philip Uren
-                   * added BEDDuplicateFilter and associated unit tests
-"""
-"""              19th October 2010 -- Philip Uren
-                   * added best option for BEDUniqueFilter
-                   * changed type for score from float to int
-"""                    
-"""              22nd October 2010 -- Philip Uren
-                   * fixed bug in BEDIterator when passing string instead of
-                     stream 
-                   * added detail to the exception raised when BED elements 
-                     appear not to have enough parts to them
-""" 
-"""              23rd October 2010 -- Philip Uren
-                   * added BEDIterator sorting order of chromosome 
-                   * added unit test for above
-""" 
-"""              27th October 2010 -- Philip Uren
-                   * moved to smithlab_py 
-                   * changed usage of progress indicator to use new class
-"""
-"""              28th October 2010 -- Philip Uren 
-                   * changed unit test for overlap
-                   * removed iterators to a new module
-""" 
-"""              16th November 2010 -- Philip Uren
-                   * added support for colours and more error checking on 
-                     parsing. Cleaned up some old code
-"""
-"""              24th Novemeber 2010 -- Philip Uren
-                   * added toGenomicCoordinates and associated unit tests
-"""
-"""              20th December 2010 -- Philip Uren
-                   * allow parsing to ignore data that doesn't match BED spec 
-                     (e.g. things that should be numbers, but aren't)
-"""
-"""              06th January 2011 -- Philip Uren
-                   * moved intervalTree method from this file to 
-                     mapping.bedIterators
-"""
-"""              28th December 2011 -- Philip Uren
-                   * simplified element subtraction code, allowed multiple 
-                     elements to be subtracted at same time, added unit tests
-                     for subtraction
-""" 
-
-"""  
-  TODO:         
-                * finish unit tests
-                * lots of duplication between intervalTreesFromList and 
-                  intervalTrees that should be removed  
-"""
 
 import sys, os, unittest, copy
 
@@ -125,13 +33,28 @@ from pyokit.util.progressIndicator import ProgressIndicator
 from pyokit.util.fileUtils import linesInFile
 from pyokit.datastruct.intervalTree import IntervalTree
 
-class BEDError(Exception):
+###############################################################################
+##                           EXCEPTION CLASSES                               ##
+###############################################################################
+
+class GenomicIntervalError(Exception):
   def __init__(self, msg):
     self.value = msg
   def __str__(self):
     return repr(self.value)
+  
+###############################################################################
+##             FUNCTIONS FOR MANIPULATING GENOMIC INTERVALS                  ##
+###############################################################################
 
 def intervalTreesFromList(inElements, verbose = False):
+  """
+    @summary: build a dictionary, indexed by chromosome name, of interval trees
+              for each chromosome.
+    @param inElements: list of genomic intervals. Members of the list must have
+                       chrom, start and end fields; no other restrictions. 
+    @param verbose: TODO 
+  """
   elements = {}
   if verbose :
     totalLines = len(inElements)
@@ -164,8 +87,8 @@ def intervalTreesFromList(inElements, verbose = False):
 
 def collapseRegions(s):
   """
-    @summary: given a set of intervals with chromosome, start and end field, 
-              collapse into a set of non-overlapping intervals. Intervals
+    @summary: given a list of genomic intervals with chromosome, start and end  
+              field, collapse into a set of non-overlapping intervals. Intervals
               must be sorted by chromosome and then start coordinate.
     @return:  list of intervals that define the collapsed regions. Note that
               these are all new objects, no existing object from s is returned
@@ -262,7 +185,7 @@ def regionsIntersection(s1, s2):
     while s2_c[j].start < s1_c[i].end :
       s = max(s1_c[i].start, s2_c[j].start)
       e = min(s1_c[i].end, s2_c[j].end)
-      overlap = BEDElement(s1_c[i].chrom,s,e,"X",0,"+")
+      overlap = GenomicInterval(s1_c[i].chrom,s,e,"X",0,"+")
       if debug : sys.stderr.write("\tadding to overlaps: " +\
                                   str(overlap) + "\n")
       res.append(overlap)
@@ -276,109 +199,18 @@ def regionsIntersection(s1, s2):
                                 str(s2_c[j]) + "\n")
   
   return res
-    
-
-
-def toGenomicCoordinates(start, end, transcript, debug = False):
-  """
-    @summary: transform transcript coordinates into genomic coordinates,
-              returning a BEDElement (or two if the region spans a splice
-              junction)
-    @param start: the start location in transcript coordinates
-    @param end: the end location in transcript coordinates
-    @param transcript: list of BEDElement objects describing where
-                       the exons of this transcript are
-    @return: a list of BEDElement objects representing the regions of the 
-             transcript covered in genomic coordinates -- this may be only 
-             one region if it's inside a single exon, or multiple if spanning
-             more than one exon
-    @raise BEDError: if the transcript has exons on multiple chromosomes
-  """
-  
-  def regionIterator (start, end, transcript, debug = False):
-    """
-      @summary: an internal function for iterating covered regions
-    """
-    # do some quick error checking..
-    totalSize = sum([x.end - x.start for x in transcript])
-    if start < 0 or end > totalSize :
-      raise BEDError("gave start and end as " + str(start) + "," +str(end) +\
-                     " -- transcript is " + str(totalSize) + " long")
-    
-    # sort the exons into order and figure out where the gene is
-    transcript.sort(key = lambda x : x.start)
-    chrom = None 
-    for exon in transcript : 
-      if chrom == None : chrom = exon.chrom
-      elif chrom != exon.chrom : 
-        raise BEDError ("got transcript with exons on multiple chromosomes!")
-    tStart = transcript[0].start
-    
-    # figure out the relative location of the splice junctions
-    cumulative = 0
-    junctions = [0]
-    for exon in transcript :
-      cumulative += exon.end - exon.start
-      junctions.append(cumulative)
-      
-    if debug :
-      sys.stderr.write("identified exon boundaries at: "+str(junctions)+"\n")
-      
-    # now figure out which exon the start and end are in
-    startInd, endInd = None, None
-    prev = 0
-    exonInd = 0
-    for i in range(1,len(junctions)) :
-      junc = junctions[i]
-      
-      # the start...
-      if debug : sys.stderr.write("is " + str(start) + " in " + str(prev) +\
-                                  "-" + str(junc) + "? ")
-      if start >= prev and start < junc :
-        startInd = exonInd
-        if debug : sys.stderr.write("yes \n")
-      elif debug : sys.stderr.write("no \n")
-      
-      # the end...
-      if debug : sys.stderr.write("is " + str(end) + " in " + str(prev) +\
-                                  "-" + str(junc) + "? ")
-      if end >= prev and end <= junc :
-        endInd = exonInd
-        if debug : sys.stderr.write("yes \n")
-      elif debug : sys.stderr.write("no \n")
-      
-      exonInd += 1
-      prev = junc
-    
-    # convert to absolute coordinates
-    absStart = (start - junctions[startInd]) + transcript[startInd].start
-    absEnd = (end - junctions[endInd]) + transcript[endInd].start
-    
-    # first we yeild any exon that is entirely covered by the region
-    for exon in transcript :
-      if absStart < exon.start and absEnd > exon.end :
-        yield BEDElement(exon.chrom, exon.start, exon.end)
-    
-    # if both start and end are in same exon, we can yield a single region
-    if startInd == endInd :
-      yield BEDElement(chrom, absStart, absEnd) 
-    else :
-      yield BEDElement(chrom, absStart, transcript[startInd].end)
-      yield BEDElement(chrom, transcript[endInd].start, absEnd)
-  
-  return [region for region in regionIterator(start, end, transcript, debug)]
           
 
-def BEDElementFromString(line, scoreType=int, dropAfter = None):
+def parseBEDString(line, scoreType=int, dropAfter = None):
   """
     @summary: Given a string in BED format, parse the string and return a 
-              BEDElement object
+              GenomicInterval object
     @param line: the string to be parsed
     @param dropAfter: an int indicating that any fields after and including this
                       field should be ignored as they don't conform to the BED 
                       format. By default, None, meaning we use all fields. Index
                       from zero.
-    @return: BEDElement 
+    @return: GenomicInterval object built from the BED string representation 
   """
   peices = line.split("\t")
   if dropAfter != None : peices = peices[0:dropAfter]
@@ -417,11 +249,17 @@ def BEDElementFromString(line, scoreType=int, dropAfter = None):
   try : int(thickEnd)
   except : thickEnd = None 
   
-  return BEDElement(chrom, start, end, name, score, strand, thickStart,
-                    thickEnd, colour, blockCount, blockSizes, blockStarts, scoreType)
+  return GenomicInterval(chrom, start, end, name, score, strand, thickStart,
+                         thickEnd, colour, blockCount, blockSizes, blockStarts, 
+                         scoreType)
+
+
+###############################################################################
+##                          GENOMIC INTERVAL CLASS                           ##
+###############################################################################
   
 
-class BEDElement :
+class GenomicInterval :
   POSITIVE_STRAND = "+"
   NEGATIVE_STRAND = "-"
   DEFAULT_STRAND = POSITIVE_STRAND
@@ -431,18 +269,19 @@ class BEDElement :
                colour = None, blockCount = None, blockSizes = None,
                blockStarts = None, scoreType = int):
     """
-      @summary: Constructor for the BEDElement class
+      @summary: Constructor for the GenomicInterval class
       @note: only the first three parameters are required 
       @note: if any parameter is omitted, no default will be set for it
              (it will just be = None) and it won't appear in any output.
       @note: if any parameter is provided, all parameters that proceed 
              it must also be provided. 
-      @note: BEDElements are inclusive of the start, but not the end 
+      @note: GenomicIntervals are inclusive of the start, but not the end 
              coordinate 
     """
     # the basic read info -- we must get at least this much 
     if chrom == None or start == None or end == None :
-      raise BEDError("Must provided at least chrom, start, end for BED element")
+      raise GenomicIntervalError("Must provided at least chrom, start, end " +\
+                                 "for Genomic Interval")
     self.chrom = chrom.strip()
     self.start = int(start)
     self.end = int(end)
@@ -511,17 +350,23 @@ class BEDElement :
                              or thickStart == None or thickEnd == None \
                              or colour == None or blockCount == None \
                              or blockSizes == None) :
-      raise BEDError("If blockStarts is provided, must also provide name, " +\
-                     "score, strand, thickStart, thickEnd, colour, " +\
-                     "blockCount and blockSizes")
+      raise GenomicIntervalError("If blockStarts is provided, must also "    +\
+                                 "provide name, score, strand, thickStart, " +\
+                                 "thickEnd, colour, blockCount and blockSizes")
     self.blockStarts = None
     if blockStarts != None : self.blockStarts = blockStarts
 
   
   def __hash__(self):
+    """
+      @summary: return a hash of this GenomicInterval
+    """
     return hash(str(self))
   
   def __eq__(self, e):
+    """
+      @summary: return true if two GenomicInterval objects are equal
+    """
     if e == None : return False
     try :
       return  self.chrom == e.chrom and self.start == e.start and\
@@ -574,17 +419,32 @@ class BEDElement :
     return  res
   
   def distance(self, e):
+    """
+      @summary: return the distance from this GenomicInterval to e. We consider
+                intervals that overlap to have a distance of 0 to each other. 
+                The distance between two intervals on different chromosomes is 
+                considered undefined, and causes an exception to be raised.
+      
+    """
+    if e.chrom != self.chrom :
+      raise GenomicIntervalError("cannot get distance from " + str(self) +\
+                                 " to " + str(e) + " as they're on "     +\
+                                 "different chromosomes")
     dist = 0
     if not e.intersects(self) :
       dist = max(self.start, e.start) - min(self.end, e.end)
     return dist
   
   def signedDistance(self, e):
-    """ distance from self to e, with sign """
-    dist = 0
-    if not e.intersects(self) :
-      dist = max(self.start, e.start) - min(self.end, e.end)
-      if e < self : dist = dist * -1
+    """ 
+      @summary: return the distance from self to e, with sign. If e comes 
+                earlier than self, the distance will be negative. We consider
+                intervals that overlap to have a distance of 0 to each other. 
+                The distance between two intervals on different chromosomes is 
+                considered undefined, and causes an exception to be raised.
+    """
+    dist = self.distance(e)
+    if e < self : dist = dist * -1
     return dist
   
   
@@ -641,6 +501,10 @@ class BEDElement :
 
     
   def sizeOfOverlap(self, e):
+    """
+      @summary: returns the number of bases that are shared in common 
+                between self and e.
+    """
     # no overlap
     if not self.intersects(e) : return 0
     
@@ -654,7 +518,9 @@ class BEDElement :
     
     
   def intersects(self, e):
-    """ returns true if this elements intersects the element e """
+    """ 
+      @summary: returns true if this elements intersects the element e 
+    """
 
     if self.chrom != e.chrom : return False
     if self.end >= e.start and self.end <= e.end : return True
@@ -664,27 +530,27 @@ class BEDElement :
     return False
   
   def isPositiveStrand(self):
+    """
+      @summary: returns true if this element is on the positive strand
+    """
     if self.strand == None and self.DEFAULT_STRAND == self.POSITIVE_STRAND :
       return True
     return self.strand == self.POSITIVE_STRAND 
   
   def isNegativeStrand(self):
+    """
+      @summary: returns true if this element is on the negative strand
+    """
     if self.strand == None and self.DEFAULT_STRAND == self.NEGATIVE_STRAND :
       return True
     return self.strand == self.NEGATIVE_STRAND
   
-  def transcriptKey(self):
-    """
-      @summary: returns a string that uniquely identifies the name, chrom and
-                strand of this element, assuming this identifies an exon and 
-                has a name of the format refSeq_exon_details
-    """
-    refseq = self.name
-    if self.name.find("_exon_") != -1 : refseq = self.name.split("_exon_")
-    return refseq + self.strand + self.chrom
-     
+  
+###############################################################################
+##                        UNIT TESTS FOR THIS MODULE                         ##
+###############################################################################
 
-class BEDUnitTests(unittest.TestCase):
+class GenomicIntervalUnitTests(unittest.TestCase):
   """
     @summary: Unit tests for functions and classes in this module  
   """
@@ -710,8 +576,8 @@ class BEDUnitTests(unittest.TestCase):
                   "chr1"+"\t"+"70"+"\t"+"95"+"\t"+"X"+"\t"+"0"+"\t"+"+",
                   "chr2"+"\t"+"40"+"\t"+"60"+"\t"+"X"+"\t"+"0"+"\t"+"+",
                   "chr3"+"\t"+"10"+"\t"+"30"+"\t"+"X"+"\t"+"0"+"\t"+"+"]
-    input = [BEDElementFromString(x) for x in elements]
-    expect = [BEDElementFromString(x) for x in expect_str]
+    input = [parseBEDString(x) for x in elements]
+    expect = [parseBEDString(x) for x in expect_str]
     got = collapseRegions(input)
     if debug :
       sys.stderr.write("expect:\n")
@@ -756,9 +622,9 @@ class BEDUnitTests(unittest.TestCase):
                    "chr3"+"\t"+"60" +"\t"+"70" +"\t"+"X"   +"\t"+"0"+"\t"+"+",
                    "chr4"+"\t"+"20" +"\t"+"30" +"\t"+"X"   +"\t"+"0"+"\t"+"+",
                    "chr4"+"\t"+"40" +"\t"+"50" +"\t"+"X"   +"\t"+"0"+"\t"+"+"]
-    input_s1 = [BEDElementFromString(x) for x in s1_elements]
-    input_s2 = [BEDElementFromString(x) for x in s2_elements]
-    expect = [BEDElementFromString(x) for x in expect_str]
+    input_s1 = [parseBEDString(x) for x in s1_elements]
+    input_s2 = [parseBEDString(x) for x in s2_elements]
+    expect = [parseBEDString(x) for x in expect_str]
     got = regionsIntersection(input_s1, input_s2)
     if debug :
       sys.stderr.write("expect:\n")
@@ -768,26 +634,26 @@ class BEDUnitTests(unittest.TestCase):
     self.assertEqual(expect, got)
       
   def testSizeOfOverlap(self):
-      ## region 2 entirely inside region 1 -- ans = size of region 2
-      region1 = BEDElement("chr1", 10, 20, "read", 1, "f")
-      region2 = BEDElement("chr1", 10, 20, "read", 1, "f")
-      self.assertEqual(region1.sizeOfOverlap(region2), len(region2))
-      self.assertEqual(region1.sizeOfOverlap(region2), 
-                       region2.sizeOfOverlap(region1))
+    ## region 2 entirely inside region 1 -- ans = size of region 2
+    region1 = GenomicInterval("chr1", 10, 20, "read", 1, "f")
+    region2 = GenomicInterval("chr1", 10, 20, "read", 1, "f")
+    self.assertEqual(region1.sizeOfOverlap(region2), len(region2))
+    self.assertEqual(region1.sizeOfOverlap(region2), 
+                     region2.sizeOfOverlap(region1))
   
   def testSubtract(self):
     debug = False
-    a = BEDElement("chr1",10,100)
-    b1 = BEDElement("chr1",1,8)
-    b2 = BEDElement("chr1",15,20)
-    b3 = BEDElement("chr1",50,60)
-    b4 = BEDElement("chr1",90,120)
-    c1 = BEDElement("chr2",30,40)
+    a = GenomicInterval("chr1",10,100)
+    b1 = GenomicInterval("chr1",1,8)
+    b2 = GenomicInterval("chr1",15,20)
+    b3 = GenomicInterval("chr1",50,60)
+    b4 = GenomicInterval("chr1",90,120)
+    c1 = GenomicInterval("chr2",30,40)
     
     res = a.subtract([b1,b2,b3,b4,c1])
-    expect = [BEDElement("chr1",10,15),
-              BEDElement("chr1",20,50),
-              BEDElement("chr1",60,90)]
+    expect = [GenomicInterval("chr1",10,15),
+              GenomicInterval("chr1",20,50),
+              GenomicInterval("chr1",60,90)]
     res.sort()
     expect.sort()
     if debug :
@@ -797,39 +663,36 @@ class BEDUnitTests(unittest.TestCase):
     assert(res == expect)
   
   def testDistance(self):
+    """
+      @summary: test that calculating the distance between two GenomicInterval
+                objects succeeds when they're on the same chromosome and gives
+                the right answer, but fails when they're on different 
+                chromosomes
+      @todo: needs to be implemented
+    """
     pass
   
-  def testToGenomicCoordinates(self):
-    debug = False
-    exon1 = BEDElement("chr1", 101, 110)
-    exon2 = BEDElement("chr1", 120, 130)
-    exon3 = BEDElement("chr1", 170, 175)
-    
-    transcript = [exon1,exon2,exon3]
-    sortKey = lambda x : x.start
-    
-    res1 = toGenomicCoordinates(8, 15, transcript, debug = debug)
-    res2 = toGenomicCoordinates(8, 24, transcript, debug = debug)
-    res3 = toGenomicCoordinates(0, 3, transcript, debug = debug)
-    for res in [res1,res2,res3] : res.sort(key = sortKey)
-    
-    expect1 = [BEDElement("chr1", 109, 110), BEDElement("chr1", 120, 126)]
-    expect2 = [BEDElement("chr1", 109, 110), BEDElement("chr1", 120, 130), 
-               BEDElement("chr1", 170, 175)]
-    expect3 = [BEDElement("chr1", 101, 104)]
-    for expect in [expect1, expect2, expect3] : expect.sort(key = sortKey)
-    
-    if debug :
-      for expect, got in [(expect1, res1), (expect2, res2), (expect3, res3)] :
-        sys.stderr.write("expect: \n")
-        for e in expect : sys.stderr.write("\t" + str(e) + "\n")
-        sys.stderr.write("got: \n")
-        for e in got : sys.stderr.write("\t" + str(e) + "\n")
-        sys.stderr.write("\n")
-    
-    self.assertTrue(res1 == expect1)
-    self.assertTrue(res2 == expect2)
-    self.assertTrue(res3 == expect3)
+  def testSignedDistance(self):
+    """
+      @summary: test that calculating the signed distance between two 
+                GenomicInterval objects succeeds when they're on the same 
+                chromosome and gives the right answer, but fails when they're  
+                on different chromosomes
+      @todo: needs to be implemented
+    """
+    pass
+  
+  def testIntersects(self):
+    """
+      @summary: test that intervals on different chroms don't intersect even
+                when they have the same co-ordinates. Test that intervals 
+                on the same chrom don't intersect when only the end co-ordinate
+                overlaps the start of the other. 
+      @todo: test needs to be implemented
+    """
+    pass
+
 
 if __name__ == "__main__":
     unittest.main(argv = [sys.argv[0]])
+
