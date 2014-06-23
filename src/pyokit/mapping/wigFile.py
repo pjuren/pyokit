@@ -1,40 +1,28 @@
 #!/usr/bin/python
 """
-  Date of Creation: 15th Oct 2011    
-                       
-  Description:     Class for loading a whole Wig file at once and 
-                   performing random access to the elements. 
-                   Lookup in O(log(n)) for a single element
-                   Building data structure is O(nlog(n)). 
-                   
-  Copyright (C) 2011
-  University of Southern California,
-  Philip J. Uren,
-  
+  Date of Creation: 15th Oct 2011
+  Description:      Class for loading a whole Wig file at once and
+                    performing random access to the elements.
+                    Lookup in O(log(n)) for a single element
+                    Building data structure is O(nlog(n)).
+
+  Copyright (C) 2011-2014
+  Philip J. Uren
+
   Authors: Philip J. Uren
-  
+
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   This program is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  
-  --------------------
-  
-  Known Bugs:    None
-  
-  Revision 
-  History:       None 
-  
-  TODO:          * should force file to be sorted upon loading, could then
-                   check that no elements overlap at load time.
 """
 
 import sys, unittest
@@ -52,14 +40,14 @@ class WigFile :
   def __init__(self, filename, verbose = False):
     """
       @summary: constructor for the WigFile class
-      @param filename: can be either a string filename or a 
+      @param filename: can be either a string filename or a
                        file-handle-like object
-    """ 
+    """
     self.filename = filename
     self.itrees = {}
     self.verbose = verbose
     self.__load(verbose=self.verbose)
-  
+
   def __load(self, verbose=False):
     """
       @summary: load the contents of a wig file into this object
@@ -68,24 +56,24 @@ class WigFile :
     for e in wigIterator(self.filename, verbose=verbose) :
       if not e.chrom in byChrom : byChrom[e.chrom] = []
       byChrom[e.chrom].append(e)
-    for chrom in byChrom : 
+    for chrom in byChrom :
       self.itrees[chrom] = IntervalTree(byChrom[chrom], openEnded=True)
-  
+
   def contains(self, chrom, point):
     """
-      @summary: return True if this WigFile has an element covering the 
+      @summary: return True if this WigFile has an element covering the
                 given position, False otherwise
     """
     if not chrom in self.itrees : return False
     hits = self.itrees[chrom].intersectingPoint(point)
     return len(hits) > 0
-    
+
   def getElement(self, chrom, point):
     """
       @summary: get the WigElement that is intersected by the given point
                 returns None if there is no such element
       @return:  a WigElement
-      @raise WigFileError: if more than one element intersects the point 
+      @raise WigFileError: if more than one element intersects the point
     """
     if not chrom in self.itrees : return None
     hits = self.itrees[chrom].intersectingPoint(point)
@@ -93,24 +81,24 @@ class WigFile :
     if len(hits) > 1  : raise WigFileError("multiple entries intersect " +\
                                            str(chrom) + " at " + str(point))
     return hits[0]
-      
+
   def getScore(self, chrom, point):
     """
       @summary: get the value (float) that is intersected by the given point
                 returns None if there is no such element
       @return:  a float
-      @raise WigFileError: if more than one element intersects the point 
-    """ 
+      @raise WigFileError: if more than one element intersects the point
+    """
     e = self.getElement(chrom, point)
     if e == None : return None
     return e.score
-    
+
 
 class WigFileUnitTests(unittest.TestCase):
   """
-    @summary: Unit tests for WigFile 
+    @summary: Unit tests for WigFile
   """
-  
+
   def setUp(self):
     pass
 
@@ -125,12 +113,12 @@ class WigFileUnitTests(unittest.TestCase):
             ("chr4",40,6),
             ("chr2",30,2),
             ("chr1",45,3)]
-     
+
     infh = DummyInputStream(wigIn)
     wf = WigFile(infh)
-    for chrom, point, ans in test : 
+    for chrom, point, ans in test :
       self.assertTrue(wf.getScore(chrom, point) == ans)
-      
+
   def testFailOverlap(self):
     debug = False
     wigIn = "chr1" + "\t" + "01" "\t" + "10" + "\t" + "5" + "\n" +\
@@ -138,6 +126,6 @@ class WigFileUnitTests(unittest.TestCase):
     infh = DummyInputStream(wigIn)
     wf = WigFile(infh)
     self.assertRaises(WigFileError, wf.getScore, "chr1", 9)
-    
+
 if __name__ == "__main__":
     unittest.main(argv = [sys.argv[0]])

@@ -1,30 +1,29 @@
 #!/usr/bin/python
 
 """
-  Date of Creation: 3rd Apr 2010    
-                       
-  Description:   Classes and functions for manipulating Genomic Intervals 
+  Date of Creation: 3rd Apr 2010
 
-  Copyright (C) 2010  
-  University of Southern California,
+  Description:   Classes and functions for manipulating Genomic Intervals
+
+  Copyright (C) 2010-2014
   Philip J. Uren,
-  
+
   Authors: Philip J. Uren
-  
+
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   This program is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-  
+
 
 import sys, os, unittest, copy
 
@@ -43,8 +42,8 @@ class GenomicIntervalError(Exception):
     self.value = msg
   def __str__(self):
     return repr(self.value)
-  
-  
+
+
 ###############################################################################
 ##       FUNCTIONS FOR MANIPULATING COLLECTIONS OF GENOMIC INTERVALS         ##
 ###############################################################################
@@ -54,57 +53,57 @@ def intervalTreesFromList(inElements, verbose = False):
     @summary: build a dictionary, indexed by chromosome name, of interval trees
               for each chromosome.
     @param inElements: list of genomic intervals. Members of the list must have
-                       chrom, start and end fields; no other restrictions. 
-    @param verbose: output progress messages to sys.stderr if True 
+                       chrom, start and end fields; no other restrictions.
+    @param verbose: output progress messages to sys.stderr if True
   """
   elements = {}
   if verbose :
     totalLines = len(inElements)
-    pind = ProgressIndicator(totalToDo = totalLines, 
-                                   messagePrefix = "completed", 
-                                   messageSuffix = "of parsing")      
-  
+    pind = ProgressIndicator(totalToDo = totalLines,
+                                   messagePrefix = "completed",
+                                   messageSuffix = "of parsing")
+
   for element in inElements :
     if not element.chrom in elements : elements[element.chrom] = []
     elements[element.chrom].append(element)
     if verbose :
       pind.done += 1
       pind.showProgress()
-    
+
   # create an interval tree for each list
   trees = {}
   if verbose:
     totalLines = len(elements)
-    pind = ProgressIndicator(totalToDo = totalLines, 
-                                   messagePrefix = "completed", 
+    pind = ProgressIndicator(totalToDo = totalLines,
+                                   messagePrefix = "completed",
                                    messageSuffix = "of making interval trees")
   for chrom in elements :
     trees[chrom] = IntervalTree(elements[chrom])
     if verbose:
       pind.done += 1
       pind.showProgress()
-      
+
   return trees
 
 
 def collapseRegions(s):
   """
-    @summary: given a list of genomic intervals with chromosome, start and end  
+    @summary: given a list of genomic intervals with chromosome, start and end
               field, collapse into a set of non-overlapping intervals. Intervals
               must be sorted by chromosome and then start coordinate.
     @return:  list of intervals that define the collapsed regions. Note that
               these are all new objects, no existing object from s is returned
               or altered. Returned regions will all have name "X", strand +
               and score 0
-    @param s: list of genomic regions to collapse 
-    @raise BEDError: if the input regions are not correctly sorted (chromosome 
-                     then start) 
+    @param s: list of genomic regions to collapse
+    @raise BEDError: if the input regions are not correctly sorted (chromosome
+                     then start)
     @note: O(n) time, O(n) space
   """
   debug = False
-  
+
   if len(s) == 0 or len(s) == 1 : return copy.deepcopy(s)
-  
+
   res = []
   current = copy.copy(s[0])
   current.strand = '+'
@@ -114,16 +113,16 @@ def collapseRegions(s):
     if debug :
       sys.stderr.write("processing " + str(s[i]) + "\n")
       sys.stderr.write("\tcurrent is: " + str(current) + "\n")
-    
-    # make sure things are sorted.. 
+
+    # make sure things are sorted..
     if (s[i].chrom < s[i-1].chrom) or \
        (s[i].chrom == s[i-1].chrom and s[i].start < s[i-1].start) :
       raise BEDError("collapsing regions failed. saw this region: " +\
                      str(s[i-1]) + " before this one: " + str(s[i]))
-      
-    # because of sorting order, we know that nothing else exists with 
+
+    # because of sorting order, we know that nothing else exists with
     # start less than s[i] which we haven't already seen.
-    if s[i].start > current.end or s[i].chrom != current.chrom : 
+    if s[i].start > current.end or s[i].chrom != current.chrom :
       res.append(current)
       current = copy.copy(s[i])
       current.strand = '+'
@@ -131,57 +130,57 @@ def collapseRegions(s):
       current.name = "X"
     else :
       current.end = max(s[i].end, current.end)
-      
+
   # don't forget the last one...
   res.append(current)
-  
+
   return res
-    
-    
+
+
 def regionsIntersection(s1, s2):
   """
-    @summary: given two lists of genomic regions with chromosome, start and end 
-              coordinates, return a new list of regions which is the 
-              intersection of those two sets. Lists must be sorted by 
+    @summary: given two lists of genomic regions with chromosome, start and end
+              coordinates, return a new list of regions which is the
+              intersection of those two sets. Lists must be sorted by
               chromosome and start index
     @return: new list that represents the intersection of the two input lists.
              output regions will all have name "X", be one strand "+" and have
              score 0
     @param s1: first list of genomic regions
     @param s2: second list of genomic regions
-    @raise BEDError: if the input regions are not sorted correctly (by 
+    @raise BEDError: if the input regions are not sorted correctly (by
                      chromosome and start index)
-    @note: O(n) time, O(n) space; informally, might use up to 3x space of 
-           input 
+    @note: O(n) time, O(n) space; informally, might use up to 3x space of
+           input
   """
   debug = False
-  
-  # we don't need to explicitly check for sorting because sorted order is 
+
+  # we don't need to explicitly check for sorting because sorted order is
   # a post-condition of the collapsing function
   s1_c = collapseRegions(s1)
   s2_c = collapseRegions(s2)
-  
+
   if len(s1_c) == 0 or len(s2_c) == 0 : return []
-  
+
   res = []
   j = 0
   for i in range(0, len(s1_c)) :
     if debug :
       sys.stderr.write("processing from s1_c : " + str(s1_c[i]) + "\n")
-    
+
     # find first thing in s2_c with end in or after s1_c[i]
     hits = True
     if debug : sys.stderr.write("i = " + str(i) + " and j = " + str(j) + "\n")
     while j < len(s2_c) and \
           (s2_c[j].chrom < s1_c[i].chrom or \
-          (s2_c[j].chrom == s1_c[i].chrom and s2_c[j].end <= s1_c[i].start)) : 
+          (s2_c[j].chrom == s1_c[i].chrom and s2_c[j].end <= s1_c[i].start)) :
       j += 1
-    # nothing intersects if we hit the end of s2, or the end of the chrom, 
+    # nothing intersects if we hit the end of s2, or the end of the chrom,
     # or we're still on the same chrom but start after the end of s2_c[i]
     if j >= len(s2_c) or s2_c[j].chrom > s1_c[i].chrom or \
-       (s2_c[j].chrom == s1_c[i].chrom and s2_c[j].start >= s1_c[i].end) : 
-      continue 
-    
+       (s2_c[j].chrom == s1_c[i].chrom and s2_c[j].start >= s1_c[i].end) :
+      continue
+
     # now everything at or after j in s2_c that starts before
     # the end of s1_c must overlap with it
     while s2_c[j].start < s1_c[i].end :
@@ -193,16 +192,16 @@ def regionsIntersection(s1, s2):
       res.append(overlap)
       j += 1
       if j >= len(s2_c) or s2_c[j].chrom != s1_c[i].chrom : break
-    
-    # it's possible the last intersecting element runs on to the 
+
+    # it's possible the last intersecting element runs on to the
     # next element from s1_c, so...
     j -= 1
     if debug : sys.stderr.write("\tmoving s2_c index back to " +\
                                 str(s2_c[j]) + "\n")
-  
+
   return res
-          
-          
+
+
 ###############################################################################
 ##                FUNCTIONS FOR PARSING GENOMIC INTERVALS                    ##
 ###############################################################################
@@ -220,38 +219,38 @@ def parseWigString(line, scoreType=int):
   if (len(parts) < 4) :
     raise GenomicIntervalError("failed to parse " + s +\
                                " as wig format, too few fields")
-  return GenomicInterval(parts[0].strip(), int(parts[1]), int(parts[2]), None, 
+  return GenomicInterval(parts[0].strip(), int(parts[1]), int(parts[2]), None,
                          scoreType(parts[3]))
 
 def parseBEDString(line, scoreType=int, dropAfter = None):
   """
-    @summary: Given a string in BED format, parse the string and return a 
+    @summary: Given a string in BED format, parse the string and return a
               GenomicInterval object
     @param line: the string to be parsed
     @param dropAfter: an int indicating that any fields after and including this
-                      field should be ignored as they don't conform to the BED 
+                      field should be ignored as they don't conform to the BED
                       format. By default, None, meaning we use all fields. Index
                       from zero.
-    @return: GenomicInterval object built from the BED string representation 
+    @return: GenomicInterval object built from the BED string representation
   """
   peices = line.split("\t")
   if dropAfter != None : peices = peices[0:dropAfter]
-  if len(peices) < 3 : 
+  if len(peices) < 3 :
     raise GenomicIntervalError("BED elements must have at least chrom, " +\
                                "start and end; found only " +\
                                str(len(peices)) + " in " + line)
   chrom = peices[0]
   start = peices[1]
   end = peices[2]
-  
-  name = None 
-  score = None 
-  strand = None 
-  
+
+  name = None
+  score = None
+  strand = None
+
   if len(peices) >= 4 != None : name = peices[3]
   if len(peices) >= 5 != None : score = peices[4]
   if len(peices) >= 6 != None : strand = peices[5]
-  
+
   return GenomicInterval(chrom, start, end, name, score, strand, scoreType)
 
 
@@ -263,51 +262,51 @@ class GenomicInterval :
   POSITIVE_STRAND = "+"
   NEGATIVE_STRAND = "-"
   DEFAULT_STRAND = POSITIVE_STRAND
-  
-  def __init__(self, chrom, start, end, name = None, score = None, 
+
+  def __init__(self, chrom, start, end, name = None, score = None,
                strand = None, scoreType = int):
     """
       @summary: Constructor for the GenomicInterval class
-      @note: only the first three parameters are required 
+      @note: only the first three parameters are required
       @note: if any parameter is omitted, no default will be set for it
              (it will just be = None) and it won't appear in any output.
-      @note: if any parameter is provided, all parameters that proceed 
-             it must also be provided. 
-      @note: GenomicIntervals are inclusive of the start, but not the end 
-             coordinate 
+      @note: if any parameter is provided, all parameters that proceed
+             it must also be provided.
+      @note: GenomicIntervals are inclusive of the start, but not the end
+             coordinate
     """
-    # the basic read info -- we must get at least this much 
+    # the basic read info -- we must get at least this much
     if chrom == None or start == None or end == None :
       raise GenomicIntervalError("Must provided at least chrom, start, end " +\
                                  "for Genomic Interval")
     self.chrom = chrom.strip()
     self.start = int(start)
     self.end = int(end)
-    
+
     # we might get the following too...
     # name:
     self.name = None
     if name != None: self.name = name.strip()
-    
+
     # score
     self.score = None
     if score != None : self.score = scoreType(score)
-    
-    # strand 
-    self.strand = None  
+
+    # strand
+    self.strand = None
     if strand != None : self.strand = strand.strip()
     if self.strand != None and self.strand != self.POSITIVE_STRAND and \
        self.strand != self.NEGATIVE_STRAND :
       raise GenomicIntervalError("Invalid strand: " + self.strand            +\
                                  "; expected either " + self.POSITIVE_STRAND +\
                                  " or " + self.NEGATIVE_STRAND)
-  
+
   def __hash__(self):
     """
       @summary: return a hash of this GenomicInterval
     """
     return hash(str(self))
-  
+
   def __eq__(self, e):
     """
       @summary: return true if two GenomicInterval objects are equal
@@ -319,51 +318,51 @@ class GenomicInterval :
               self.score == e.score and self.strand == e.strand
     except AttributeError :
       return False
-           
+
   def __lt__(self, rhs):
     """
-      @summary: is self < rhs? default comparison by end 
+      @summary: is self < rhs? default comparison by end
     """
     if rhs == None : return False
     if self.chrom < rhs.chrom : return True
     if self.chrom > rhs.chrom : return False
     if self.end < rhs.end : return True
     return False
-           
+
   def sameRegion(self, e):
     """
-      @summary: return true if self and e are for the same region 
+      @summary: return true if self and e are for the same region
                 (ignores differences in non-region related fields)
     """
     if e == None : return False
     return self.chrom == e.chrom and self.start == e.start and\
            self.end == e.end and self.name == e.name and\
            self.strand == e.strand
-    
-        
+
+
   def __len__(self):
-    return (self.end - self.start)       
-        
+    return (self.end - self.start)
+
   def __str__(self):
     """
-      @summary: Produce a string representation of the BED element. Only 
-                those fields which we have values for will be output. 
+      @summary: Produce a string representation of the BED element. Only
+                those fields which we have values for will be output.
     """
     delim = "\t"
     res = self.chrom + delim + str(self.start) + delim + str(self.end)
     if self.name != None : res += (delim + str(self.name))
     if self.score != None : res += (delim + str(self.score))
     if self.strand != None : res += (delim + str(self.strand))
-    
+
     return  res
-  
+
   def distance(self, e):
     """
       @summary: return the distance from this GenomicInterval to e. We consider
-                intervals that overlap to have a distance of 0 to each other. 
-                The distance between two intervals on different chromosomes is 
+                intervals that overlap to have a distance of 0 to each other.
+                The distance between two intervals on different chromosomes is
                 considered undefined, and causes an exception to be raised.
-      
+
     """
     if e.chrom != self.chrom :
       raise GenomicIntervalError("cannot get distance from " + str(self) +\
@@ -373,26 +372,26 @@ class GenomicInterval :
     if not e.intersects(self) :
       dist = max(self.start, e.start) - min(self.end, e.end)
     return dist
-  
+
   def signedDistance(self, e):
-    """ 
-      @summary: return the distance from self to e, with sign. If e comes 
+    """
+      @summary: return the distance from self to e, with sign. If e comes
                 earlier than self, the distance will be negative. We consider
-                intervals that overlap to have a distance of 0 to each other. 
-                The distance between two intervals on different chromosomes is 
+                intervals that overlap to have a distance of 0 to each other.
+                The distance between two intervals on different chromosomes is
                 considered undefined, and causes an exception to be raised.
     """
     dist = self.distance(e)
     if e < self : dist = dist * -1
     return dist
-  
-  
+
+
   def __singleIntersect(self, e):
     """
       @summary: this is a private method which will return a list of regions
-                that represent the result of subtracting e from self. The 
-                list might be empty if self is totally contained in e, or 
-                may contain two elements if e is totally contained in self. 
+                that represent the result of subtracting e from self. The
+                list might be empty if self is totally contained in e, or
+                may contain two elements if e is totally contained in self.
                 otherwise there'll be one element.
     """
     if e.chrom != self.chrom or e.end < self.start or e.start > self.end :
@@ -408,7 +407,7 @@ class GenomicInterval :
       r1.end = e.start
       r2.start = e.end
       return [r1,r2]
-    if e.start <= self.start : 
+    if e.start <= self.start :
       # cuts off start of self
       r = copy.copy(self)
       r.start = e.end
@@ -418,47 +417,47 @@ class GenomicInterval :
       r = copy.copy(self)
       r.end = e.start
       return [r]
-    # oops, we screwed up if we got to here.. 
+    # oops, we screwed up if we got to here..
     raise BEDError("fatal error - failed BED subtraction of " +\
                    str(e) + " from " + str(self))
-    
-  
+
+
   def subtract(self, es):
-    """ 
+    """
       @summary: subtracts the BED elements in es from self
       @param es: a list of BED elements (or anything with chrom, start, end)
-      @return: a list of BED elements which represent what is left of 
+      @return: a list of BED elements which represent what is left of
                self after the subtraction. This might be an empty list.
     """
     workingSet = [self]
-    for e in es : 
+    for e in es :
       newWorkingSet = []
       for w in workingSet :
         newWorkingSet += w.__singleIntersect(e)
       workingSet = newWorkingSet
     return workingSet
 
-    
+
   def sizeOfOverlap(self, e):
     """
-      @summary: returns the number of bases that are shared in common 
+      @summary: returns the number of bases that are shared in common
                 between self and e.
     """
     # no overlap
     if not self.intersects(e) : return 0
-    
+
     # complete inclusion..
     if e.start >= self.start and e.end <= self.end : return len(e)
     if self.start >= e.start and self.end <= e.end : return len(self)
-    
+
     # partial overlap
     if e.start > self.start : return (self.end - e.start)
     if self.start > e.start : return (e.end - self.start)
-    
-    
+
+
   def intersects(self, e):
-    """ 
-      @summary: returns true if this elements intersects the element e 
+    """
+      @summary: returns true if this elements intersects the element e
     """
 
     if self.chrom != e.chrom : return False
@@ -467,15 +466,15 @@ class GenomicInterval :
     if e.start >= self.start and e.start <= self.end : return True
     if e.end >= self.start and e.end <= self.end : return True
     return False
-  
+
   def isPositiveStrand(self):
     """
       @summary: returns true if this element is on the positive strand
     """
     if self.strand == None and self.DEFAULT_STRAND == self.POSITIVE_STRAND :
       return True
-    return self.strand == self.POSITIVE_STRAND 
-  
+    return self.strand == self.POSITIVE_STRAND
+
   def isNegativeStrand(self):
     """
       @summary: returns true if this element is on the negative strand
@@ -483,20 +482,20 @@ class GenomicInterval :
     if self.strand == None and self.DEFAULT_STRAND == self.NEGATIVE_STRAND :
       return True
     return self.strand == self.NEGATIVE_STRAND
-  
-  
+
+
 ###############################################################################
 ##                        UNIT TESTS FOR THIS MODULE                         ##
 ###############################################################################
 
 class GenomicIntervalUnitTests(unittest.TestCase):
   """
-    @summary: Unit tests for functions and classes in this module  
+    @summary: Unit tests for functions and classes in this module
   """
-  
+
   def setUp(self):
     pass
-  
+
   def testCollapse(self):
     debug = False
     elements = ["chr1"+"\t"+"10"+"\t"+"20"+"\t"+"R01"+"\t"+"0"+"\t"+"+",
@@ -524,7 +523,7 @@ class GenomicIntervalUnitTests(unittest.TestCase):
       sys.stderr.write("got:\n")
       sys.stderr.write("\n".join([str(x) for x in got]) + "\n")
     self.assertEqual(expect, got)
-    
+
   def testRegionsIntersection(self):
     debug = False
     s1_elements = ["chr1"+"\t"+"40" +"\t"+"90" +"\t"+"R11" +"\t"+"0"+"\t"+"+",
@@ -571,15 +570,15 @@ class GenomicIntervalUnitTests(unittest.TestCase):
       sys.stderr.write("got:\n")
       sys.stderr.write("\n".join([str(x) for x in got]) + "\n")
     self.assertEqual(expect, got)
-      
+
   def testSizeOfOverlap(self):
     ## region 2 entirely inside region 1 -- ans = size of region 2
     region1 = GenomicInterval("chr1", 10, 20, "read", 1, "+")
     region2 = GenomicInterval("chr1", 10, 20, "read", 1, "+")
     self.assertEqual(region1.sizeOfOverlap(region2), len(region2))
-    self.assertEqual(region1.sizeOfOverlap(region2), 
+    self.assertEqual(region1.sizeOfOverlap(region2),
                      region2.sizeOfOverlap(region1))
-  
+
   def testSubtract(self):
     debug = False
     a = GenomicInterval("chr1",10,100)
@@ -588,7 +587,7 @@ class GenomicIntervalUnitTests(unittest.TestCase):
     b3 = GenomicInterval("chr1",50,60)
     b4 = GenomicInterval("chr1",90,120)
     c1 = GenomicInterval("chr2",30,40)
-    
+
     res = a.subtract([b1,b2,b3,b4,c1])
     expect = [GenomicInterval("chr1",10,15),
               GenomicInterval("chr1",20,50),
@@ -600,33 +599,33 @@ class GenomicIntervalUnitTests(unittest.TestCase):
       sys.stderr.write("expect\n" + "\n".join([str(x) for x in expect]) + "\n")
       sys.stderr.write("got\n" + "\n".join([str(x) for x in res]) + "\n")
     assert(res == expect)
-  
+
   def testDistance(self):
     """
       @summary: test that calculating the distance between two GenomicInterval
                 objects succeeds when they're on the same chromosome and gives
-                the right answer, but fails when they're on different 
+                the right answer, but fails when they're on different
                 chromosomes
       @todo: needs to be implemented
     """
     pass
-  
+
   def testSignedDistance(self):
     """
-      @summary: test that calculating the signed distance between two 
-                GenomicInterval objects succeeds when they're on the same 
-                chromosome and gives the right answer, but fails when they're  
+      @summary: test that calculating the signed distance between two
+                GenomicInterval objects succeeds when they're on the same
+                chromosome and gives the right answer, but fails when they're
                 on different chromosomes
       @todo: needs to be implemented
     """
     pass
-  
+
   def testIntersects(self):
     """
       @summary: test that intervals on different chroms don't intersect even
-                when they have the same co-ordinates. Test that intervals 
+                when they have the same co-ordinates. Test that intervals
                 on the same chrom don't intersect when only the end co-ordinate
-                overlaps the start of the other. 
+                overlaps the start of the other.
       @todo: test needs to be implemented
     """
     pass
@@ -634,4 +633,3 @@ class GenomicIntervalUnitTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(argv = [sys.argv[0]])
-

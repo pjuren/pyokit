@@ -1,37 +1,26 @@
 #!/usr/bin/python
 """
-  Date of Creation: 15th Oct 2011    
-                       
-  Description:     A WigDir is a directory containing a collection of 
-                   wig files split by chromosome 
+  Date of Creation: 15th Oct 2011
+  Description:      A WigDir is a directory containing a collection of
+                    wig files split by chromosome
 
-  Copyright (C) 2011
-  University of Southern California,
-  Philip J. Uren,
-  
+  Copyright (C) 2011-2014
+  Philip J. Uren
+
   Authors: Philip J. Uren
-  
+
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   This program is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  
-  --------------------
-  
-  Known Bugs:    None
-  
-  Revision 
-  History:       None 
-  
-  TODO:          None  
 """
 
 import sys, unittest, os
@@ -41,50 +30,50 @@ from pyokit.mapping.wigFile import WigFile
 class WigDir :
   def __init__(self, dir, extension="wig", verbose=False):
     self.extension = extension
-    self.files = {}               
+    self.files = {}
     self.currentlyLoaded = None
     self.verbose=verbose
     self.__load(dir, verbose)
-  
+
   def contains(self, chrom, point):
     """
-      @summary: return True if this WigDir has an element covering the 
+      @summary: return True if this WigDir has an element covering the
                 given position, False otherwise
     """
     filename = self._chromToFilename(chrom)
     if filename == None : return False
-    if self.currentlyLoaded != filename : self._loadFile(filename) 
-    return self.currentlyLoaded.contains(chrom, point) 
-    
+    if self.currentlyLoaded != filename : self._loadFile(filename)
+    return self.currentlyLoaded.contains(chrom, point)
+
   def getElement(self, chrom, point):
     """
       @summary: get the WigElement that is intersected by the given point
                 returns None if there is no such element
       @return:  a WigElement
-      @raise WigFileError: if more than one element intersects the point 
+      @raise WigFileError: if more than one element intersects the point
     """
     fh = self.__chromToFileHandle(chrom)
     if fh == None : return None
     if self.currentlyLoaded != fh : self.__loadFile(fh, verbose=self.verbose)
-    return self.currentlyLoaded.getElement(chrom, point) 
-          
+    return self.currentlyLoaded.getElement(chrom, point)
+
   def getScore(self, chrom, point):
     """
       @summary: get the value (float) that is intersected by the given point
                 returns None if there is no such element
       @return:  a float
-      @raise WigFileError: if more than one element intersects the point 
-    """ 
+      @raise WigFileError: if more than one element intersects the point
+    """
     e = self.getElement(chrom, point)
     if e == None : return None
     return e.score
-  
-  def __str__(self): 
+
+  def __str__(self):
     return ",".join(self.files.keys())
-  
+
   def __chromToFileHandle(self, chrom):
     """
-      @summary: find the file that contains entries for the given chromosome 
+      @summary: find the file that contains entries for the given chromosome
     """
     if not chrom in self.files : return None
     return self.files[chrom]
@@ -92,18 +81,18 @@ class WigDir :
     #mhits = [f for f in hits if len(f.nam) == max(hits, key=len)]
     #if len(mhits) == 0 : return None
     #if len(mhits) > 1  : return None
-    #return mhits[0]  
-  
+    #return mhits[0]
+
   def __load(self, dir, verbose=False):
     """
-      @summary: builds self.files, which is a dictionary of file-handle-like 
+      @summary: builds self.files, which is a dictionary of file-handle-like
                 objects indexed by name.
-      @param dir: -if single string we treat as directory of files to load 
+      @param dir: -if single string we treat as directory of files to load
                   -if a list of string, we treat as list of filenames to load
                   -if list of anything else, treat as list of file-handle-like
                    objects (must have .name attributes)
     """
-    if type(dir).__name__ == "str" : 
+    if type(dir).__name__ == "str" :
       for f in os.listdir(dir) :
         name = os.path.splitext(f)[0]
         self.files[name] = open(os.path.join(dir,f))
@@ -112,28 +101,28 @@ class WigDir :
         if type(f).__name__ == "str" : f = open(f)
         name = os.path.splitext(f.name)[0]
         self.files[name] = f
-        
+
   def __loadFile(self, filename, verbose=False):
     """
       @summary: load the specified file.
-      @param filename: if a string, we treat it as a name and try to open a 
+      @param filename: if a string, we treat it as a name and try to open a
                        handle to it. Any other object is treated as file-like
-                       and we try to seek the start of the file and build a 
+                       and we try to seek the start of the file and build a
                        WigFile object from it
     """
     fh = None
     if type(filename).__name__ == "str" : fh = open(filename)
-    else : 
+    else :
       fh = filename
       fh.seek(0)
     self.currentlyLoaded = WigFile(fh, verbose=verbose)
-    
-    
+
+
 class WigDirUnitTests(unittest.TestCase):
   """
-    @summary: Unit tests for WigFile 
+    @summary: Unit tests for WigFile
   """
-  
+
   def setUp(self):
     pass
 
@@ -169,11 +158,10 @@ class WigDirUnitTests(unittest.TestCase):
             ("chr2",34, 6),
             ("chr2",77, 8),
             ("chr4",14,16)]
-     
+
     wd = WigDir(wigInfs)
-    for chrom, point, ans in test : 
+    for chrom, point, ans in test :
       self.assertTrue(wd.getScore(chrom, point) == ans)
-    
+
 if __name__ == "__main__":
     unittest.main(argv = [sys.argv[0]])
-  
