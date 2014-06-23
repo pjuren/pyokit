@@ -15,7 +15,7 @@ setup(name='pyokit',
 			author = 'Philip J. Uren',
 			author_email = 'philip.uren@gmail.com',
 			url = 'https://github.com/pjuren/pyokit', 
-			download_url = 'https://github.com/pjuren/pyokit/tarball/0.1', 
+			download_url = 'https://github.com/pjuren/pyokit/tarball/pyokit_0.1.1', 
 			keywords = [],
 			classifiers = [],
 )
