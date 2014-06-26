@@ -16,7 +16,7 @@ after_success:
   - git config --global user.name "${GIT_NAME}"
   - git config --global user.email ${GIT_EMAIL}
   - #git config credential.helper "store --file=.git/credentials"
-  - #echo https://${GH_TOKEN}:@github.com >> .git/credentials
+  - echo ${GH_NAME}
   -
   - # now we make the directory for the docs and cd into it
   - mkdir Docs
