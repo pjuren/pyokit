@@ -1,36 +1,34 @@
 #!/usr/bin/python
 
 """
-  Date of Creation: 3rd June 2010
-  Description:      An Interval Tree is a data structure for quickly determining
-                    the set of intervals that intersect a given point or 
-                    interval.
+Date of Creation: 3rd June 2010
+An Interval Tree is a data structure for quickly determining the set of
+intervals that intersect a given point or interval.
 
-  Copyright (C) 2010-2014
-  Philip J. Uren,
+Copyright (C) 2010-2014
+Philip J. Uren,
 
-  Authors: Philip J. Uren
+Authors: Philip J. Uren
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import copy, random, unittest
 
 class IntervalTreeError(Exception):
-  """
-    @summary: Exception class for errors that occur when building or using
-              interval trees
+  """Exception class for errors that occur when building or using
+  interval trees
   """
   def __init__(self, value):
     self.value = value
@@ -54,15 +52,14 @@ class IntervalTreeNode :
 
 
 class IntervalTree :
-  def __init__(self, intervals, openEnded=False):
-    """
-      @summary: Constructor for IntervalTree.
-      @param intervals: list of intervals, doesn't need to be sorted in
-                        any way. can be any object, as long as they have
-                        'start' and 'end' attributes.
-      @raises: IntervalTreeError if no intervals are provided (None or empty)
-    """
+  """
+    interval tree class.
 
+    :param intervals: list of intervals, doesn't need to be sorted in any way.
+                      Can be any object, as long as they have 'start' and 'end'
+                      attributes.
+  """
+  def __init__(self, intervals, openEnded=False):
     self.openEnded = openEnded
     self.left = None
     self.right = None
@@ -107,10 +104,10 @@ class IntervalTree :
 
   def intersectingPoint(self, p):
     """
-      @summary: given a point, determine which set of intervals in the tree
-                are intersected.
-      @param p: intersection point
-      @return:  the list of intersected intervals
+    given a point, determine which set of intervals in the tree are intersected.
+    
+    :param p: intersection point
+    :return: the list of intersected intervals
     """
 
     # perfect match
@@ -137,12 +134,11 @@ class IntervalTree :
 
 
   def intersectingInterval(self, start, end):
-    """
-      @summary:     given an interval, determine which set of intervals in the
-                    tree are intersected.
-      @param start: start of the intersecting interval
-      @param end:   end of the intersecting interval
-      @return:      the list of intersected intervals
+    """given an interval, determine which set of intervals in the tree are
+    intersected.
+    :param start: start of the intersecting interval
+    :param end:   end of the intersecting interval
+    :return:      the list of intersected intervals
     """
 
     # find all intervals in this node that intersect start and end
@@ -168,12 +164,11 @@ class IntervalTree :
     return l
 
   def intersectingIntervalIterator(self, start, end):
-    """
-      DESCPT: Get an iterator which will iterate over those objects in the
-                tree which intersect the given interval - sorted in order
-                of start index
-      PARAMS: Start and end of desired interval
-      RETURN: Iterator object
+    """ DESCPT: Get an iterator which will iterate over those objects in the
+    tree which intersect the given interval - sorted in order
+    of start index
+    :param start:
+    :param end:
     """
     items = self.intersectingInterval(start, end)
     items.sort(key = lambda x: x.start)
@@ -222,9 +217,8 @@ class TestIntervalTree(unittest.TestCase):
     self.assertTrue(len(tree.intersectingPoint(11)) == 0)
 
   def testEmpty(self):
-    """
-      Test that the interval tree raises an exception
-      if provided with an emtpy list
+    """ Test that the interval tree raises an exception if provided with an
+    emtpy list
     """
     self.assertRaises(IntervalTreeError, IntervalTree, [])
     self.assertRaises(IntervalTreeError, IntervalTree, None)
@@ -288,9 +282,8 @@ class TestIntervalTree(unittest.TestCase):
     self.assertEqual(ans, [dead1])
 
   def testOpenVsClosedInterval(self):
-    """
-      @summary: test that passing the open interval switch results in
-                intersections with the end of an interval being dropped
+    """ test that passing the open interval switch results in intersections
+    with the end of an interval being dropped
     """
     one = TestIntervalTree.TestInterval(10,15)
     two = TestIntervalTree.TestInterval(15,20)
