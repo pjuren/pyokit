@@ -6,8 +6,8 @@
 docs :
 	$(MAKE) -C sphinx clean
 	$(MAKE) -C sphinx html 
-	rm -rf docs/doctrees
-	mv docs/html/* docs
-	mv docs/html/.buildinfo docs
-	rmdir docs/html
+	rm -rf Docs/doctrees
+	mv Docs/html/* docs
+	mv Docs/html/.buildinfo docs
+	rmdir Docs/html
 .PHONY : docs
