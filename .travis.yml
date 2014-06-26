@@ -1,3 +1,5 @@
+before_install:
+  - sudo apt-get update
 install:
   - pip install sphinx
 language: python
