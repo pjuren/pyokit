@@ -1,4 +1,4 @@
-before_install:
+install:
   - pip install sphinx
 language: python
 script: python setup.py sdist; pip install --no-index dist/pyokit-?.?.?.tar.gz; python src/test.py
@@ -23,7 +23,7 @@ after_success:
   - cd Docs/
   -
   - # clone the whole repo again, but switch to gh_pages branch
-  - git clone https://github.com/pjuren/TinyTest .
+  - git clone https://github.com/pjuren/pyokit .
   - git checkout gh-pages
   -
   - # go back up and build the documentation, pointing it towards
@@ -35,5 +35,5 @@ after_success:
   - cd Docs
   - git add --all .
   - git commit -m "Auto-updating developer documentation"
-  - git push https://${GH_TOKEN}@github.com/pjuren/Pyokit gh-pages
+  - git push https://${GH_TOKEN}@github.com/pjuren/pyokit gh-pages
 
