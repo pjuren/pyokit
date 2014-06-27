@@ -1,4 +1,6 @@
 
+uninstall :
+	pip uninstall pyokit
 
 install :
 	rm -rf dist
