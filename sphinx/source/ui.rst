@@ -4,7 +4,8 @@ Building user interfaces with Pyokit
 Pyokit contains an extension to the built-in python command-line parser. The
 pyokit.interface.cli.CLI class is used to instantiate user interfaces, and once
 you have one, you can parse a command line. Options for the user interface are
-described by objects created from the pyokit.interface.cli.Option class
+described by objects created from the pyokit.interface.cli.Option class. Both
+classes are described below.
 
 Here's an example of creating a simple program with a command-line interface.
 
@@ -55,5 +56,14 @@ Here's an example of creating a simple program with a command-line interface.
   if __name__ == "__main__":
     _main()
 
+-------------
+The CLI class
+-------------
 .. autoclass:: pyokit.interface.cli.CLI
+   :members:
+
+----------------
+The Option class
+----------------
 .. autoclass:: pyokit.interface.cli.Option
+   :members:

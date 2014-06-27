@@ -13,10 +13,11 @@ and analysis of high-throughput biological datasets in python a bit easier.
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    install
    using
+   datastrct
 
 ========================
 Contacts and bug reports
