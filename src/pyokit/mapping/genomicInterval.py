@@ -50,11 +50,12 @@ class GenomicIntervalError(Exception):
 
 def intervalTreesFromList(inElements, verbose = False):
   """
-    @summary: build a dictionary, indexed by chromosome name, of interval trees
-              for each chromosome.
-    @param inElements: list of genomic intervals. Members of the list must have
-                       chrom, start and end fields; no other restrictions.
-    @param verbose: output progress messages to sys.stderr if True
+  build a dictionary, indexed by chromosome name, of interval trees for each
+  chromosome.
+
+  :param inElements: list of genomic intervals. Members of the list must have
+                     chrom, start and end fields; no other restrictions.
+  :param verbose: output progress messages to sys.stderr if True
   """
   elements = {}
   if verbose :
@@ -88,17 +89,18 @@ def intervalTreesFromList(inElements, verbose = False):
 
 def collapseRegions(s):
   """
-    @summary: given a list of genomic intervals with chromosome, start and end
-              field, collapse into a set of non-overlapping intervals. Intervals
-              must be sorted by chromosome and then start coordinate.
-    @return:  list of intervals that define the collapsed regions. Note that
-              these are all new objects, no existing object from s is returned
-              or altered. Returned regions will all have name "X", strand +
-              and score 0
-    @param s: list of genomic regions to collapse
-    @raise BEDError: if the input regions are not correctly sorted (chromosome
+  given a list of genomic intervals with chromosome, start and end field,
+  collapse into a set of non-overlapping intervals. Intervals must be sorted by
+  chromosome and then start coordinate.
+
+  :note: O(n) time, O(n) space
+  :return:  list of intervals that define the collapsed regions. Note that
+            these are all new objects, no existing object from s is returned
+            or altered. Returned regions will all have name "X", strand +
+            and score 0
+  :param s: list of genomic regions to collapse
+  :raise BEDError: if the input regions are not correctly sorted (chromosome
                      then start)
-    @note: O(n) time, O(n) space
   """
   debug = False
 
@@ -208,12 +210,13 @@ def regionsIntersection(s1, s2):
 
 def parseWigString(line, scoreType=int):
   """
-    @summary: Given a string in simple Wig format, parse the string and return
-              a GenomicInterval
-    @param line: the string to be parsed
-    @param scoreType: treat the score field as having this type.
-    @return: GenomicInterval object representing this wig line; the name of the
-             interval will be set to 'X', and it's strand to the default.
+  Given a string in simple Wig format, parse the string and return a
+  GenomicInterval
+
+  :param line: the string to be parsed
+  :param scoreType: treat the score field as having this type.
+  :return: GenomicInterval object representing this wig line; the name of the
+           interval will be set to 'X', and it's strand to the default.
   """
   parts = line.split("\t")
   if (len(parts) < 4) :
@@ -259,6 +262,20 @@ def parseBEDString(line, scoreType=int, dropAfter = None):
 ###############################################################################
 
 class GenomicInterval :
+  """
+  Represents a contiguous segment of a genome; inclusive of the start, but not
+  the end coordinate
+
+  :param chrom: The chromosome this genomic interval is on.
+  :param start: The start of this genomic interval (inclusive).
+  :param end: The end of this genomic interval (exclusive).
+  :param name: A name associated with this genomic interval.
+  :param score: A score associated with this genomic interval.
+  :param strand: The DNA strand (+ or -) that this genomic interval is on.
+  :param scoreType: The type (e.g. int, float) of the score associated with this
+                    genomic interval
+  """
+
   POSITIVE_STRAND = "+"
   NEGATIVE_STRAND = "-"
   DEFAULT_STRAND = POSITIVE_STRAND
@@ -266,16 +283,10 @@ class GenomicInterval :
   def __init__(self, chrom, start, end, name = None, score = None,
                strand = None, scoreType = int):
     """
-      @summary: Constructor for the GenomicInterval class
-      @note: only the first three parameters are required
-      @note: if any parameter is omitted, no default will be set for it
-             (it will just be = None) and it won't appear in any output.
-      @note: if any parameter is provided, all parameters that proceed
-             it must also be provided.
-      @note: GenomicIntervals are inclusive of the start, but not the end
-             coordinate
+    Constructor for the GenomicInterval class. See class-level documentation
+    for parameter descriptions
     """
-    # the basic read info -- we must get at least this much
+    # the basic info -- we must get at least this much
     if chrom == None or start == None or end == None :
       raise GenomicIntervalError("Must provided at least chrom, start, end " +\
                                  "for Genomic Interval")
@@ -303,13 +314,15 @@ class GenomicInterval :
 
   def __hash__(self):
     """
-      @summary: return a hash of this GenomicInterval
+    return a hash of this GenomicInterval
     """
     return hash(str(self))
 
   def __eq__(self, e):
     """
-      @summary: return true if two GenomicInterval objects are equal
+    Check whether this genomic interval is equal to e.
+
+    :return: True if self is equal to e
     """
     if e == None : return False
     try :
@@ -321,7 +334,10 @@ class GenomicInterval :
 
   def __lt__(self, rhs):
     """
-      @summary: is self < rhs? default comparison by end
+    Check whether self < rhs? Comparison is first by chrom, then by end index.
+
+    :param rhs: object from the right-hand-side of the comparaison self < rhs
+    :return: True if self is considered 'less' than rhs.
     """
     if rhs == None : return False
     if self.chrom < rhs.chrom : return True
@@ -331,8 +347,12 @@ class GenomicInterval :
 
   def sameRegion(self, e):
     """
-      @summary: return true if self and e are for the same region
-                (ignores differences in non-region related fields)
+    Check whether self represents the same DNA region as e
+
+    :param e: genomic region to compare against
+    :return: True if self and e are for the same region (ignores differences
+             in non-region related fields, such as name or score -- but does
+             consider strand)
     """
     if e == None : return False
     return self.chrom == e.chrom and self.start == e.start and\
@@ -345,8 +365,10 @@ class GenomicInterval :
 
   def __str__(self):
     """
-      @summary: Produce a string representation of the BED element. Only
-                those fields which we have values for will be output.
+    Produce a string representation of the interval. Only those fields which
+    we have values for will be output.
+
+    :return: String representation of the genomic interval in BED format.
     """
     delim = "\t"
     res = self.chrom + delim + str(self.start) + delim + str(self.end)
@@ -358,11 +380,14 @@ class GenomicInterval :
 
   def distance(self, e):
     """
-      @summary: return the distance from this GenomicInterval to e. We consider
-                intervals that overlap to have a distance of 0 to each other.
-                The distance between two intervals on different chromosomes is
-                considered undefined, and causes an exception to be raised.
+    Get the distance from this genomic interval to another. We consider
+    intervals that overlap to have a distance of 0 to each other. The distance
+    between two intervals on different chromosomes is considered undefined, and
+    causes an exception to be raised.
 
+    :return: the distance from this GenomicInterval to e.
+    :param e: the other genomic interval to find the distance to.
+    :raise GenomicIntervalError: if self and e are on different chromosomes.
     """
     if e.chrom != self.chrom :
       raise GenomicIntervalError("cannot get distance from " + str(self) +\
@@ -375,11 +400,15 @@ class GenomicInterval :
 
   def signedDistance(self, e):
     """
-      @summary: return the distance from self to e, with sign. If e comes
-                earlier than self, the distance will be negative. We consider
-                intervals that overlap to have a distance of 0 to each other.
-                The distance between two intervals on different chromosomes is
-                considered undefined, and causes an exception to be raised.
+    Get the signed distance from this genomic interval to another one. We
+    consider intervals that overlap to have a distance of 0 to each other. The
+    distance between two intervals on different chromosomes is considered
+    undefined, and causes an exception to be raised. If e comes earlier than
+    self, the distance will be negative.
+
+    :return: the signed distance from this GenomicInterval to e.
+    :param e: the other genomic interval to find the distance to.
+    :raise GenomicIntervalError: if self and e are on different chromosomes.
     """
     dist = self.distance(e)
     if e < self : dist = dist * -1
@@ -388,11 +417,12 @@ class GenomicInterval :
 
   def __singleIntersect(self, e):
     """
-      @summary: this is a private method which will return a list of regions
-                that represent the result of subtracting e from self. The
-                list might be empty if self is totally contained in e, or
-                may contain two elements if e is totally contained in self.
-                otherwise there'll be one element.
+    Get a list of GenomicRegions produced by subtracting e from self.
+
+    :return: a list of regions that represent the result of subtracting e from
+             self. The list might be empty if self is totally contained in e, or
+             may contain two elements if e is totally contained in self.
+             otherwise there'll be one element.
     """
     if e.chrom != self.chrom or e.end < self.start or e.start > self.end :
       # no intersection
@@ -424,10 +454,11 @@ class GenomicInterval :
 
   def subtract(self, es):
     """
-      @summary: subtracts the BED elements in es from self
-      @param es: a list of BED elements (or anything with chrom, start, end)
-      @return: a list of BED elements which represent what is left of
-               self after the subtraction. This might be an empty list.
+    Subtracts the BED elements in es from self
+
+    :param es: a list of BED elements (or anything with chrom, start, end)
+    :return: a list of BED elements which represent what is left of
+             self after the subtraction. This might be an empty list.
     """
     workingSet = [self]
     for e in es :
@@ -440,8 +471,9 @@ class GenomicInterval :
 
   def sizeOfOverlap(self, e):
     """
-      @summary: returns the number of bases that are shared in common
-                between self and e.
+    Get the size of the overlap between self and e
+
+    :return: the number of bases that are shared in common between self and e.
     """
     # no overlap
     if not self.intersects(e) : return 0
@@ -457,7 +489,9 @@ class GenomicInterval :
 
   def intersects(self, e):
     """
-      @summary: returns true if this elements intersects the element e
+    Check whether e intersects self.
+
+    :return: true if this elements intersects the element e
     """
 
     if self.chrom != e.chrom : return False
@@ -469,7 +503,9 @@ class GenomicInterval :
 
   def isPositiveStrand(self):
     """
-      @summary: returns true if this element is on the positive strand
+    Check if this genomic region is on the positive strand.
+
+    :return: True if this element is on the positive strand
     """
     if self.strand == None and self.DEFAULT_STRAND == self.POSITIVE_STRAND :
       return True
@@ -477,7 +513,9 @@ class GenomicInterval :
 
   def isNegativeStrand(self):
     """
-      @summary: returns true if this element is on the negative strand
+    Check if this genomic interval is on the negative strand
+    
+    :return: True if this element is on the negative strand
     """
     if self.strand == None and self.DEFAULT_STRAND == self.NEGATIVE_STRAND :
       return True
