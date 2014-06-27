@@ -89,6 +89,14 @@ class Option :
             str(self.required) + ")"
 
 class CLI :
+  """ Represents a command line interface for a program, including the number
+  of arguemnts and the options the program accepts. Provides methods for parsing
+  a command line for the string and interogating the provided arguments and
+  options.
+  :param progName: the name of the program that this UI is for.
+  :param shortDesc: a short description of what the program does.
+  :param longDesc: a long description of what the program does.
+  """
   def __init__(self, progName, shortDesc, longDesc):
     self.programName = progName
     self.longDescription = longDesc
