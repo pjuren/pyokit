@@ -8,7 +8,7 @@ Genomic Intervals
 
 The GenomicInterval class
 `````````````````````````
-.. autoclass:: pyokit.mapping.genomicInterval.GenomicInterval
+.. autoclass:: pyokit.datastruct.genomicInterval.GenomicInterval
    :members:
 
 --------------
