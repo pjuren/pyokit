@@ -29,6 +29,10 @@ import sys, copy, getopt
 DEFAULT_TYPE = str
 
 class InterfaceException(Exception):
+  """
+  Exception class representing errors that might occur when parsing
+  command lines
+  """
   def __init__(self, msg):
     self.value = msg
   def __str__(self):
@@ -36,20 +40,24 @@ class InterfaceException(Exception):
 
 
 class Option :
+  """
+  Represents an option for a command line interface.
+
+  :param short: the short name for the option (should be 1 char long).
+  :param long: the long name for the option (arbitrary length).
+  :param description: text description of what the option does.
+  :param argName: name of the argument, if the option requires one.
+  :param default: if the option is not given, what default value is used?
+  :param required: will passing the cmd line fail if this option is missing?
+  :param type: data type for this option (e.g. int, str, float, etc.)
+  :param special: if True, disregard requirements for other options when
+                  this option is set. Useful for things like help options.
+  """
   def __init__(self, short, long, description, argName = None,
                default = None, required = False, type = DEFAULT_TYPE,
                special = False):
     """
-      @summary: Constructor for Option class
-      @param short: the short name for the option (should be 1 char long)
-      @param long: the long name for the option (arbitrary length)
-      @param description: text description of what the option does
-      @param argName: name of the argument, if the option requires one
-      @param default: if the option is not given, what default value is used?
-      @param required: will passing the cmd line fail if this option is missing?
-      @param type: data type for this option (e.g. int, str, float, etc.)
-      @param special: if True, disregard requirements for other options when
-                      this option is set
+    Constructor for Option class.
     """
     self.short = short
     self.long = long
@@ -78,26 +86,46 @@ class Option :
       raise InterfaceException("Got argument type but no name")
 
   def isSet(self):
+    """
+    Check whether this option has been set by the user or not.
+    :return: True if this option has been set by the user, else false.
+    """
     return self.set
 
   def isRequired(self):
+    """
+    Check whether this is a required option (i.e. whether parsing a command
+    line should fail when it is missing).
+    :return: True if this option is required, else false.
+    """
     return self.required
 
   def __str__(self):
+    """
+    Get a string representation of this option.
+    """
     return  "-" + self.short + ", --" + self.long + " : " +\
             self.description.replace("\t","\\t") + " (required? " +\
             str(self.required) + ")"
 
 class CLI :
-  """ Represents a command line interface for a program, including the number
+  """
+  Represents a command line interface for a program, including the number
   of arguemnts and the options the program accepts. Provides methods for parsing
   a command line for the string and interogating the provided arguments and
   options.
+
   :param progName: the name of the program that this UI is for.
   :param shortDesc: a short description of what the program does.
   :param longDesc: a long description of what the program does.
   """
+
   def __init__(self, progName, shortDesc, longDesc):
+    """
+    CLI constructor -- builds a CLI object that defines an interface, but has
+    not yet been populated with user-supplied data; see class-level
+    documentation for parameter descriptions.
+    """
     self.programName = progName
     self.longDescription = longDesc
     self.shortDescription = shortDesc
@@ -109,6 +137,9 @@ class CLI :
 
 
   def usage(self):
+    """
+    Print the usage description for this program. Output goes to standard out.
+    """
     print self.programName + " [options]",
     if self.maxArgs == -1 or self.maxArgs - self.minArgs > 1 : print "[files..]"
     elif self.maxArgs - self.minArgs == 1: print "[file]"
@@ -123,10 +154,13 @@ class CLI :
 
   def parseCommandLine(self, line):
     """
-      @summary: Parse the given command line.
-      @param line: list of tokens from the command line. Should have had
-                   program name removed - generally one would do this:
-                   sys.argv[1:]
+    Parse the given command line and populate this CLI object with the values
+    found. If the command line doesn't conform to the specification defined
+    by this CLI object, this function prints a message to stdout indicating what
+    was wrong, prints the program usage instructions and then exists the program
+
+    :param line: list of tokens from the command line. Should have had program
+                 name removed - generally one would do this: sys.argv[1:]
     """
 
     # separate arguments and options
@@ -178,9 +212,10 @@ class CLI :
 
   def getOption(self, name):
     """
-      @summary returns the Option associated with the given name - name can
-               be short or long name.
-      @raise InterfaceException: if the named option doesn't exist.
+    Get the the Option object associated with the given name
+
+    :param name: the name of the option to retrieve; can be short or long name.
+    :raise InterfaceException: if the named option doesn't exist.
     """
     name = name.strip()
     for o in self.options :
@@ -190,16 +225,19 @@ class CLI :
 
   def getValue(self, name):
     """
-      @summary: returns the value of the option matching the name given -
-                can be long or short name
-      @raise InterfaceException: if the named option doesn't exist.
+    Get the value of the option matching the name given
+
+    :param name: the name of the option to retrieve; can be short or long name.
+    :raise InterfaceException: if the named option doesn't exist.
     """
     return self.getOption(name).value
 
   def hasOption(self, name):
     """
-      @summary: returns true if an option exists in the UI for the given
-                name (short or long name ok)
+    Check whether this CLI has an option with a given name
+
+    :param name: the name of the option to check; can be short or long name.
+    :return: true if an option exists in the UI for the given name
     """
     name = name.strip()
     for o in self.options :
@@ -209,9 +247,10 @@ class CLI :
 
   def addOption(self, o):
     """
-      @summary: add a new Option to the UI
-      @param o: the option to add
-      @raise InterfaceException: if an option with that name already exists.
+    Add a new Option to this CLI
+
+    :param o: the option to add
+    :raise InterfaceException: if an option with that name already exists.
     """
     if self.hasOption(o.short) :
       raise InterfaceException("Failed adding option - already have " + str(o))
@@ -219,8 +258,11 @@ class CLI :
 
   def optionIsSet(self, name):
     """
-      @summary: returns true if an option matching the given name exists and
-                it has had it's value set by the user
+    Check whether an option with a given name exists and has been set
+
+    :param name: the name of the option to check; can be short or long name.
+    :return: true if an option matching the given name exists and it has had
+             it's value set by the user
     """
     name = name.strip()
     if not self.hasOption(name) : return False
@@ -228,19 +270,23 @@ class CLI :
 
   def hasArgument(self, num):
     """
-      @summary: Returns true if the user has supplied at least <num> + 1
-                arguments. i.e. arguments are indexed from 0, so asking for
-                the 0th arg will check to see if the user supplied 1 or
-                more args
+    Check whether the user supplied a particular number of arguments.
+
+    :param num: the argument number to check. Arguments are indexed from 0,
+                so asking for the 0th arg will check to see if the user supplied
+                1 or more args.
+    :return: true if the user has supplied at least <num> + 1 arguments.
     """
     return len(self.args) >= num + 1
 
   def getArgument(self, num):
     """
-      @summary: return the num^th argument. Arguments are always parsed as
-                strings, so this will be a string. Indexing here is from 0.
-      @param num: the argument number to fetch.
-      @raise InterfaceException: if there are fewer than num + 1 arguments.
+    Get the num^th argument.
+
+    :param num: Which argument to get; indexing here is from 0.
+    :return: The num^th agument; arguments are always parsed as strings, so this
+             will be a string.
+    :raise InterfaceException: if there are fewer than num + 1 arguments.
     """
     if not self.hasArgument(num) :
       raise InterfaceException("Failed to retrieve argument " + str(num) +\
@@ -249,14 +295,15 @@ class CLI :
 
   def getAllArguments(self):
     """
-      @summary: return a list of all the arguments.
+    Get a list of all the arguments.
+    :return: a list of all the arguments, each as a string.
     """
     # don't leak a reference to the internal variable args
     return copy.copy(self.args)
 
   def _optlist(self):
     """
-      @summary: TODO
+    Get a string representation of the options in short format.
     """
     res = ""
     for o in self.options :
@@ -267,7 +314,7 @@ class CLI :
 
   def _longoptl(self):
     """
-      @summary: TODO
+    Get a list of string representations of the options in long format.
     """
     res = []
     for o in self.options :
