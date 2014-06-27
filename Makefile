@@ -1,4 +1,7 @@
 
+test : 
+	python src/test.py
+
 uninstall :
 	pip uninstall pyokit
 
