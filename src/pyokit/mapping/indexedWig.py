@@ -34,7 +34,7 @@ import sys, math, os, unittest, time
 from random import shuffle
 from heapq import *
 from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
-from pyokit.mapping.genomicInterval import parseWigString
+from pyokit.datastruct.genomicInterval import parseWigString
 from pyokit.datastruct.intervalTree import IntervalTree
 from pyokit.util.progressIndicator import ProgressIndicator
 

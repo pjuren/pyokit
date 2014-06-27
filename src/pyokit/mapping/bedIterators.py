@@ -31,7 +31,7 @@ from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
 from pyokit.util.progressIndicator import ProgressIndicator
 from pyokit.util.fileUtils import linesInFile
 from pyokit.datastruct.intervalTree import IntervalTree
-from pyokit.mapping.genomicInterval import parseBEDString, GenomicInterval
+from pyokit.datastruct.genomicInterval import parseBEDString, GenomicInterval
 
 DEFAULT_DELIM = "\t"
 ITERATOR_SORTED_START = 1

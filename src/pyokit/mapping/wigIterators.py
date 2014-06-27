@@ -26,9 +26,12 @@
 ITERATOR_SORTED_START = 1
 ITERATOR_SORTED_END = 2
 
+# standard library imports
 import sys, unittest, os
+
+# Pyokit imports
+from pyokit.datastruct.genomicInterval import GenomicInterval, parseWigString
 from pyokit.util.fileUtils import openFD, getFDName
-from pyokit.mapping.genomicInterval import parseWigString, GenomicInterval
 from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
 from pyokit.util.fileUtils import linesInFile
 from pyokit.util.progressIndicator import ProgressIndicator

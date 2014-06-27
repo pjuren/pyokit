@@ -26,7 +26,6 @@
 import unittest
 
 ########### MAPPING LIBRARIES ############
-from pyokit.mapping.genomicInterval import *
 from pyokit.mapping.bedIterators import *
 
 from pyokit.mapping.wigDir import *
@@ -44,6 +43,7 @@ from pyokit.sequencing.maf import *
 
 ############ DATA STRUCTURES #############
 from pyokit.datastruct.intervalTree import *
+from pyokit.datastruct.genomicInterval import *
 
 ########### TESTING AND UTILS ############
 from pyokit.testing.dummyfiles import *
