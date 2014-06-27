@@ -55,11 +55,14 @@ class BEDError(Exception):
 
 def intervalTrees(reffh, scoreType = int, verbose = False):
   """
-    @summary: Build a dictionary of interval trees indexed by chrom from
-              a BED stream
-    @param reffh: a stream allowing iteration over lines in BED format,
-                  or a filename for a BED file
-    @param verbose: output progress messages to sys.stderr if True
+  Build a dictionary of interval trees indexed by chrom from a BED stream or
+  file
+
+  :param reffh: This can be either a string, or a stream-like object. In the
+                former case, it is treated as a filename. The format of the
+                file/stream must be BED.
+  :param scoreType: The data type for scores (the fifth column) in the BED file.
+  :param verbose: output progress messages to sys.stderr if True
   """
   if type(reffh).__name__ == "str" : fh = open(reffh)
   else : fh = reffh
@@ -100,21 +103,25 @@ def intervalTrees(reffh, scoreType = int, verbose = False):
 def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType = int,
                 dropAfter=None):
   """
-    @summary: Get an iterator for a BED file
-    @param filehandle: stream of BED formated data
-    @param sortedby: if None, order is not checked.
-                     if == ITERATOR_SORTED_START, elements in file must
-                           be sorted by chrom and start index (an exception
-                           is raised if they are not)
-                     if == ITERATOR_SORTED_END, element must be sorted
-                           by chrom and end index
-    @param verbose: if True, output additional progress messages to stderr
-    @param dropAfter: an int indicating that any fields after and including this
-                      field should be ignored as they don't conform to the BED
-                      format. By default, None, meaning we use all fields. Index
-                      from zero.
-    @return: iterator where subsequent calls to next() yield the next BED
-             element in the stream
+  Get an iterator for a BED file
+
+  :param filehandle: this can be either a string, or a stream-like object. In
+                     the former case, it is treated as a filename. The format
+                     of the file/stream must be BED.
+  :param sortedby: if None, order is not checked.
+                   if == ITERATOR_SORTED_START, elements in file must
+                   be sorted by chrom and start index (an exception
+                   is raised if they are not)
+                   if == ITERATOR_SORTED_END, element must be sorted
+                   by chrom and end index.
+  :param verbose: if True, output additional progress messages to stderr
+  :param scoreType: The data type for scores (the fifth column) in the BED file.
+  :param dropAfter: an int indicating that any fields after and including this
+                    field should be ignored as they don't conform to the BED
+                    format. By default, None, meaning we use all fields. Index
+                    from zero.
+  :return: iterator where subsequent calls to next() yield the next BED
+           element in the stream as a GenomicInterval object.
   """
   chromsSeen = set()
   prev = None
