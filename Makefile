@@ -1,7 +1,9 @@
 
 
-
-
+install :
+	rm -rf dist
+	python setup.py sdist
+	pip install --no-index dist/pyokit-?.?.?.tar.gz
 
 docs :
 	$(MAKE) -C sphinx clean
