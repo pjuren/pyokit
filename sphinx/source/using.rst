@@ -8,6 +8,7 @@ Using Pyokit
    import
    ui
    bed
+   genomicIntervals
 
 
 =========
