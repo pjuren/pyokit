@@ -141,19 +141,18 @@ def collapseRegions(s):
 
 def regionsIntersection(s1, s2):
   """
-    @summary: given two lists of genomic regions with chromosome, start and end
-              coordinates, return a new list of regions which is the
-              intersection of those two sets. Lists must be sorted by
-              chromosome and start index
-    @return: new list that represents the intersection of the two input lists.
-             output regions will all have name "X", be one strand "+" and have
-             score 0
-    @param s1: first list of genomic regions
-    @param s2: second list of genomic regions
-    @raise BEDError: if the input regions are not sorted correctly (by
-                     chromosome and start index)
-    @note: O(n) time, O(n) space; informally, might use up to 3x space of
-           input
+  given two lists of genomic regions with chromosome, start and end coordinates,
+  return a new list of regions which is the intersection of those two sets.
+  Lists must be sorted by chromosome and start index
+
+  :return: new list that represents the intersection of the two input lists.
+           output regions will all have name "X", be on strand "+" and have
+           score 0
+  :param s1: first list of genomic regions
+  :param s2: second list of genomic regions
+  :raise BEDError: if the input regions are not sorted correctly (by
+                   chromosome and start index)
+  :note: O(n) time, O(n) space; informally, might use up to 3x space of input
   """
   debug = False
 
@@ -514,7 +513,7 @@ class GenomicInterval :
   def isNegativeStrand(self):
     """
     Check if this genomic interval is on the negative strand
-    
+
     :return: True if this element is on the negative strand
     """
     if self.strand == None and self.DEFAULT_STRAND == self.NEGATIVE_STRAND :
