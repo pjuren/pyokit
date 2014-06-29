@@ -10,6 +10,7 @@
 *.egg
 
 # ignore things built as part of installation
+/docs/
 /build/
 /dist/
 /src/pyokit.egg-info/
