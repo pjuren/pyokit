@@ -27,8 +27,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import copy, random, unittest
 
 class IntervalTreeError(Exception):
-  """Exception class for errors that occur when building or using
-  interval trees
+  """
+    Exception class for errors that occur when building or using interval trees
   """
   def __init__(self, value):
     self.value = value
@@ -53,7 +53,8 @@ class IntervalTreeNode :
 
 class IntervalTree :
   """
-    interval tree class.
+    An interval tree is a binary tree that allows fast O(log(n)) lookup of
+    intervals that intersect a given point or interval.
 
     :param intervals: list of intervals, doesn't need to be sorted in any way.
                       Can be any object, as long as they have 'start' and 'end'
@@ -105,7 +106,7 @@ class IntervalTree :
   def intersectingPoint(self, p):
     """
     given a point, determine which set of intervals in the tree are intersected.
-    
+
     :param p: intersection point
     :return: the list of intersected intervals
     """
@@ -134,11 +135,13 @@ class IntervalTree :
 
 
   def intersectingInterval(self, start, end):
-    """given an interval, determine which set of intervals in the tree are
-    intersected.
-    :param start: start of the intersecting interval
-    :param end:   end of the intersecting interval
-    :return:      the list of intersected intervals
+    """
+      given an interval, determine which set of intervals in the tree are
+      intersected.
+
+      :param start: start of the intersecting interval
+      :param end:   end of the intersecting interval
+      :return:      the list of intersected intervals
     """
 
     # find all intervals in this node that intersect start and end
@@ -164,11 +167,15 @@ class IntervalTree :
     return l
 
   def intersectingIntervalIterator(self, start, end):
-    """ DESCPT: Get an iterator which will iterate over those objects in the
-    tree which intersect the given interval - sorted in order
-    of start index
-    :param start:
-    :param end:
+    """
+      Get an iterator which will iterate over those objects in the tree which
+      intersect the given interval - sorted in order of start index
+
+      :param start: find intervals in the tree that intersect an interval with
+                    with this start index (inclusive)
+      :param end:   find intervals in the tree that intersect an interval with
+                    with this end index (exclusive)
+      :return: an iterator that will yield intersected intervals
     """
     items = self.intersectingInterval(start, end)
     items.sort(key = lambda x: x.start)
