@@ -26,7 +26,7 @@
 """
 
 import sys, unittest
-from pyokit.mapping.wigIterators import wigIterator
+from pyokit.io.wigIterators import wigIterator
 from pyokit.datastruct.intervalTree import IntervalTree
 from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
 
