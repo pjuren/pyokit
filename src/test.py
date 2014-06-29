@@ -26,12 +26,12 @@
 import unittest
 
 ########### MAPPING LIBRARIES ############
-from pyokit.mapping.bedIterators import *
+from pyokit.io.bedIterators import *
 
-from pyokit.mapping.wigDir import *
-from pyokit.mapping.wigFile import *
-from pyokit.mapping.indexedWig import *
-from pyokit.mapping.wigIterators import *
+from pyokit.io.wigDir import *
+from pyokit.io.wigFile import *
+from pyokit.io.indexedWig import *
+from pyokit.io.wigIterators import *
 
 ######### SEQUENCING LIBRARIES ###########
 from pyokit.sequencing.fasta import *
