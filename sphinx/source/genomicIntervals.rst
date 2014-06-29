@@ -14,7 +14,7 @@ Intersecting interval sets
 --------------------------
 .. autofunction:: pyokit.datastruct.genomicInterval.regionsIntersection
 
-------------------------
+-------------------------
 The GenomicInterval class
 -------------------------
 .. autoclass:: pyokit.datastruct.genomicInterval.GenomicInterval
