@@ -2,6 +2,7 @@
 Pyokit data-structures
 ======================
 
+.. _intervalTreesSection:
 
 --------------
 Interval Trees
