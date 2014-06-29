@@ -190,17 +190,24 @@ def pairedBEDIterator(inputStreams, mirror=False, mirrorScore=None,
                       sortedby=ITERATOR_SORTED_END, scoreType=float,
                       verbose=False):
   """
-    @summary:
-    @param inputStreams: a list of input streams in BED format
-    @param mirror: if true, add missing elements so all streams contain the
-                   same elements. Inserted elements will have the same
-    @param ignoreStrand: ignore strand when comparing elements for equality?
-    @param ignoreScore: ignore score when comparing elements for equality?
-    @param ignoreScore: ignore name when comparing elements for equality?
-    @param sortedby: must be set to one of the sorting orders for BED streams;
-                     we require the streams to be sorted in some fashion.
-    @param scoreType: interpret scores as what type? Defaults to float, which
-                      is generally the most flexible.
+  Iterate over multiple BED format files simultaneously and yield lists of
+  genomic intervals for each matching set of intervals found. By default,
+  regions which are not found in all files will be skipped (mirror = false).
+  Optionally (by setting mirror to true) if a file is missing an interval,
+  it can be added on-the-fly, and will have the same chrom, start and end and
+  name as in other files. The score will be taken from the first file in
+  inputStreams if mirrorScore is not set, otherwise that value will be used.
+
+  :param inputStreams: a list of input streams in BED format
+  :param mirror: if true, add missing elements so all streams contain the
+                 same elements. Inserted elements will have the same
+  :param ignoreStrand: ignore strand when comparing elements for equality?
+  :param ignoreScore: ignore score when comparing elements for equality?
+  :param ignoreScore: ignore name when comparing elements for equality?
+  :param sortedby: must be set to one of the sorting orders for BED streams;
+                   we require the streams to be sorted in some fashion.
+  :param scoreType: interpret scores as what type? Defaults to float, which
+                    is generally the most flexible.
   """
 
   # let's build our sorting order...
