@@ -3,7 +3,7 @@
 """
   Date of Creation: 23th May 2012
   Description:      Classes and functions for manipulating MAF files and
-                    directories. 
+                    directories.
 
   Copyright (C) 2012-2014
   Philip J. Uren
@@ -25,7 +25,7 @@
 """
 
 import sys, os, random
-from pyokit.mapping.bedIterators import BEDIterator
+from pyokit.io.bedIterators import BEDIterator
 from pyokit.datastruct.intervalTree import IntervalTree
 from pyokit.interface.cli import CLI, Option
 
