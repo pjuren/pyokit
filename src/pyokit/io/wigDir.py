@@ -25,7 +25,7 @@
 
 import sys, unittest, os
 from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
-from pyokit.mapping.wigFile import WigFile
+from pyokit.io.wigFile import WigFile
 
 class WigDir :
   def __init__(self, dir, extension="wig", verbose=False):
