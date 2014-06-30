@@ -25,7 +25,7 @@
 
 import sys, os
 from collections import deque
-from pyokit.sequencing.fastaread import FastaRead
+from pyokit.datastruct.sequence import FastaSequence
 from pyokit.util.progressIndicator import ProgressIndicator
 
 def numSequences(fileh):
@@ -115,7 +115,7 @@ def fastaIterator(fn, useMutableString = False, verbose = False):
     if verbose :
       pind.done = fh.tell()
       pind.showProgress()
-    yield FastaRead(name, seqdata, useMutableString)
+    yield FastaSequence(name, seqdata, useMutableString)
 
     # remember where we stopped for next call, or finish
     prevLine = line

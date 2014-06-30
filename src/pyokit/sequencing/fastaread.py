@@ -32,53 +32,6 @@ class FastaReadError(Exception):
   def __str__(self):
     return repr(self.value)
 
-class FastaRead(FastRead):
-  def __init__(self, seqName, seqData = "", useMutableString = False):
-    FastRead.__init__(self, seqName, seqData, useMutableString)
-  def __str__(self):
-    """
-      DESCPT: return string representation of the read
-    """
-    return ">" + self.sequenceName + "\n" + str(self.sequenceData)
-
-  def formattedString(self, width):
-    """
-      DESCPT: get formatted version of the seq where no
-              row of sequence data exceeds a given length
-    """
-    res = ">" + self.sequenceName + "\n"
-    for i in range(0,len(self.sequenceData), width) :
-      res += self.sequenceData[i:i+width]
-      if i + width < len(self.sequenceData) : res += "\n"
-    return res
-
-class ReadUnitTests(unittest.TestCase):
-  """
-    unit tests for read.py
-  """
-
-  def SetUp(self):
-    pass
-
-  def testFormattedString(self):
-    r = FastaRead("name", "ATCGATCGATCGATCTCGA")
-    expect = ">name\n" +\
-             "ATCGA\n" +\
-             "TCGAT\n" +\
-             "CGATC\n" +\
-             "TCGA"
-    got = r.formattedString(width=5)
-    self.assertTrue(got == expect)
-
-    # make sure this also works with a mutable underlying sequence
-    r = FastaRead("name", "ATCGATCGATCGATCTCGA", useMutableString = True)
-    expect = ">name\n" +\
-             "ATCGA\n" +\
-             "TCGAT\n" +\
-             "CGATC\n" +\
-             "TCGA"
-    got = r.formattedString(width=5)
-    self.assertTrue(got == expect)
 
 
 if __name__ == "__main__":

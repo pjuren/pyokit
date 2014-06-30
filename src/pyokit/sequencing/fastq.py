@@ -29,7 +29,7 @@ from collections import deque
 
 # pyokit imports
 from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
-from pyokit.sequencing.fastqread import FastqRead
+from pyokit.datastruct.sequence import FastqSequence
 from pyokit.util.progressIndicator import ProgressIndicator
 from pyokit.util.fileUtils import linesInFile
 
@@ -134,7 +134,7 @@ def fastqIteratorSimple(fn, verbose = False, allowNameMissmatch = False):
     name = lines[0][1:]
     seq = lines[1]
     qual = lines[3]
-    yield FastqRead(name, seq, qual)
+    yield FastqSequence(name, seq, qual)
 
 def fastqIterator(fn, useMutableString = False, verbose = False, debug = False,
                   sanger = False, allowNameMissmatch = False) :
@@ -221,7 +221,7 @@ def fastqIteratorComplex(fn, useMutableString = False, verbose = False,
       raise FastqFileFormatError("missing quality data..")
 
     # package it all up..
-    yield FastqRead(name, seqdata, qualdata, useMutableString)
+    yield FastqSequence(name, seqdata, qualdata, useMutableString)
     if verbose : pind.showProgress()
 
     # remember where we stopped for next call, or finish
@@ -256,8 +256,8 @@ class FastQUintTests(unittest.TestCase):
             "" + seq2Data + "\n" +\
             "+" + seq2Name + "\n" +\
             "" + seq2Qual + ""
-    expect = [FastqRead(seq1Name, seq1Data, seq1Qual),
-              FastqRead(seq2Name, seq2Data, seq2Qual)]
+    expect = [FastqSequence(seq1Name, seq1Data, seq1Qual),
+              FastqSequence(seq2Name, seq2Data, seq2Qual)]
 
     ins = DummyInputStream(instr)
 
@@ -301,8 +301,8 @@ class FastQUintTests(unittest.TestCase):
             "" + seq2Data + "\n" +\
             "+" + seq2Name + "\n" +\
             "" + seq2Qual + ""
-    expect = [FastqRead(seq1Name, seq1Data, seq1Qual),
-              FastqRead(seq2Name, seq2Data, seq2Qual)]
+    expect = [FastqSequence(seq1Name, seq1Data, seq1Qual),
+              FastqSequence(seq2Name, seq2Data, seq2Qual)]
 
     ins = DummyInputStream(instr)
 

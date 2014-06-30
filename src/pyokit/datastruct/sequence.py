@@ -65,7 +65,7 @@ class MutableString :
     return "".join(self.list)
 
 
-class FastRead:
+class Sequence:
   DNA_COMPLEMENTS = {"A":"T", "T":"A", "C":"G", "G":"C", "N":"N",
                      "a":"t", "t":"a", "c":"g", "g":"c", "n":"n"}
   RNA_COMPLEMENTS = {"A":"U", "U":"A", "C":"G", "G":"C", "N":"N",
@@ -89,7 +89,7 @@ class FastRead:
     """
       @summary: Copy constructor
     """
-    return FastRead(self.sequenceName, self.sequenceData, self.mutableString)
+    return Sequence(self.sequenceName, self.sequenceData, self.mutableString)
 
   def percentNuc(self, nuc):
     """
@@ -120,8 +120,8 @@ class FastRead:
     isRNA = self.isRNA()
     tmp = ""
     for n in self.sequenceData :
-      if isRNA : tmp += FastRead.RNA_COMPLEMENTS[n]
-      else : tmp += FastRead.DNA_COMPLEMENTS[n]
+      if isRNA : tmp += Sequence.RNA_COMPLEMENTS[n]
+      else : tmp += Sequence.DNA_COMPLEMENTS[n]
     self.sequenceData = tmp[::-1]
 
   def __len__(self):
@@ -172,12 +172,12 @@ class FastRead:
       PARAMS: region -- any object with .start and .end attributes
                         co-ords are zero based and inclusive of both
                         end points
-      RAISES: FastreadError -- if region specifies nucleotides not present in
+      RAISES: SequenceError -- if region specifies nucleotides not present in
                                this read
     """
     if region.start < 0 or region.end < 0 or \
        region.start > len(self) or region.end > len(self) :
-      raise FastreadError("cannot mask region " + str(region.start) + " to " +\
+      raise SequenceError("cannot mask region " + str(region.start) + " to " +\
                           str(region.end) + " in " + self.sequenceName + ". " +\
                           "Region specifies nucleotides not present in " +\
                           "this read. Valid range would have been 0 -- " +\
@@ -240,14 +240,14 @@ class FastRead:
     """
       DESCPT: Split this read into two halves
       PARAMS: point -- defines the split point, if None then the centre is used
-      RETURN: two FastRead objects -- one for each side
+      RETURN: two Sequence objects -- one for each side
     """
     if point == None :
       point = len(self)/2
 
-    r1 = FastqRead(self.sequenceName + ".1",
+    r1 = FastqSequence(self.sequenceName + ".1",
                    self.sequenceData[:point])
-    r2 = FastqRead(self.sequenceName + ".2",
+    r2 = FastqSequence(self.sequenceName + ".2",
                    self.sequenceData[point:])
 
     return r1,r2
@@ -256,7 +256,7 @@ class FastRead:
     """
       DESCRP: truncate the read so it is only <newLength> nucleotides long
     """
-    return FastRead(self.sequenceName, self.sequenceData[:10])
+    return Sequence(self.sequenceName, self.sequenceData[:10])
 
   def clipThreePrime(self, seq, mm_score):
     """
@@ -289,7 +289,7 @@ class FastRead:
       DESCPT: Clip adaptor sequence from this read. We assume it's in the
               3' end
       PARAMS: adaptor -- sequence to look for. We only use first 10 bases
-                         must be a full FastRead object, not just string
+                         must be a full Sequence object, not just string
     """
     missmatches = 2
     adaptor = adaptor.truncate(10)
@@ -299,7 +299,7 @@ class FastRead:
     """
       DESCPT: Does this sequence contain adaptor contamination?
               We assume adaptor is in 3' end
-      PARAMS: adaptor -- sequence to look for. must be a full FastRead
+      PARAMS: adaptor -- sequence to look for. must be a full Sequence
                          object, not just string
       RETURN: bool -- true if there is an occurence of <adaptor>,
               false otherwise
@@ -345,36 +345,135 @@ class FastRead:
     return True
 
 
-class FastReadUnitTests(unittest.TestCase):
+class FastaSequence(Sequence):
+  def __init__(self, seqName, seqData = "", useMutableString = False):
+    Sequence.__init__(self, seqName, seqData, useMutableString)
+  def __str__(self):
+    """
+      DESCPT: return string representation of the read
+    """
+    return ">" + self.sequenceName + "\n" + str(self.sequenceData)
+
+  def formattedString(self, width):
+    """
+      DESCPT: get formatted version of the seq where no
+              row of sequence data exceeds a given length
+    """
+    res = ">" + self.sequenceName + "\n"
+    for i in range(0,len(self.sequenceData), width) :
+      res += self.sequenceData[i:i+width]
+      if i + width < len(self.sequenceData) : res += "\n"
+    return res
+
+
+class FastqSequence(Sequence):
+  def __init__(self, seqName, seqData=None,
+               seqQual=None, useMutableString=False):
+    Sequence.__init__(self, seqName, seqData, useMutableString)
+    self.sequenceQual = seqQual
+
+    # for quality scores
+    self.LOWSET_SCORE = 64
+    self.HIGHEST_SCORE = 104
+
+  def __eq__(self, read):
+    return Sequence.__eq__(self, read) and \
+           self.sequenceQual == read.sequenceQual
+
+  def __ne__(self, read):
+    return Sequence.__ne__(self, read) or \
+           self.sequenceQual != read.sequenceQual
+
+  def truncate(self, size):
+    self.trimRight(len(self) - size)
+
+  def qualityToSolexa(self):
+    """
+      @summary: convert quality data from sanger to solexa format. Note that
+                no checking is done to make sure the data was originally in
+                sanger format; if it wasn't, the result will be junk
+    """
+    newqual = ""
+    for val in self.sequenceQual :
+      newqual += chr(ord(val) + SANGER_SOLEXA_OFFSET)
+    self.sequenceQual = newqual
+
+  def trimRight(self, amount):
+    """
+      @summary: trim the read by removing <amount> nucleotides
+                from the 3' end (right end)
+    """
+    self.sequenceData = self.sequenceData[:-amount]
+    self.sequenceQual = self.sequenceQual[:-amount]
+
+  def trimLeft(self, amount):
+    self.sequenceData = self.sequenceData[amount:]
+    self.sequenceQual = self.sequenceQual[amount:]
+
+  def getRelativeQualityScore(self, i):
+    val = self.sequenceQual[i]
+    return (ord(val) - self.LOWSET_SCORE) / float (self.HIGHEST_SCORE -
+                                                   self.LOWSET_SCORE)
+
+  def split(self, point = None):
+    """ returns two Read objects which correspond to the split of this read """
+    if point == None :
+      point = len(self)/2
+
+    r1 = FastqSequence(self.sequenceName + ".1",
+              self.sequenceData[:point],
+              self.sequenceQual[:point])
+    r2 = FastqSequence(self.sequenceName + ".2",
+              self.sequenceData[point:],
+              self.sequenceQual[point:])
+    return r1,r2
+
+  def merge(self, other, forceMerge = False):
+    if self.sequenceName != other.sequenceName and not forceMerge :
+      raise FastqSequenceError("cannot merge " + self.sequenceName + " with " +\
+                           other.sequenceName + " -- different sequence names")
+
+    name = self.sequenceName
+    seq = self.sequenceData + other.sequenceData
+    qual = self.sequenceQual + other.sequenceQual
+
+    return FastqSequence(name, seq, qual)
+
+  def __str__(self):
+    return "@" + self.sequenceName + "\n" + self.sequenceData +\
+           "\n" + "+" + self.sequenceName + "\n" + self.sequenceQual
+
+
+class SequenceUnitTests(unittest.TestCase):
   """
-    Unit tests for fastread
+    Unit tests for sequence classes
   """
 
   def testClipadaptor(self):
     pass
-    input =   FastRead("name", "ACTGCTAGCGATCGACT")
-    adaptor = FastRead("adap",       "AGCGATAGACT")
-    expect =  FastRead("name", "ACTGCTNNNNNNNNNNN")
+    input =   Sequence("name", "ACTGCTAGCGATCGACT")
+    adaptor = Sequence("adap",       "AGCGATAGACT")
+    expect =  Sequence("name", "ACTGCTNNNNNNNNNNN")
     input.clipAdaptor(adaptor)
     got = input
     self.assertTrue(expect == got)
 
   def testNsLeft(self):
-    input =   FastRead("name", "ACTGCTAGCGATCGACT")
-    expect =  FastRead("name", "NNNNNTAGCGATCGACT")
+    input =   Sequence("name", "ACTGCTAGCGATCGACT")
+    expect =  Sequence("name", "NNNNNTAGCGATCGACT")
     input.nsLeft(5)
     got = input
     self.assertTrue(expect == got)
 
   def testNsRight(self):
-    input =   FastRead("name", "ACTGCTAGCGATCGACT")
-    expect =  FastRead("name", "ACTGCTAGCGATNNNNN")
+    input =   Sequence("name", "ACTGCTAGCGATCGACT")
+    expect =  Sequence("name", "ACTGCTAGCGATNNNNN")
     input.nsRight(5)
     got = input
     self.assertTrue(expect == got)
 
   def testLengths(self):
-    input =   FastRead("name", "ACTNCTANCGATNNACT")
+    input =   Sequence("name", "ACTNCTANCGATNNACT")
     self.assertTrue(len(input) == 17)
     self.assertTrue(input.effectiveLength() == 13)
 
@@ -384,24 +483,80 @@ class FastReadUnitTests(unittest.TestCase):
         self.start = s
         self.end = e
 
-    input =   FastRead("name", "ACTNCTANCGATNNACT")
-    expect =  FastRead("name", "ANNNNTANCGATNNACT")
+    input =   Sequence("name", "ACTNCTANCGATNNACT")
+    expect =  Sequence("name", "ANNNNTANCGATNNACT")
     out = input.copy()
     out.maskRegion(TestRegion(1,4))
     self.assertTrue(expect == out)
 
   def testCopyConstructor(self):
-    one = FastRead("name", "ACTNCTANCGATNNACT")
+    one = Sequence("name", "ACTNCTANCGATNNACT")
     two = one.copy()
     self.assertTrue(one == two)
     one.sequenceName = "old"
     self.assertTrue(one != two)
 
   def testReverseComplement(self):
-    input = FastRead("name", "ACTGCTAGCATGCGNN")
-    expect = FastRead("name", "NNCGCATGCTAGCAGT")
+    input = Sequence("name", "ACTGCTAGCATGCGNN")
+    expect = Sequence("name", "NNCGCATGCTAGCAGT")
     input.reverseComplement()
     self.assertTrue(input == expect)
+
+  def testFormattedString(self):
+    """
+      test that string formatting works correctly for fasta sequences
+    """
+    r = FastaSequence("name", "ATCGATCGATCGATCTCGA")
+    expect = ">name\n" +\
+             "ATCGA\n" +\
+             "TCGAT\n" +\
+             "CGATC\n" +\
+             "TCGA"
+    got = r.formattedString(width=5)
+    self.assertTrue(got == expect)
+
+    # make sure this also works with a mutable underlying sequence
+    r = FastaSequence("name", "ATCGATCGATCGATCTCGA", useMutableString = True)
+    expect = ">name\n" +\
+             "ATCGA\n" +\
+             "TCGAT\n" +\
+             "CGATC\n" +\
+             "TCGA"
+    got = r.formattedString(width=5)
+    self.assertTrue(got == expect)
+
+  def testeq(self):
+    """
+      test the equality operator for fastQ sequences.
+    """
+    r1 = FastqSequence("s1","ACTGCT","BBBBBB")
+    r2 = FastqSequence("s1","ACTGCT","BBBBBB")
+    r3 = FastqSequence("s1","ACTGCT","BBBfBB")
+    r4 = FastqSequence("s1","ACCGCT","BBBBBB")
+    r5 = FastqSequence("s2","TCTGCT","fBBBBB")
+    r6 = FastqSequence("s3","CCCCCC","fBBBBB")
+    r7 = FastqSequence("s1","CCCCCC","fBBfBB")
+    r7 = FastqSequence("s6","CCCCCC","fBBfBB")
+
+    self.assertTrue((r1 == r2) == True)  # same name, same seq, same qual
+    self.assertTrue((r1 == r3) == False) # same name, same seq, diff qual
+    self.assertTrue((r1 == r4) == False) # same name, diff seq, same qual
+    self.assertTrue((r3 == r4) == False) # same name, diff seq, diff qual
+    self.assertTrue((r1 == r5) == False) # diff name, diff seq, diff qual
+    self.assertTrue((r5 == r6) == False) # diff name, diff seq, same qual
+    self.assertTrue((r6 == r7) == False) # diff name, same seq, diff qual
+    self.assertTrue((r3 == r4) == False) # diff name, same seq, same qual
+
+    self.assertTrue((r1 != r2) == False)  # same name, same seq, same qual
+    self.assertTrue((r1 != r3) == True) # same name, same seq, diff qual
+    self.assertTrue((r1 != r4) == True) # same name, diff seq, same qual
+    self.assertTrue((r3 != r4) == True) # same name, diff seq, diff qual
+    self.assertTrue((r1 != r5) == True) # diff name, diff seq, diff qual
+    self.assertTrue((r5 != r6) == True) # diff name, diff seq, same qual
+    self.assertTrue((r6 != r7) == True) # diff name, same seq, diff qual
+    self.assertTrue((r3 != r4) == True) # diff name, same seq, same qual
+
+
 
 if __name__ == "__main__":
     unittest.main()

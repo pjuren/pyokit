@@ -35,15 +35,13 @@ from pyokit.io.wigIterators import *
 
 ######### SEQUENCING LIBRARIES ###########
 from pyokit.sequencing.fasta import *
-from pyokit.sequencing.fastaread import *
 from pyokit.sequencing.fastq import *
-from pyokit.sequencing.fastqread import *
-from pyokit.sequencing.fastread import *
 from pyokit.sequencing.maf import *
 
 ############ DATA STRUCTURES #############
 from pyokit.datastruct.intervalTree import *
 from pyokit.datastruct.genomicInterval import *
+from pyokit.datastruct.sequence import *
 
 ########### TESTING AND UTILS ############
 from pyokit.testing.dummyfiles import *
