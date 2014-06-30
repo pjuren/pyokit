@@ -24,9 +24,11 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-
+# standard python library imports
 import sys, os, unittest, copy
+from heapq import heappush, heappop
 
+# pyokit imports
 from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
 from pyokit.util.progressIndicator import ProgressIndicator
 from pyokit.util.fileUtils import linesInFile
@@ -48,7 +50,7 @@ class GenomicIntervalError(Exception):
 ##       FUNCTIONS FOR MANIPULATING COLLECTIONS OF GENOMIC INTERVALS         ##
 ###############################################################################
 
-def intervalTreesFromList(inElements, verbose = False):
+def intervalTreesFromList(inElements, verbose = False, openEnded=False):
   """
   build a dictionary, indexed by chromosome name, of interval trees for each
   chromosome.
@@ -79,7 +81,7 @@ def intervalTreesFromList(inElements, verbose = False):
                                    messagePrefix = "completed",
                                    messageSuffix = "of making interval trees")
   for chrom in elements :
-    trees[chrom] = IntervalTree(elements[chrom])
+    trees[chrom] = IntervalTree(elements[chrom], openEnded)
     if verbose:
       pind.done += 1
       pind.showProgress()
@@ -201,6 +203,112 @@ def regionsIntersection(s1, s2):
                                 str(s2_c[j]) + "\n")
 
   return res
+
+def bucketIterator(elements, buckets) :
+  """
+    iterate over the genomic regions in buckets and, for each one, yeild the
+    bucket region and a list of regions from elements that intersect the bucket.
+
+    :param elements: the genomic intervals to place into the buckets. Must be
+                     sorted by chromosome and start index. This could be a list,
+                     or an iterator.
+    :param buckets: the buckets into which genomic intervals should be binned.
+                    Must be sorted by chromosome and start index. This could be
+                    a list, or an iterator
+  """
+
+  class peekableIter :
+    def __init__(self, iterable) :
+      self._iterable = iter(iterable)
+      self._head = None
+      self._fill()
+    def __iter__(self) : return self
+    def _fill(self) :
+      try :
+        prev = self._head
+        self._head = self._iterable.next()
+        if (prev != None) and \
+           ((prev.chrom > self._head.chrom) or \
+            ((prev.chrom == self._head.chrom) and \
+             (prev.start > self._head.start))) :
+          raise GenomicIntervalError("not sorted")
+      except StopIteration :
+        self._head = None
+    def __next__(self) :
+      res = self._head
+      self._fill()
+      if res == None :
+        raise StopIteration()
+      return res
+    def peek(self) : return self._head
+
+  def updateOpen(openHeap, elementIterator, bucketChrom,
+                 bucketStart, bucketEnd) :
+    """
+      Update the open heap so that it contains only elements that end after the
+      start of the current bucket. Note that the heap may already contain some
+      elements that start after the end of the current bucket, if a previous
+      bucket ended after the end of this one and brought them into the set.
+
+      :param openHeap: a min heap of elements; uses the default sorting order
+                       for the genomic intervals, which is by end index. This
+                       is what we're updating.
+      :param elementIterator: an iterator from which we will pull new elements.
+                              Elements yielded by this iterator must be sorted
+                              by start index. Must be 'peakable'
+      :param bucketChrom: the chromosome of the current bucket.
+      :param bucketStart: the start index of the current bucket.
+      :param bucketEnd: the end index of the current bucket.
+    """
+
+    # first, we're going to pop elements from the heap which can no longer
+    # overalp this or any future buckets. Buckets are sorted by start, so
+    # we'll never see another bucket that starts earlier than this one --
+    # hence any elements that end before the start of this bucket will never be
+    # used again and can be dropped. Elements in the heap are ordered by end
+    # index, so once we reach an element in the heap that does not end before
+    # the start of this bucket, we are sure that no others will come after it
+    # which do end before the start of this bucket. So we can stop dropping.
+    while len(openHeap) > 0 and ((openHeap[0].chrom < bucketChrom) or \
+                                 ((openHeap[0].chrom == bucketChrom) and \
+                                 (openHeap[0].end <= bucketStart))) :
+      heappop(openHeap)
+
+    # now we're going to add new elements from the iterator to the heap. Because
+    # we know that elements in the iterator are sorted by start index, we know
+    # that once we see an element that has a start index greater than the end
+    # of this bucket, we can stop -- everything else after it will also start
+    # after the end of this bucket.
+    while (elementIterator.peek() != None) and \
+          ((elementIterator.peek().chrom < bucketChrom) or \
+           ((elementIterator.peek().chrom == bucketChrom) and \
+            (elementIterator.peek().start < bucketEnd))) :
+      e = elementIterator.__next__()
+      # if e falls before this bucket, we can skip it; buckets are sorted by
+      # start, so no other buckets start earlier than this one and so it
+      # cannot intersect any others.
+      if (e.chrom < bucketChrom) or \
+         (e.chrom == bucketChrom and e.end <= bucketStart) : continue
+      # now we know e intersects this bucket..
+      heappush(openHeap, e)
+
+  openElems = []
+  prevBucket = None
+  elementIter = peekableIter(elements)
+  for bucket in buckets :
+    ## make sure the buckets are sorted by start index
+    if prevBucket != None and ((bucket.chrom < prevBucket.chrom) or
+                               (bucket.chrom == prevBucket.chrom and
+                                bucket.start < prevBucket.start)) :
+      raise GenomicIntervalError("not sorted")
+    updateOpen(openElems, elementIter, bucket.chrom, bucket. start, bucket.end)
+
+    # be careful here not to leak a reference to the heap; if the caller
+    # decides to mess with that list, it'll screw us up. Anyway, we need a
+    # final check here to make sure we trim off any elements that exceed the end
+    # of this bucket.
+    yield bucket, [x for x in openElems if x.start < bucket.end]
+    prevBucket = bucket
 
 
 ###############################################################################
@@ -636,6 +744,92 @@ class GenomicIntervalUnitTests(unittest.TestCase):
       sys.stderr.write("expect\n" + "\n".join([str(x) for x in expect]) + "\n")
       sys.stderr.write("got\n" + "\n".join([str(x) for x in res]) + "\n")
     assert(res == expect)
+
+  def testBucketIterator(self) :
+    """
+      test the bucket iterator
+
+      chr 1 'genes':
+      1   5   9    14  18 21
+      -----   ------
+         ------        ----
+          --------------
+       * *  **   ********
+         *  *  ****      *** **
+
+      chr 2 'genes'
+      1         11
+      -----------
+         ---
+      ** ****
+       ****    *****
+    """
+    debug = False
+
+    # set up some 'genes'
+    g1 = GenomicInterval("chr1", 1,  6)
+    g2 = GenomicInterval("chr1", 4,  10)
+    g3 = GenomicInterval("chr1", 5,  19)
+    g4 = GenomicInterval("chr1", 9,  15)
+    g5 = GenomicInterval("chr1", 18, 22)
+    g6 = GenomicInterval("chr2", 1,  12)
+    g7 = GenomicInterval("chr2", 4,  7)
+    buckets = [g1,g2,g3,g4,g5,g6,g7]
+
+    # set up some 'reads'
+    e1 = GenomicInterval("chr1", 2,  3)
+    e2 = GenomicInterval("chr1", 4,  5)
+    e3 = GenomicInterval("chr1", 4,  5)
+    e4 = GenomicInterval("chr1", 7,  9)
+    e5 = GenomicInterval("chr1", 7,  8)
+    e6 = GenomicInterval("chr1", 10, 14)
+    e7 = GenomicInterval("chr1", 12, 20)
+    e8 = GenomicInterval("chr1", 20, 23)
+    e9 = GenomicInterval("chr1", 24, 26)
+    e10 = GenomicInterval("chr2", 1,  3)
+    e11 = GenomicInterval("chr2", 2,  6)
+    e12 = GenomicInterval("chr2", 4,  8)
+    e13 = GenomicInterval("chr2", 10, 15)
+    elements = [e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13]
+
+    # expected result
+    expect = [(g1, set([e1,e2,e3])),
+              (g2, set([e2,e3,e4,e5])),
+              (g3, set([e4,e5,e6,e7])),
+              (g4, set([e6,e7])),
+              (g5, set([e7,e8])),
+              (g6, set([e10,e11,e12,e13])),
+              (g7, set([e11,e12]))]
+
+    actual = [(x, set(l)) for x,l in bucketIterator(elements, buckets)]
+    ## compare against the interval tree approach too, just for good measure.
+    trees = intervalTreesFromList(elements, openEnded = True)
+    treeRes = [(g, set(trees[g.chrom].intersectingInterval(g.start, g.end)))
+               for g in buckets]
+
+    if debug :
+      actualStr = "\n".join([str(x) + " == " + ",".join([str(y) for y in l])
+                             for x, l in actual])
+      treeReStr = "\n".join([str(x) + " == " + ",".join([str(y) for y in l])
+                             for x, l in treeRes])
+      expectStr = "\n".join([str(x) + " == " + ",".join([str(y) for y in l])
+                             for x, l in expect])
+
+      sys.stderr.write("actual result\n")
+      sys.stderr.write(actualStr + "\n")
+      sys.stderr.write("------------------------\n")
+      sys.stderr.write("interval tree result\n")
+      sys.stderr.write(treeReStr + "\n")
+      sys.stderr.write("------------------------\n")
+      sys.stderr.write("expected result\n")
+      sys.stderr.write(expectStr + "\n")
+
+    self.assertEqual(actual, expect)
+
+
+    self.assertEqual(actual, treeRes)
+
+
 
   def testDistance(self):
     """
