@@ -30,21 +30,30 @@ Given the following contents for sequences.fa:
 
    >one
    ACTGATGCGCTAGCGCGTA
+   CTGACGCG
    >two
-   CTAGCTAGCGCGCTAGTGC
+   CTAGCTAGCGCGCTAGTGCGGG
    >three
-   TTTCGAGCCGGGGCAAAAA
+   TTTCGAGCCG
+   GGGCAAAAA
 
 This script will produce this output:
 
 .. code-block:: bash
 
    >one
-   TACGCGCTAGCGCATCAGT
+   CGCGTCAGTACGCGCTAGC
+   GCATCAGT
    >two
-   GCACTAGCGCGCTAGCTAG
+   CCCGCACTAGCGCGCTAGCTAG
    >three
-   TTTTTGCCCCGGCTCGAAA
+   TTTTTGCCCC
+   GGCTCGAAA
+
+Notice that the iterator can handle sequence data split over multiple lines,
+and that output formatting respects line width from the input file (with the
+minor exception that line-width for a single sequence cannot be ragged, so
+it takes the length of the first line for that sequence).
 
 Here's the signature for the iterator:
 
@@ -54,8 +63,78 @@ Here's the signature for the iterator:
 Processing FastQ files
 ----------------------
 
+This is basically the same as fasta files, but there are a few extra wrinkles.
+Pyokit provides three iterators for fastq files. The difference between them
+is how they handle data with sequence and/or quality data split over multiple
+lines. The first, fastqIteratorSimple, ignores this possibility and expects
+all fastq records to occupy 4 lines. In general this will be fine, as fastq
+data, in my experience, always follows this convention. The second iterator,
+fastqIteratorComplex, allows for the processing of files/streams where this
+convention isn't followed (but it is slower, so should be avoided if possible).
+Finally, there is a general function, called fastqIterator which at present just
+wraps the simple iterator. In almost all cases, it will be sufficient just to
+use this.
+
+Here's the same example from above, but this time using a fastq iterator:
+
+>>> from pyokit.io.fastqIterators import fastqIterator
+>>> for s in fastqIterator("sequences.fq") :
+>>>   s.reverseComplement()
+>>>   print s
+
+Given this input fastq file:
+
+.. code-block:: bash
+
+   @one
+   ACTGATGCGCTAGCGCGTACTGACGCG
+   +one
+   !''*((((***+))%%%++)(%%%%).
+   @two
+   CTAGCTAGCGCGCTAGTGCGGG
+   +two
+   1***-+*''))**55CCF>>!*
+   @three
+   TTTCGAGCCGGGGCAAAAA
+   +three
+   CCCCCCC65+))%%%+%%)
+
+The output will be:
+
+.. code-block:: bash
+
+   @one
+   CGCGTCAGTACGCGCTAGCGCATCAGT
+   +one
+   .)%%%%()++%%%))+***((((*''!
+   @two
+   CCCGCACTAGCGCGCTAGCTAG
+   +two
+   *!>>FCC55**))''*+-***1
+   @three
+   TTTTTGCCCCGGCTCGAAA
+   +three
+   )%%+%%%))+56CCCCCCC
+
+Notice that quality scores are also correctly reversed.
+
+Here's the signature for the general fastQ iterator:
+
 .. autofunction:: pyokit.io.fastqIterators.fastqIterator
+
+Here's the signature for the simple iterator:
+
+.. autofunction:: pyokit.io.fastqIterators.fastqIteratorSimple
+
+And here's the signature for the iterator that handles multi-line quality and
+sequence data:
+
+.. autofunction:: pyokit.io.fastqIterators.fastqIteratorComplex
 
 ----------------------
 Manipulating sequences
 ----------------------
+
+Pretty much everything you need should be covered in the class descriptions for
+the sequence classes: see :ref:`sequenceClassSection`,
+:ref:`fastaSequenceClassSection`, and :ref:`fastqSequenceClassSection`
