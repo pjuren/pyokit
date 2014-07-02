@@ -3,10 +3,9 @@ Using Pyokit
 ============
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
    import
    ui
-   bed
    genomicIntervals
    sequences

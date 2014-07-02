@@ -9,11 +9,13 @@ Pyokit: Python Bio Toolkit
 
 Pyokit is a python library with a collection of tools to make the processing
 and analysis of high-throughput biological datasets in python a bit easier.
+This is the Pyokit manual, which describes the library and gives examples of
+how to use it to achieve common data processing goals. 
 
 Contents:
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 4
 
    install
    using
