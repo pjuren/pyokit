@@ -30,12 +30,12 @@ from pyokit.util.progressIndicator import ProgressIndicator
 
 def numSequences(fileh):
   """
-    @summary Determine how many sequences there are in the file stream passed
-            Note: stream will be consumed
-    @param fileh the stream to read the fasta data from, or a string
-                 giving the filename of the file to load. Note that if a stream
-                 is given, it will be consumed by this function
-    @return the number of sequences in this fasta stream/file
+    Determine how many sequences there are in fasta file/stream.
+
+    :param fileh: the stream to read the fasta data from, or a string giving the
+                  filename of the file to load. Note that if a stream is given,
+                  it will be consumed by this function
+    :return: the number of sequences in this fasta stream/file
   """
   if type(fileh).__name__ == "str" : fh = open(fileh)
   else : fh = fileh
@@ -46,9 +46,16 @@ def numSequences(fileh):
 
 def _isSequenceHead(line):
   """
-    @summary Determine whether a string conforms to the requirements for a
-             header line in fasta format.
-    @return true if <line> is the header line of a fastq read sequence.
+    Determine whether a string conforms to the requirements for a header line in
+    fasta format. Fasta header lines must start with a '>'; empty spaces are not
+    stripped, so if your line has any whitespace before '>', it will fail this
+    check. There is no check for newline characters either, so strings
+    with \n at the end will pass, as will those without it. Multi-line strings
+    will also pass.
+
+    :param line: the line to check
+    :return: True if the passed line matches the fasta specification for a
+             header line, else false.
   """
   if len(line) < 1 : return False
   if line[0] == '>' : return True
@@ -56,14 +63,17 @@ def _isSequenceHead(line):
 
 def fastaIterator(fn, useMutableString = False, verbose = False):
   """
-    @summary A generator function which yields reads from <filename>
-             the iterator is exhausted when all reads have been
-             read from <filename>
-    @param fn       a stream or a string; if this is a string, we treat it as a
-                    filename, else we treat it as a file-like object, with a
-                    readline() method
-    @param verbose  if True, output additional status messages to stderr
-                    about progress
+    A generator function which yields fastaSequence objects from a fasta-format
+    file or stream.
+
+    :param fn: a file-like stream or a string; if this is a string, it's treated
+               as a filename, else it's treated it as a file-like object, which
+               must have a readline() method.
+    :param useMustableString: if True, construct sequences from lists of chars,
+                              rather than python string objects, to allow
+                              more efficient editing. Use with caution.
+    :param verbose: if True, output additional status messages to stderr about
+                    progress
   """
   prevLine = None
   fh = fn
@@ -71,23 +81,19 @@ def fastaIterator(fn, useMutableString = False, verbose = False):
 
   if verbose :
     try :
-      #total = 0
-      #for s in fastaIterator(fn.name, verbose = False) : total += 1
       total = os.path.getsize(fh.name)
       pind = ProgressIndicator(totalToDo = total,
-                                     messagePrefix = "completed",
-                                     messageSuffix = "of processing " +\
-                                                      fh.name)
+                               messagePrefix = "completed",
+                               messageSuffix = "of processing " +\
+                                                fh.name)
     except AttributeError :
-      sys.stderr.write("Warning: " +\
-                       "unable to show progress for stream")
+      sys.stderr.write("Warning: unable to show progress for stream")
       verbose = False
 
 
   while True :
-    # either we have a sequence header left over from the
-    # prev call, or we need to read a new one from the file...
-    # try to do that now
+    # either we have a sequence header left over from the prev call, or we need
+    # to read a new one from the file... try to do that now
     seqHeader = ""
     if prevLine != None and not _isSequenceHead(prevLine) :
       raise FastqFileFormatError("terminated on non-read header: " + prevLine)
@@ -98,24 +104,23 @@ def fastaIterator(fn, useMutableString = False, verbose = False):
     name = seqHeader[1:].strip()
 
     # now we need to read lines until we hit another sequence header, or we
-    # run out of lines..
-    # this is our sequence data
-
+    # run out of lines.. this is our sequence data
     line = None
+    lineWidth = None
     seqdata = ""
     while line == None or not _isSequenceHead(line) :
-
       line = fh.readline()
-      if line == "" :
-        # file is finished...
-        break
-      if not _isSequenceHead(line) : seqdata += line.strip()
+      if line == "" : break  # file is finished...
+      if not _isSequenceHead(line) :
+        seqdata += line.strip()
+        if lineWidth == None :
+          lineWidth = len(line.strip())
 
     # package it all up..
     if verbose :
       pind.done = fh.tell()
       pind.showProgress()
-    yield FastaSequence(name, seqdata, useMutableString)
+    yield FastaSequence(name, seqdata, lineWidth, useMutableString)
 
     # remember where we stopped for next call, or finish
     prevLine = line

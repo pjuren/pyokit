@@ -41,31 +41,36 @@ class FastqFileFormatError(Exception):
 
 def _isSequenceHead(line, prevLine = None):
   """
-    @summary Determine whether a string represents a sequence header line in
-             fastq format.
-    @param line       The line to check
-    @param prevLine   @todo
-    @return True if <line> is the header line of a fastq read sequence
+    Determine if a string represents a sequence header line in fastq format.
+    Sequence headers start with the '@' symbol, and are followed by sequence
+    data.
+
+    :param line:      The line/string to check
+    :param prevLine:  The line that came before this one. This is a hint that
+                      lets us disambiguate some potentially confusing cases:
+                      if we know the previous line and it's a quality header,
+                      we won't call this a sequence header -- the reason is that
+                      sanger format uses the '@' symbol in it's quality data and
+                      we don't want to mistake that for a sequence header if it
+                      happens to appear as the first character. You needn't
+                      provide this though, if it's set to None, the function
+                      will make its best guess without that info.
+    :return: True if the given line conforms to the sequence header format for
+             a fastq sequence
   """
-  # if we know the previous line and it's a quality header, don't call this
-  # a sequence header -- the reason is that sanger format uses the '@'
-  # symbol in it's quality data and we don't want to mistake that for the
-  # a sequence header if it happens to appear as the first character
-  #print "check if " + line + " is seq header, with prev line as " + str(prevLine)
-  #if prevLine != None and _isQualityHead(prevLine) : return False
-  #print "\tpassed prev line is qual header check"
 
   if len(line) < 1 : return False
-  #print "\tpassed empty line test"
   if line[0] == '@' : return True
   #print "\tfirst char not an '@', so it's not a seq header.."
   return False
 
 def _isQualityHead(line):
   """
-    @summary Determine whether a string represents a quality header in fastq
-             format.
-    @return True if <line> is the header line of a fastq quality sequence
+    Determine whether a string represents a quality header in fastq format.
+    Quality headers begin with the '+' symbol; subsequent line(s) will be
+    quality data.
+
+    :return: True if <line> is the header line of a fastq quality sequence
   """
   if len(line) < 1 : return False
   if line[0] == '+' : return True
@@ -74,14 +79,20 @@ def _isQualityHead(line):
 
 def fastqIteratorSimple(fn, verbose = False, allowNameMissmatch = False):
   """
-    @summary: process a fastq file, but don't take into consideration
-              the possibility of data or quality spanning
-              more than one line
-    @param fn: filename or stream to read data from
-    @param ignoreNameMismatch: don't throw error if name in sequence data
-                               and quality data parts of a read don't match
-    @param verbose: if true, output additional status messages to
-                    stderr about progress
+    A generator function that yields FastqSequence objects read from a
+    fastq-format stream or filename. This is iterator requires that all
+    sequence and quality data is provided on a single line -- put another way,
+    it cannot parse fastq files with newline characters interspersed in the
+    sequence and/or quality strings. That's probably okay though, as fastq
+    files tend not to be formated like that (famous last words..).
+
+    :param fn: filename or stream to read data from.
+    :param allowNameMismatch:  don't throw error if name in sequence data
+                               and quality data parts of a read don't match.
+                               Newer version of CASVA seem to output data like
+                               this, probably to save space.
+    :param verbose: if True, output additional status messages to stderr about
+                    progress.
   """
   fh = fn
   if type(fh).__name__ == "str" : fh = open(fh)
@@ -139,7 +150,28 @@ def fastqIteratorSimple(fn, verbose = False, allowNameMissmatch = False):
 def fastqIterator(fn, useMutableString = False, verbose = False, debug = False,
                   sanger = False, allowNameMissmatch = False) :
   """
-    @summary
+    A generator function which yields FastqSequence objects read from a file or
+    stream. This is a general function which wraps fastqIteratorSimple. In
+    future releases, we may allow dynamic switching of which base iterator is
+    used.
+
+    :param fn:                 A file-like stream or a string; if this is a
+                               string, it's treated as a filename specifying
+                               the location of an input fastq file, else it's
+                               treated as a file-like object, which must have a
+                               readline() method.
+    :param useMustableString:  if True, construct sequences from lists of chars,
+                               rather than python string objects, to allow
+                               more efficient editing. Use with caution.
+    :param verbose:            if True, print messages about progress to stderr.
+    :param debug:              if True, print debugging messages to stderr.
+    :param sanger:             if True, assume quality scores are in sanger
+                               format. Otherwise, assume they're in Illumina
+                               format.
+    :param allowNameMissmatch: don't throw error if name in sequence data and
+                               quality data parts of a read don't match. Newer
+                               version of CASVA seem to output data like this,
+                               probably to save space.
   """
   it = fastqIteratorSimple(fn, verbose=verbose,
                            allowNameMissmatch=allowNameMissmatch)
@@ -148,12 +180,24 @@ def fastqIterator(fn, useMutableString = False, verbose = False, debug = False,
 def fastqIteratorComplex(fn, useMutableString = False, verbose = False,
                          debug = False, sanger = False):
   """
-    @summary: process a fastq file, taking into consideration the
-              possibility that sequence or quality data might span
-              more than one line
-    @param fn: filename or stream to read data from
-    @param verbose: if true, output additional status messages to
-                    stderr about progress
+    A generator function which yields FastqSequence objects read from a file or
+    stream. This iterator can handle fastq files that have their sequence
+    and/or their quality data split across multiple lines (i.e. there are
+    newline characters in the sequence and quality strings).
+
+    :param fn:                 A file-like stream or a string; if this is a
+                               string, it's treated as a filename specifying
+                               the location of an input fastq file, else it's
+                               treated as a file-like object, which must have a
+                               readline() method.
+    :param useMustableString:  if True, construct sequences from lists of chars,
+                               rather than python string objects, to allow
+                               more efficient editing. Use with caution.
+    :param verbose:            if True, print messages about progress to stderr.
+    :param debug:              if True, print debugging messages to stderr.
+    :param sanger:             if True, assume quality scores are in sanger
+                               format. Otherwise, assume they're in Illumina
+                               format.
   """
   fh = fn
   if type(fh).__name__ == "str" : fh = open(fh)
@@ -214,9 +258,11 @@ def fastqIteratorComplex(fn, useMutableString = False, verbose = False,
       if line == "" : break
       elif not _isSequenceHead(line, prevLine) : qualdata += line.strip()
     if debug:
-      sys.stderr.write("finished reading quality data, found: " + qualdata.strip() + "\n")
+      sys.stderr.write("finished reading quality data, found: " +\
+                       qualdata.strip() + "\n")
       sys.stderr.write("loop terminated with line: " + line.strip() + "\n")
-      sys.stderr.write("prev when loop termianted was: " + prevLine.strip() + "\n")
+      sys.stderr.write("prev when loop termianted was: " +\
+                       prevLine.strip() + "\n")
     if qualdata.strip() == "" :
       raise FastqFileFormatError("missing quality data..")
 
@@ -236,8 +282,9 @@ class FastQUintTests(unittest.TestCase):
 
   def testSangerQual(self):
     """
-      @summary: test sequences in sanger format that contain the '@'
-                symbol within their quality strings
+      Unit test for the fastqIterator function -- test that it correctly handles
+      sequences in sanger format that contain the '@' symbol within their
+      quality strings, including at the start.
     """
     debug = False
 
@@ -281,8 +328,9 @@ class FastQUintTests(unittest.TestCase):
 
   def testSangerQual2(self):
     """
-      @summary: test sequences in sanger format that contain the '+'
-                symbol within their quality strings
+      Unit test for fastqIterator function -- test that it correctly handles
+      sequences in sanger format that contain the '+' symbol within their
+      quality strings.
     """
     debug = False
 
