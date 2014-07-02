@@ -1,6 +1,6 @@
 
 clean :
-	rm `find . -name "*.pyc"`
+	rm -f `find . -name "*.pyc"`
 
 test : 
 	python src/test.py

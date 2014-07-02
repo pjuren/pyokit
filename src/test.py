@@ -1,6 +1,8 @@
+#!/usr/bin/python
+
 """
   Date of Creation: 23rd Feb 2014
-  Description:      Register modules to run unit tests on. 
+  Description:      Register modules to run unit tests on.
 
   Copyright (C) 2014
   Philip J. Uren
@@ -21,12 +23,12 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-
-#!/usr/bin/python
 import unittest
 
-########### MAPPING LIBRARIES ############
+############################## I/O LIBRARIES ###################################
 from pyokit.io.bedIterators import *
+from pyokit.io.fastaIterators import *
+from pyokit.io.fastqIterators import *
 
 from pyokit.io.wigDir import *
 from pyokit.io.wigFile import *
@@ -34,8 +36,6 @@ from pyokit.io.indexedWig import *
 from pyokit.io.wigIterators import *
 
 ######### SEQUENCING LIBRARIES ###########
-from pyokit.sequencing.fasta import *
-from pyokit.sequencing.fastq import *
 from pyokit.sequencing.maf import *
 
 ############ DATA STRUCTURES #############
