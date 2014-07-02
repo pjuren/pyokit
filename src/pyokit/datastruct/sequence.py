@@ -346,23 +346,47 @@ class Sequence:
 
 
 class FastaSequence(Sequence):
-  def __init__(self, seqName, seqData = "", useMutableString = False):
+  """
+    Data-structure for holding information about a Fasta-formatted sequence.
+    This is basically just a wrapper around a regular Sequence object which
+    provides the neccessary formatting for output.
+
+    :param seqName:           the name of the sequence
+    :param seqData:           the actual nucleotide sequence
+    :param lineWidth:         width of sequence data lines for output. If None,
+                              all sequence data will be output on a single line
+    :param useMustableString:
+  """
+
+  def __init__(self, seqName, seqData = "", lineWidth = None,
+               useMutableString = False):
     Sequence.__init__(self, seqName, seqData, useMutableString)
+    self.lineWidth = lineWidth
   def __str__(self):
     """
-      DESCPT: return string representation of the read
+      Get a string representation of this fasta sequence. If line width was
+      specifified when the object was created, it is respected. Otherwise, all
+      sequence data is printed to a single line.
     """
-    return ">" + self.sequenceName + "\n" + str(self.sequenceData)
+    if self.lineWidth == None :
+      return ">" + self.sequenceName + "\n" + str(self.sequenceData)
+    else :
+      return self.formattedString()
 
-  def formattedString(self, width):
+  def formattedString(self):
     """
-      DESCPT: get formatted version of the seq where no
-              row of sequence data exceeds a given length
+      Get a formatted version of the seq where no row of sequence data exceeds
+      the line length for this object.
+
+      :raise: SequenceError if this object has no line width specified.
     """
+    if self.lineWidth == None :
+      raise SequenceError("No line width for fasta formatted read specified")
+
     res = ">" + self.sequenceName + "\n"
-    for i in range(0,len(self.sequenceData), width) :
-      res += self.sequenceData[i:i+width]
-      if i + width < len(self.sequenceData) : res += "\n"
+    for i in range(0,len(self.sequenceData), self.lineWidth) :
+      res += self.sequenceData[i:i+self.lineWidth]
+      if i + self.lineWidth < len(self.sequenceData) : res += "\n"
     return res
 
 
@@ -414,6 +438,12 @@ class FastqSequence(Sequence):
     val = self.sequenceQual[i]
     return (ord(val) - self.LOWSET_SCORE) / float (self.HIGHEST_SCORE -
                                                    self.LOWSET_SCORE)
+  def reverseComplement(self):
+    """
+      Reverse complement this fastq sequence.
+    """
+    Sequence.reverseComplement(self)
+    self.sequenceQual = self.sequenceQual[::-1]
 
   def split(self, point = None):
     """ returns two Read objects which correspond to the split of this read """
