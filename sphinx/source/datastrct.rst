@@ -43,7 +43,7 @@ Sequences
 Sequences in Pyokit are represented using the Sequence class, which wraps a
 name and the actual sequence data, and provides a lot of the basic functionality
 for manipulating sequences. Specializations exist for particular sequence
-format. At present, fasta and fastq are supported. The Sequence, FastaSequence
+formats. At present, fasta and fastq are supported. The Sequence, FastaSequence
 and FastqSequence classes are described below. For more information about
 manipulating sequence data, see :ref:`sequencesSection`
 
@@ -54,8 +54,9 @@ manipulating sequence data, see :ref:`sequencesSection`
 ``````````````````
 The Sequence class
 ``````````````````
-..autoclass::pyokit.datastruct.sequence.Sequence
-  :members:
+
+.. autoclass:: pyokit.datastruct.sequence.Sequence
+   :members:
 
 
 
@@ -64,8 +65,9 @@ The Sequence class
 ```````````````````````
 The FastaSequence class
 ```````````````````````
-..autoclass::pyokit.datastruct.sequence.FastaSequence
-  :members:
+
+.. autoclass:: pyokit.datastruct.sequence.FastaSequence
+   :members:
 
 
 
@@ -75,5 +77,5 @@ The FastaSequence class
 The FastqSequence class
 ```````````````````````
 
-..autoclass::pyokit.datastruct.sequence.FastqSequence
-  :members:
+.. autoclass:: pyokit.datastruct.sequence.FastqSequence
+   :members:

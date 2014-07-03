@@ -27,6 +27,12 @@ import unittest, sys, os
 from pyokit.util.progressIndicator import ProgressIndicator
 
 class MutableString :
+  """
+    Strings in python are immutable. That brings a number of advantages, but
+    one problem is that they are expensive to edit. This class implements a
+    string as a list of char, which is cheaper to edit, but cannot be used for
+    things like dictionary keys due to it's mutability.
+  """
   def __init__(self, strng):
     self.list = []
     for ch in strng :
@@ -66,6 +72,23 @@ class MutableString :
 
 
 class Sequence:
+  """
+    This is the base class for all sequences in Pyokit. Objects from this class
+    will have only a sequence name and actual nucleotide sequence data.
+
+    :param seqName:          A name describing the sequence. Can be any string.
+    :param seqData:          The nucleotide sequence data. Can be DNA or RNA.
+                             Note that there is no check to make sure the
+                             sequence data is valid, that's the responsibility
+                             of the caller.
+    :param useMutableString: Store the sequence data as a mutable string, rather
+                             than a regular python string. This should make
+                             editing operations must faster, but it comes at the
+                             expense of less flexibility (e.g. the object can
+                             not be used as a hash key because it is mutable.)
+  """
+
+
   DNA_COMPLEMENTS = {"A":"T", "T":"A", "C":"G", "G":"C", "N":"N",
                      "a":"t", "t":"a", "c":"g", "g":"c", "n":"n"}
   RNA_COMPLEMENTS = {"A":"U", "U":"A", "C":"G", "G":"C", "N":"N",
@@ -73,10 +96,8 @@ class Sequence:
 
   def __init__(self, seqName, seqData, useMutableString = False):
     """
-      @summary: Constructor
-      @param seqName:
-      @param seqData:
-      @param useMutableString:
+      Constructor for Sequence objects. See class level documentation for
+      parameter descriptions.
     """
     self.sequenceName = seqName
     if useMutableString :
@@ -87,24 +108,32 @@ class Sequence:
 
   def copy(self):
     """
-      @summary: Copy constructor
+      Copy constructor for Sequence objects.
     """
     return Sequence(self.sequenceName, self.sequenceData, self.mutableString)
 
   def percentNuc(self, nuc):
     """
-      @summary: return the percentage of the sequence which is equal
-              to the passed nucleotide
-      @param nuc: count number of times this nuc appears
-      @return: percentage (float)
+      return the percentage of the sequence which is equal to the passed nuc.
+
+      :param nuc: the nucleotide to compute percentage composition for. There is
+                  no check to make sure this is a valid nucleotide.
+      :return: the percentage of the sequence that is <nuc>
     """
     count = reduce(lambda x,y: x+1 if y==nuc else x, self.sequenceData, 0)
     return count / float(len(self.sequenceData))
 
   def similarity(self, self_start, self_end, other_start, other_end, other):
     """
-      DESCPT: Count of the number of places where this[start,end] is equal to
-              other[o_start, o_end]
+      Compute the number of matching bases in the subsequences self[start, end]
+      and other[o_start, o_end]. Note that the subsequences must be the same
+      length.
+
+      :param self_start:  start index for sub-sequence in self
+      :param self_end:    end index for sub-sequence in self
+      :param other_start: start index for subsequence in other sequence
+      :param other_end:   end index for subsequence in other sequence
+      :param other:       other sequence to compare to this.
     """
     assert(self_end - self_start == other_end - other_start)
     count = 0
@@ -113,33 +142,42 @@ class Sequence:
         count += 1
     return count
 
-  def reverseComplement(self):
+  def reverseComplement(self, isRNA=None):
     """
-      @summary: reverse complement this sequence
+      Reverse complement this sequence in-place.
+
+      :param isRNA: if True, treat this sequence as RNA. If False, treat it as
+                    DNA. If None (default), inspect the sequence and make a
+                    guess as to whether it is RNA or DNA.
     """
-    isRNA = self.isRNA()
+    isRNA_l = self.isRNA() if isRNA == None else isRNA
+
     tmp = ""
     for n in self.sequenceData :
-      if isRNA : tmp += Sequence.RNA_COMPLEMENTS[n]
+      if isRNA_l : tmp += Sequence.RNA_COMPLEMENTS[n]
       else : tmp += Sequence.DNA_COMPLEMENTS[n]
     self.sequenceData = tmp[::-1]
 
   def __len__(self):
     """
-      DESCPT: length of the read, defined as the length of its sequence data
+      Get the length of the sequence, defined as the length of its sequence data
     """
     return len(self.sequenceData)
 
   def effectiveLength(self):
     """
-      DESCPT: disregarding N's, how long is this sequence?
+      Get the length of the sequence if N's are disregarded.
     """
     return len([nuc for nuc in self.sequenceData
                     if nuc != "N" and nuc != "n"])
 
-  def __eq__(self, read):
+  def __eq__(self, seq):
     """
-      DESCRP: return true if this read is equal to passed parameter
+      Check wheter this sequence is equal to another sequence. Sequences are
+      equal if they have the same name and nucleotide sequence.
+
+      :param seq: the other sequence to compare against.
+      :return: true if this sequence is equal to passed parameter, else false.
     """
     if read == None : return False
     return  self.sequenceData == read.sequenceData and\
@@ -147,7 +185,11 @@ class Sequence:
 
   def __ne__(self, read):
     """
-      DECPRP: return true if this read is not equal to the passed parameter
+      Check wheter this sequence is not equal to another sequence. Sequences are
+      equal if they have the same name and nucleotide sequence.
+
+      :param seq: the other sequence to compare against.
+      :return: true if this sequence is not equal to passed param., else false.
     """
     if read == None : return True
     return  self.sequenceData != read.sequenceData or\
@@ -155,25 +197,25 @@ class Sequence:
 
   def nsLeft(self, amount):
     """
-      DESCPT: replace leftmost <amount> bases by Ns
+      Replace leftmost <amount> bases by Ns.
     """
     self.sequenceData = (amount * "N") + self.sequenceData[amount:]
 
   def nsRight(self, amount):
     """
-      DESCPT: replace rightmost <amount> bases by Ns
+      Replace rightmost <amount> bases by Ns
     """
     self.sequenceData = self.sequenceData[:-amount] + (amount * "N")
 
   def maskRegion(self, region):
     """
-      DESCPT: Replace nucleotides in this read in the regions
-              given by Ns
-      PARAMS: region -- any object with .start and .end attributes
-                        co-ords are zero based and inclusive of both
-                        end points
-      RAISES: SequenceError -- if region specifies nucleotides not present in
-                               this read
+      Replace nucleotides in this sequence in the regions given by Ns
+
+      :param region: any object with .start and .end attributes. Co-ords are
+                     zero based and inclusive of both end points. Any other
+                     attributes (e.g. chrom.) are ignored.
+      :raise SequenceError: if region specifies nucleotides not present in
+                            this sequence
     """
     if region.start < 0 or region.end < 0 or \
        region.start > len(self) or region.end > len(self) :
@@ -192,8 +234,13 @@ class Sequence:
 
   def maskRegions(self, regions, verbose = False):
     """
-      DESCPT: Mask the given regions in this read
-      PARAMS: verbose -- print status messages to stderr if True
+      Mask the given regions in this sequence with Ns.
+
+      :param region: iterable of regions to mask. Each region can be any object
+                     with .start and .end attributes. Co-ords are zero based and
+                     inclusive of both end points. Any other attributes (e.g.
+                     chrom.) are ignored.
+      :param verbose: print status messages to stderr if True
     """
     if verbose:
       pind = ProgressIndicator(totalToDo = len(regions),
@@ -208,8 +255,10 @@ class Sequence:
 
   def isDNA(self):
     """
-      @summary: return True if this sequence contains only DNA nucleotides
-      @return: True if contains only DNA nucleotides, False otherwise
+      Make a guess as to whether this sequence is a DNA sequence or not by
+      looking at the symbols it contains.
+
+      :return: True if contains only DNA nucleotides, False otherwise
     """
     for nuc in self.sequenceData :
       if not nuc in "ACGTacgtn" : return False
@@ -217,8 +266,10 @@ class Sequence:
 
   def isRNA(self):
     """
-      @summary: return True if this sequence contains only RNA nucleotides
-      @return: True if contains only RNA nucleotides, False otherwise
+      Make a guess as to whether this sequence is an RNA sequence or not by
+      looking at the symbols it contains.
+
+      :return: True if contains only RNA nucleotides, False otherwise
     """
     for nuc in self.sequenceData :
       if not nuc in "ACGUacgun" : return False
@@ -226,21 +277,23 @@ class Sequence:
 
   def toRNA(self):
     """
-      @summary: convert to RNA sequence by changing any Ts to Us
+      Convert this sequence in-place to an RNA sequence by changing any Ts to Us
     """
     self.sequenceData = self.sequenceData.replace("T","U")
 
   def toDNA(self):
     """
-      @summary: convert to DNA sequence by changing any Us to Ts
+      Convert this sequence in-place to a DNA sequence by changing any Us to Ts
     """
     self.sequenceData = self.sequenceData.replace("U","T")
 
   def split(self, point = None):
     """
-      DESCPT: Split this read into two halves
-      PARAMS: point -- defines the split point, if None then the centre is used
-      RETURN: two Sequence objects -- one for each side
+      Split this sequence into two halves and return them. The original sequence
+      remains unmodified.
+
+      :param point: defines the split point, if None then the centre is used
+      :return: two Sequence objects -- one for each side
     """
     if point == None :
       point = len(self)/2
@@ -254,18 +307,21 @@ class Sequence:
 
   def truncate(self, newLength):
     """
-      DESCRP: truncate the read so it is only <newLength> nucleotides long
+      Truncate this sequence in-place so it's only <newLength> nucleotides long.
+
+      :param newLength: the length to truncate this sequence to.
     """
     return Sequence(self.sequenceName, self.sequenceData[:10])
 
   def clipThreePrime(self, seq, mm_score):
     """
-      DESCPT: Clip a sequence from the 3' end of the read -- we assume sequence to
-              be clipped will always begin somewhere in this sequence, but may
-              not be fully contained. If found, replaced with Ns
-      PARAMS: seq -- sequence to be clipped
-              mm_score -- the number of matching bases needed to consider a hit,
-                          mm_score = len(adaptor) would be 100% match
+      Clip a sequence from the 3' end of the sequence -- we assume the sequence
+      to be clipped will always begin somewhere in this sequence, but may not be
+      fully contained. If found, replaced with Ns.
+
+      :param seq: sequence to be clipped
+      :param mm_score: the number of matching bases needed to consider a hit,
+                       mm_score = len(seq) would be 100% match
     """
     lim = mm_score - 1
     other_end = len(seq) - 1
@@ -286,10 +342,13 @@ class Sequence:
 
   def clipAdaptor(self, adaptor):
     """
-      DESCPT: Clip adaptor sequence from this read. We assume it's in the
-              3' end
-      PARAMS: adaptor -- sequence to look for. We only use first 10 bases
-                         must be a full Sequence object, not just string
+      Clip an adaptor sequence from this sequence. We assume it's in the 3' end.
+      This is basically a convenience wrapper for clipThreePrime. It requires
+      8 out of 10 of the first bases in the adaptor sequence to match for
+      clipping to occur.
+
+      :param adaptor: sequence to look for. We only use the first 10 bases; must
+                      be a full Sequence object, not just a string.
     """
     missmatches = 2
     adaptor = adaptor.truncate(10)
@@ -297,12 +356,14 @@ class Sequence:
 
   def containsAdaptor(self, adaptor):
     """
-      DESCPT: Does this sequence contain adaptor contamination?
-              We assume adaptor is in 3' end
-      PARAMS: adaptor -- sequence to look for. must be a full Sequence
-                         object, not just string
-      RETURN: bool -- true if there is an occurence of <adaptor>,
-              false otherwise
+      Check whether this sequence contains adaptor contamination. If it exists,
+      we assume it's in the 3' end. This function requires 8 out of 10 of the
+      first bases in the adaptor sequence to match for an occurrence to be
+      reported.
+
+      :param adaptor: sequence to look for. We only use first 10 bases; must be
+                      a full Sequence object, not just string.
+      :return: True if there is an occurence of <adaptor>, False otherwise
     """
     origSeq = self.sequenceData
     self.clipAdaptor(adaptor)
@@ -313,29 +374,39 @@ class Sequence:
 
   def isPolyA(self):
     """
-      DESCRP: Is this sequence a polyA? based on having > 90% A in read
+      Determine whether this sequence is polyA. To be a polyA sequence, it
+      must have > 90% Adenine.
+
+      :return: True if the sequence is PolyA by the above definition.
     """
     return self.percentNuc("A") >= 0.9
 
   def isPolyT(self):
     """
-      DESCRP: Is this sequence a polyT? based on having > 90% A in read
+      Determine whether this sequence is polyT. To be a polyT sequence, it
+      must have > 90% Thymine.
+
+      :return: True if the sequence is PolyT by the above definition.
     """
     return self.percentNuc("T") >= 0.9
 
   def isLowQuality(self):
     """
-      DESCRP: Is this sequence low quality? based on having > 10% N in read
+      Determine whether this is a low quality sequence. To be considered a low
+      quality sequence, it must have > 10% Ns.
+
+      :return: True if this sequence meets the above definition of low-quality.
     """
     return self.percentNuc("N") >= 0.1
 
   def maskMatch(self, mask):
     """
-      DESCPT: Determine whether this sequence matches the given mask.
-              Ns in the mask are considered to match anything in the
-              sequence -- all other chars must match exactly
-      PARAMS: mask -- string to match against
-      RETURN: True if the mask matches at all places, otherwise false
+      Determine whether this sequence matches the given mask.
+
+      :param mask: string to match against. Ns in the mask are considered to
+                   match anything in the sequence -- all other chars must
+                   match exactly.
+      :return: True if the mask matches at all places, otherwise false
     """
     if len(mask) > len(self.sequenceData) : return False
     lim = len(mask)
@@ -391,31 +462,85 @@ class FastaSequence(Sequence):
 
 
 class FastqSequence(Sequence):
+  """
+    Data structure fo holding informaton about a Fastq-formatted sequence.
+    Fastq-formatted sequences differ from regular sequences by the inclusion of
+    a quality score for each nucleotide in the sequence, encoded as a string.
+
+    :param seqName:          A name describing the sequence. Can be any string.
+    :param seqData:          The nucleotide sequence data. Can be DNA or RNA.
+                             Note that there is no check to make sure the
+                             sequence data is valid, that's the responsibility
+                             of the caller.
+    :param seqQual:          The quality string for this sequence -- must be
+                             the same length as the nucleotide sequence.
+    :param useMutableString: Store the sequence data as a mutable string, rather
+                             than a regular python string. This should make
+                             editing operations must faster, but it comes at the
+                             expense of less flexibility (e.g. the object can
+                             not be used as a hash key because it is mutable.)
+    :raise SequenceError:    if the sequence data is not the same length as the
+                             quality data.
+  """
+
   def __init__(self, seqName, seqData=None,
                seqQual=None, useMutableString=False):
+    """
+      Constructor for FastqSequence class; see class level documentation for
+      descriptions of parameters.
+    """
+    if len(seqData) != len(seqQual) :
+      raise SequenceError("failed to create FastqSequence object -- length " +\
+                          "of sequence data (" + str(len(seqData)) + ")" +\
+                          "does not match length of quality string (" +\
+                          str(len(seqQual)) + ")")
+
     Sequence.__init__(self, seqName, seqData, useMutableString)
+
     self.sequenceQual = seqQual
 
     # for quality scores
     self.LOWSET_SCORE = 64
     self.HIGHEST_SCORE = 104
 
-  def __eq__(self, read):
-    return Sequence.__eq__(self, read) and \
-           self.sequenceQual == read.sequenceQual
+  def __eq__(self, seq):
+    """
+      determine whether two fastqSequence objects are equal. To be equal, their
+      sequence data (name, nuc. sequence) must match, as well as their quality
+      data.
+
+      :param seq: the other sequence to compare against.
+      :return: True if this sequence is equal to seq, else False.
+    """
+    return Sequence.__eq__(self, seq) and \
+           self.sequenceQual == seq.sequenceQual
 
   def __ne__(self, read):
+    """
+      determine whether two fastqSequence objects are not equal. They are
+      considered unequal if any of their sequence data (name, nuc. sequence)
+      does not match, or if their quality data does not match.
+
+      :param seq: the other sequence to compare against.
+      :return: True if this sequence is not equal to seq, else False.
+    """
+
     return Sequence.__ne__(self, read) or \
            self.sequenceQual != read.sequenceQual
 
   def truncate(self, size):
+    """
+      truncate this fastqSequence in-place so it is only <size> nucleotides long
+
+      :param size: the number of nucleotides to truncate to.
+    """
     self.trimRight(len(self) - size)
 
   def qualityToSolexa(self):
     """
-      @summary: convert quality data from sanger to solexa format. Note that
-                no checking is done to make sure the data was originally in
-                sanger format; if it wasn't, the result will be junk
+      Convert the quality data for this fastqSequence in-place, from sanger to
+      solexa format. Note that no checking is done to make sure the data was
+      originally in sanger format; if it wasn't, the result will be junk.
     """
     newqual = ""
     for val in self.sequenceQual :
@@ -424,13 +549,23 @@ class FastqSequence(Sequence):
 
   def trimRight(self, amount):
     """
-      @summary: trim the read by removing <amount> nucleotides
-                from the 3' end (right end)
+      Trim this fastqSequence in-place by removing <amount> nucleotides from the
+      3' end (right end).
+
+      :param amount: the number of nucleotides to trim from the right-side of
+                     this sequence.
     """
     self.sequenceData = self.sequenceData[:-amount]
     self.sequenceQual = self.sequenceQual[:-amount]
 
   def trimLeft(self, amount):
+    """
+      Trim this fastqSequence in-place by removing <amount> nucleotides from the
+      5' end (left end).
+
+      :param amount: the number of nucleotides to trim from the left-side of
+                     this sequence.
+    """
     self.sequenceData = self.sequenceData[amount:]
     self.sequenceQual = self.sequenceQual[amount:]
 
@@ -440,13 +575,21 @@ class FastqSequence(Sequence):
                                                    self.LOWSET_SCORE)
   def reverseComplement(self):
     """
-      Reverse complement this fastq sequence.
+      Reverse complement this fastq sequence in-place.
     """
     Sequence.reverseComplement(self)
     self.sequenceQual = self.sequenceQual[::-1]
 
   def split(self, point = None):
-    """ returns two Read objects which correspond to the split of this read """
+    """
+      Split this fastq sequence into two halves. The original sequence is left
+      unaltered.
+
+      :param point: the point (index) at which to split this sequence. If None
+                    (the default), then we split in the middle.
+      :return: two FastqSequence objects which correspond to the split of this
+               sequence.
+    """
     if point == None :
       point = len(self)/2
 
@@ -459,6 +602,20 @@ class FastqSequence(Sequence):
     return r1,r2
 
   def merge(self, other, forceMerge = False):
+    """
+      Merge two fastqSequences by concatenating their sequence data and their
+      quality data (<self> first, then <other>); <self> and <other> must have
+      the same sequence name. A new merged FastqSequence object is returned;
+      <Self> and <other> are left unaltered.
+
+      :param other: the other sequence to merge with self.
+      :param forceMerge: force the merge to occur, even if sequences names don't
+                         match. In this case, <self> takes precedence.
+      :return: A new FastqSequence that represents the merging of <self> and
+               <other>
+      :raise: FastqSequenceError if the sequences names do not match, and the
+              forceMerge parameter is not set.
+    """
     if self.sequenceName != other.sequenceName and not forceMerge :
       raise FastqSequenceError("cannot merge " + self.sequenceName + " with " +\
                            other.sequenceName + " -- different sequence names")
@@ -470,6 +627,11 @@ class FastqSequence(Sequence):
     return FastqSequence(name, seq, qual)
 
   def __str__(self):
+    """
+      Get a string representation of this FastQSequence.
+
+      :return: String that represents this FastQSequence.
+    """
     return "@" + self.sequenceName + "\n" + self.sequenceData +\
            "\n" + "+" + self.sequenceName + "\n" + self.sequenceQual
 
