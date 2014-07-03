@@ -12,7 +12,7 @@ setup(name='pyokit',
 			author_email = 'philip.uren@gmail.com',
 			url = 'https://github.com/pjuren/pyokit', 
 			download_url = 'https://github.com/pjuren/pyokit/tarball/pyokit_0.1.1', 
-			license='GPL3',
+			license='LGPL2',
 			keywords = [],
 			classifiers = [],
 )
