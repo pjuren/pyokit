@@ -1,0 +1,173 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Installing Pyokit &mdash; Pyokit 0.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="Pyokit 0.2.0 documentation" href="index.html" />
+    <link rel="next" title="Using Pyokit" href="using.html" />
+    <link rel="prev" title="Pyokit: Python Bio Toolkit" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="using.html" title="Using Pyokit"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Pyokit: Python Bio Toolkit"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="installing-pyokit">
+<h1>Installing Pyokit<a class="headerlink" href="#installing-pyokit" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h2>
+<p>Pyokit depends on rpy2 for some of its functionality. You don&#8217;t strictly
+need it, Pyokit can be installed without it, but if you don&#8217;t have it some
+functionality will not be supported.</p>
+</div>
+<div class="section" id="installing-from-pypi">
+<h2>Installing from PyPI<a class="headerlink" href="#installing-from-pypi" title="Permalink to this headline">¶</a></h2>
+<p>Pyokit is available from the Python package index. The easiest
+way to install it is to use pip. Note that You may need to prefix certain
+commands below with <tt class="docutils literal"><span class="pre">sudo</span></tt> if you&#8217;re installing to the global python
+installation.</p>
+<ol class="arabic">
+<li><p class="first">Get pip (if you don&#8217;t already have it):</p>
+<div class="highlight-bash"><div class="highlight"><pre>wget https://bootstrap.pypa.io/get-pip.py
+python get-pip.py
+</pre></div>
+</div>
+<p>This will install pip for you. if <tt class="docutils literal"><span class="pre">python</span></tt> doesn&#8217;t point to the version of
+python you want to use, then replace it with the full path to the one you
+prefer (you&#8217;ll probably have to do that if you don&#8217;t have admin. access on
+the machine you&#8217;re using).</p>
+</li>
+<li><p class="first">Now you can install pyokit:</p>
+<div class="highlight-bash"><div class="highlight"><pre>pip install pyokit
+</pre></div>
+</div>
+<p>... and you&#8217;re done.</p>
+</li>
+</ol>
+</div>
+<div class="section" id="installing-from-source">
+<h2>Installing from source<a class="headerlink" href="#installing-from-source" title="Permalink to this headline">¶</a></h2>
+<p>The bleeding-edge version can always be cloned from the GitHub repository
+(www.github.com/pjuren/pyokit), where tagged releases can also be downloaded as
+.tar.gz files. If you take this route, you will still need pip (see above if you
+don&#8217;t have it). After unpacking the distribution (or cloning the repository),
+<tt class="docutils literal"><span class="pre">cd</span></tt> into the newly created directory and then</p>
+<ol class="arabic">
+<li><p class="first">Build the distribution package:</p>
+<div class="highlight-bash"><div class="highlight"><pre>python setup.py sdist
+</pre></div>
+</div>
+</li>
+<li><p class="first">Install the distribution:</p>
+<div class="highlight-bash"><div class="highlight"><pre>pip install --no-index dist/pyokit-a.b.c.tar.gz
+</pre></div>
+</div>
+<p>where a.b.c is the version you downloaded.</p>
+</li>
+</ol>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Installing Pyokit</a><ul>
+<li><a class="reference internal" href="#dependencies">Dependencies</a></li>
+<li><a class="reference internal" href="#installing-from-pypi">Installing from PyPI</a></li>
+<li><a class="reference internal" href="#installing-from-source">Installing from source</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Pyokit: Python Bio Toolkit</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="using.html"
+                        title="next chapter">Using Pyokit</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/install.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="using.html" title="Using Pyokit"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Pyokit: Python Bio Toolkit"
+             >previous</a> |</li>
+        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Philip J. Uren.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

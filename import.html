@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Python Module Index &mdash; Pyokit 1.0.2 documentation</title>
+    <title>Importing Pyokit modules &mdash; Pyokit 0.2.0 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '1.0.2',
+        VERSION:     '0.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,10 +24,10 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="Pyokit 1.0.2 documentation" href="index.html" />
- 
-
-
+    <link rel="top" title="Pyokit 0.2.0 documentation" href="index.html" />
+    <link rel="up" title="Using Pyokit" href="using.html" />
+    <link rel="next" title="Building user interfaces with Pyokit" href="ui.html" />
+    <link rel="prev" title="Using Pyokit" href="using.html" /> 
   </head>
   <body>
     <div class="related">
@@ -37,9 +37,13 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="#" title="Python Module Index"
-             >modules</a> |</li>
-        <li><a href="index.html">Pyokit 1.0.2 documentation</a> &raquo;</li> 
+          <a href="ui.html" title="Building user interfaces with Pyokit"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="using.html" title="Using Pyokit"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li><a href="using.html" accesskey="U">Using Pyokit</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -48,29 +52,17 @@
         <div class="bodywrapper">
           <div class="body">
             
-
-   <h1>Python Module Index</h1>
-
-   <div class="modindex-jumpbox">
-   <a href="#cap-p"><strong>p</strong></a>
-   </div>
-
-   <table class="indextable modindextable" cellspacing="0" cellpadding="2">
-     <tr class="pcap"><td></td><td>&nbsp;</td><td></td></tr>
-     <tr class="cap" id="cap-p"><td></td><td>
-       <strong>p</strong></td><td></td></tr>
-     <tr>
-       <td><img src="_static/minus.png" class="toggler"
-              id="toggle-1" style="display: none" alt="-" /></td>
-       <td>
-       <tt class="xref">pyokit</tt></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&nbsp;&nbsp;&nbsp;
-       <a href="index.html#module-pyokit.datastruct.intervalTree"><tt class="xref">pyokit.datastruct.intervalTree</tt></a></td><td>
-       <em></em></td></tr>
-   </table>
+  <div class="section" id="importing-pyokit-modules">
+<h1>Importing Pyokit modules<a class="headerlink" href="#importing-pyokit-modules" title="Permalink to this headline">¶</a></h1>
+<p>The library is divided into five sub-modules: datastruct, mapping, sequencing
+testing, and util. After installing the libraries, they can be used either
+from the interactive python prompt or in scripts. To use, for example, the
+IntervalTree class which is in the intervalTree module in the datastruct
+package, type (either in the python interpretor or your script):</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyokit.datastruct.intervalTree</span> <span class="kn">import</span> <span class="n">IntervalTree</span>
+</pre></div>
+</div>
+</div>
 
 
           </div>
@@ -78,6 +70,17 @@
       </div>
       <div class="sphinxsidebar">
         <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="using.html"
+                        title="previous chapter">Using Pyokit</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="ui.html"
+                        title="next chapter">Building user interfaces with Pyokit</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/import.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
@@ -102,9 +105,13 @@
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="#" title="Python Module Index"
-             >modules</a> |</li>
-        <li><a href="index.html">Pyokit 1.0.2 documentation</a> &raquo;</li> 
+          <a href="ui.html" title="Building user interfaces with Pyokit"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="using.html" title="Using Pyokit"
+             >previous</a> |</li>
+        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li><a href="using.html" >Using Pyokit</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

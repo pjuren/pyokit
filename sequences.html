@@ -1,0 +1,352 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Biological Sequences &mdash; Pyokit 0.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="Pyokit 0.2.0 documentation" href="index.html" />
+    <link rel="up" title="Using Pyokit" href="using.html" />
+    <link rel="next" title="Pyokit data-structures" href="datastrct.html" />
+    <link rel="prev" title="Manipulating Genomic Intervals" href="genomicIntervals_manip.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="datastrct.html" title="Pyokit data-structures"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="genomicIntervals_manip.html" title="Manipulating Genomic Intervals"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li><a href="using.html" accesskey="U">Using Pyokit</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="biological-sequences">
+<span id="sequencessection"></span><h1>Biological Sequences<a class="headerlink" href="#biological-sequences" title="Permalink to this headline">¶</a></h1>
+<p>Sequences in Pyokit are represented using the Sequence class, which wraps a
+name and the actual sequence data, and provides a lot of the basic functionality
+for manipulating sequences. Further specializations provide extra functionality
+for fasta-format and fastq-format reads. For the class descriptions, see
+<a class="reference internal" href="datastrct.html#sequenceclasssection"><em>The Sequence class</em></a>, <a class="reference internal" href="datastrct.html#fastasequenceclasssection"><em>The FastaSequence class</em></a>, and
+<a class="reference internal" href="datastrct.html#fastqsequenceclasssection"><em>The FastqSequence class</em></a></p>
+<div class="section" id="processing-fasta-files">
+<h2>Processing Fasta files<a class="headerlink" href="#processing-fasta-files" title="Permalink to this headline">¶</a></h2>
+<p>Pyokit contains an iterator for fasta files. Here&#8217;s an example of the usual
+idiom for processing a fasta file in a scenario that requires only one pass
+(in this case, reverse complement all the sequences in the fasta file).</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyokit.io.fastaIterators</span> <span class="kn">import</span> <span class="n">fastaIterator</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">fastaIterator</span><span class="p">(</span><span class="s">&quot;sequences.fa&quot;</span><span class="p">)</span> <span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="n">s</span><span class="o">.</span><span class="n">reverseComplement</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="k">print</span> <span class="n">s</span>
+</pre></div>
+</div>
+<p>Given the following contents for sequences.fa:</p>
+<div class="highlight-bash"><div class="highlight"><pre>&gt;one
+ACTGATGCGCTAGCGCGTA
+CTGACGCG
+&gt;two
+CTAGCTAGCGCGCTAGTGCGGG
+&gt;three
+TTTCGAGCCG
+GGGCAAAAA
+</pre></div>
+</div>
+<p>This script will produce this output:</p>
+<div class="highlight-bash"><div class="highlight"><pre>&gt;one
+CGCGTCAGTACGCGCTAGC
+GCATCAGT
+&gt;two
+CCCGCACTAGCGCGCTAGCTAG
+&gt;three
+TTTTTGCCCC
+GGCTCGAAA
+</pre></div>
+</div>
+<p>Notice that the iterator can handle sequence data split over multiple lines,
+and that output formatting respects line width from the input file (with the
+minor exception that line-width for a single sequence cannot be ragged, so
+it takes the length of the first line for that sequence).</p>
+<p>Here&#8217;s the signature for the iterator:</p>
+<dl class="function">
+<dt id="pyokit.io.fastaIterators.fastaIterator">
+<tt class="descclassname">pyokit.io.fastaIterators.</tt><tt class="descname">fastaIterator</tt><big>(</big><em>fn</em>, <em>useMutableString=False</em>, <em>verbose=False</em><big>)</big><a class="headerlink" href="#pyokit.io.fastaIterators.fastaIterator" title="Permalink to this definition">¶</a></dt>
+<dd><p>A generator function which yields fastaSequence objects from a fasta-format
+file or stream.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fn</strong> &#8211; a file-like stream or a string; if this is a string, it&#8217;s treated
+as a filename, else it&#8217;s treated it as a file-like object, which
+must have a readline() method.</li>
+<li><strong>useMustableString</strong> &#8211; if True, construct sequences from lists of chars,
+rather than python string objects, to allow
+more efficient editing. Use with caution.</li>
+<li><strong>verbose</strong> &#8211; if True, output additional status messages to stderr about
+progress</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="processing-fastq-files">
+<h2>Processing FastQ files<a class="headerlink" href="#processing-fastq-files" title="Permalink to this headline">¶</a></h2>
+<p>This is basically the same as fasta files, but there are a few extra wrinkles.
+Pyokit provides three iterators for fastq files. The difference between them
+is how they handle data with sequence and/or quality data split over multiple
+lines. The first, fastqIteratorSimple, ignores this possibility and expects
+all fastq records to occupy 4 lines. In general this will be fine, as fastq
+data, in my experience, always follows this convention. The second iterator,
+fastqIteratorComplex, allows for the processing of files/streams where this
+convention isn&#8217;t followed (but it is slower, so should be avoided if possible).
+Finally, there is a general function, called fastqIterator which at present just
+wraps the simple iterator. In almost all cases, it will be sufficient just to
+use this.</p>
+<p>Here&#8217;s the same example from above, but this time using a fastq iterator:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyokit.io.fastqIterators</span> <span class="kn">import</span> <span class="n">fastqIterator</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">fastqIterator</span><span class="p">(</span><span class="s">&quot;sequences.fq&quot;</span><span class="p">)</span> <span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="n">s</span><span class="o">.</span><span class="n">reverseComplement</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="k">print</span> <span class="n">s</span>
+</pre></div>
+</div>
+<p>Given this input fastq file:</p>
+<div class="highlight-bash"><div class="highlight"><pre>@one
+ACTGATGCGCTAGCGCGTACTGACGCG
++one
+!<span class="s1">&#39;&#39;</span>*<span class="o">((((</span>***+<span class="o">))</span>%%%++<span class="o">)(</span>%%%%<span class="o">)</span>.
+@two
+CTAGCTAGCGCGCTAGTGCGGG
++two
+1***-+*<span class="s1">&#39;&#39;</span><span class="o">))</span>**55CCF&gt;&gt;!*
+@three
+TTTCGAGCCGGGGCAAAAA
++three
+CCCCCCC65+<span class="o">))</span>%%%+%%<span class="o">)</span>
+</pre></div>
+</div>
+<p>The output will be:</p>
+<div class="highlight-bash"><div class="highlight"><pre>@one
+CGCGTCAGTACGCGCTAGCGCATCAGT
++one
+.<span class="o">)</span>%%%%<span class="o">()</span>++%%%<span class="o">))</span>+***<span class="o">((((</span>*<span class="s1">&#39;&#39;</span>!
+@two
+CCCGCACTAGCGCGCTAGCTAG
++two
+*!&gt;&gt;FCC55**<span class="o">))</span><span class="s1">&#39;&#39;</span>*+-***1
+@three
+TTTTTGCCCCGGCTCGAAA
++three
+<span class="o">)</span>%%+%%%<span class="o">))</span>+56CCCCCCC
+</pre></div>
+</div>
+<p>Notice that quality scores are also correctly reversed.</p>
+<p>Here&#8217;s the signature for the general fastQ iterator:</p>
+<dl class="function">
+<dt id="pyokit.io.fastqIterators.fastqIterator">
+<tt class="descclassname">pyokit.io.fastqIterators.</tt><tt class="descname">fastqIterator</tt><big>(</big><em>fn</em>, <em>useMutableString=False</em>, <em>verbose=False</em>, <em>debug=False</em>, <em>sanger=False</em>, <em>allowNameMissmatch=False</em><big>)</big><a class="headerlink" href="#pyokit.io.fastqIterators.fastqIterator" title="Permalink to this definition">¶</a></dt>
+<dd><p>A generator function which yields FastqSequence objects read from a file or
+stream. This is a general function which wraps fastqIteratorSimple. In
+future releases, we may allow dynamic switching of which base iterator is
+used.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fn</strong> &#8211; A file-like stream or a string; if this is a
+string, it&#8217;s treated as a filename specifying
+the location of an input fastq file, else it&#8217;s
+treated as a file-like object, which must have a
+readline() method.</li>
+<li><strong>useMustableString</strong> &#8211; if True, construct sequences from lists of chars,
+rather than python string objects, to allow
+more efficient editing. Use with caution.</li>
+<li><strong>verbose</strong> &#8211; if True, print messages about progress to stderr.</li>
+<li><strong>debug</strong> &#8211; if True, print debugging messages to stderr.</li>
+<li><strong>sanger</strong> &#8211; if True, assume quality scores are in sanger
+format. Otherwise, assume they&#8217;re in Illumina
+format.</li>
+<li><strong>allowNameMissmatch</strong> &#8211; don&#8217;t throw error if name in sequence data and
+quality data parts of a read don&#8217;t match. Newer
+version of CASVA seem to output data like this,
+probably to save space.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<p>Here&#8217;s the signature for the simple iterator:</p>
+<dl class="function">
+<dt id="pyokit.io.fastqIterators.fastqIteratorSimple">
+<tt class="descclassname">pyokit.io.fastqIterators.</tt><tt class="descname">fastqIteratorSimple</tt><big>(</big><em>fn</em>, <em>verbose=False</em>, <em>allowNameMissmatch=False</em><big>)</big><a class="headerlink" href="#pyokit.io.fastqIterators.fastqIteratorSimple" title="Permalink to this definition">¶</a></dt>
+<dd><p>A generator function that yields FastqSequence objects read from a
+fastq-format stream or filename. This is iterator requires that all
+sequence and quality data is provided on a single line &#8211; put another way,
+it cannot parse fastq files with newline characters interspersed in the
+sequence and/or quality strings. That&#8217;s probably okay though, as fastq
+files tend not to be formated like that (famous last words..).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fn</strong> &#8211; filename or stream to read data from.</li>
+<li><strong>allowNameMismatch</strong> &#8211; don&#8217;t throw error if name in sequence data
+and quality data parts of a read don&#8217;t match.
+Newer version of CASVA seem to output data like
+this, probably to save space.</li>
+<li><strong>verbose</strong> &#8211; if True, output additional status messages to stderr about
+progress.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<p>And here&#8217;s the signature for the iterator that handles multi-line quality and
+sequence data:</p>
+<dl class="function">
+<dt id="pyokit.io.fastqIterators.fastqIteratorComplex">
+<tt class="descclassname">pyokit.io.fastqIterators.</tt><tt class="descname">fastqIteratorComplex</tt><big>(</big><em>fn</em>, <em>useMutableString=False</em>, <em>verbose=False</em>, <em>debug=False</em>, <em>sanger=False</em><big>)</big><a class="headerlink" href="#pyokit.io.fastqIterators.fastqIteratorComplex" title="Permalink to this definition">¶</a></dt>
+<dd><p>A generator function which yields FastqSequence objects read from a file or
+stream. This iterator can handle fastq files that have their sequence
+and/or their quality data split across multiple lines (i.e. there are
+newline characters in the sequence and quality strings).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fn</strong> &#8211; A file-like stream or a string; if this is a
+string, it&#8217;s treated as a filename specifying
+the location of an input fastq file, else it&#8217;s
+treated as a file-like object, which must have a
+readline() method.</li>
+<li><strong>useMustableString</strong> &#8211; if True, construct sequences from lists of chars,
+rather than python string objects, to allow
+more efficient editing. Use with caution.</li>
+<li><strong>verbose</strong> &#8211; if True, print messages about progress to stderr.</li>
+<li><strong>debug</strong> &#8211; if True, print debugging messages to stderr.</li>
+<li><strong>sanger</strong> &#8211; if True, assume quality scores are in sanger
+format. Otherwise, assume they&#8217;re in Illumina
+format.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="manipulating-sequences">
+<h2>Manipulating sequences<a class="headerlink" href="#manipulating-sequences" title="Permalink to this headline">¶</a></h2>
+<p>Pretty much everything you need should be covered in the class descriptions for
+the sequence classes: see <a class="reference internal" href="datastrct.html#sequenceclasssection"><em>The Sequence class</em></a>,
+<a class="reference internal" href="datastrct.html#fastasequenceclasssection"><em>The FastaSequence class</em></a>, and <a class="reference internal" href="datastrct.html#fastqsequenceclasssection"><em>The FastqSequence class</em></a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Biological Sequences</a><ul>
+<li><a class="reference internal" href="#processing-fasta-files">Processing Fasta files</a></li>
+<li><a class="reference internal" href="#processing-fastq-files">Processing FastQ files</a></li>
+<li><a class="reference internal" href="#manipulating-sequences">Manipulating sequences</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="genomicIntervals_manip.html"
+                        title="previous chapter">Manipulating Genomic Intervals</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="datastrct.html"
+                        title="next chapter">Pyokit data-structures</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/sequences.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="datastrct.html" title="Pyokit data-structures"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="genomicIntervals_manip.html" title="Manipulating Genomic Intervals"
+             >previous</a> |</li>
+        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li><a href="using.html" >Using Pyokit</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Philip J. Uren.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
