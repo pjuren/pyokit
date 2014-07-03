@@ -21,3 +21,16 @@ docs :
 	mv Docs/html/.buildinfo Docs
 	rmdir Docs/html
 .PHONY : docs
+
+releasePatch :
+	bumpversion --verbose patch --tag --tag-name pyokit_{new_version}
+.PHONY : releasePatch
+
+releaseMinor :
+	bumpversion --verbose minor --tag --tag-name pyokit_{new_version}
+.PHONY : releaseMinor
+
+releaseMajor :
+	bumpversion --verbose major --tag --tag-name pyokit_{new_version}
+.PHONY : releaseMajor
+
