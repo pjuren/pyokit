@@ -61,15 +61,15 @@ clean :
 ################################################################################
 
 releasePatch :
-	bumpversion patch --tag --tag-name pyokit_{new_version}
+	bumpversion patch --commit --tag --tag-name pyokit_{new_version}
 .PHONY : releasePatch
 
 releaseMinor :
-	bumpversion minor --tag --tag-name pyokit_{new_version}
+	bumpversion minor --commit --tag --tag-name pyokit_{new_version}
 .PHONY : releaseMinor
 
 releaseMajor :
-	bumpversion major --tag --tag-name pyokit_{new_version}
+	bumpversion major --commit --tag --tag-name pyokit_{new_version}
 .PHONY : releaseMajor
 
 publishPyPITest :
