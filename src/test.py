@@ -35,15 +35,13 @@ from pyokit.io.wigFile import *
 from pyokit.io.indexedWig import *
 from pyokit.io.wigIterators import *
 
-######### SEQUENCING LIBRARIES ###########
-from pyokit.sequencing.maf import *
-
-############ DATA STRUCTURES #############
+############################# DATA STRUCTURES ##################################
 from pyokit.datastruct.intervalTree import *
 from pyokit.datastruct.genomicInterval import *
 from pyokit.datastruct.sequence import *
+from pyokit.datastruct.maf import *
 
-########### TESTING AND UTILS ############
+############################ TESTING AND UTILS #################################
 from pyokit.testing.dummyfiles import *
 from pyokit.util.progressIndicator import *
 

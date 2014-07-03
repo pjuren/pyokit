@@ -179,9 +179,9 @@ class Sequence:
       :param seq: the other sequence to compare against.
       :return: true if this sequence is equal to passed parameter, else false.
     """
-    if read == None : return False
-    return  self.sequenceData == read.sequenceData and\
-            self.sequenceName == read.sequenceName
+    if seq == None : return False
+    return  self.sequenceData == seq.sequenceData and\
+            self.sequenceName == seq.sequenceName
 
   def __ne__(self, read):
     """
@@ -698,23 +698,24 @@ class SequenceUnitTests(unittest.TestCase):
     """
       test that string formatting works correctly for fasta sequences
     """
-    r = FastaSequence("name", "ATCGATCGATCGATCTCGA")
+    r = FastaSequence("name", "ATCGATCGATCGATCTCGA", lineWidth=5)
     expect = ">name\n" +\
              "ATCGA\n" +\
              "TCGAT\n" +\
              "CGATC\n" +\
              "TCGA"
-    got = r.formattedString(width=5)
+    got = r.formattedString()
     self.assertTrue(got == expect)
 
     # make sure this also works with a mutable underlying sequence
-    r = FastaSequence("name", "ATCGATCGATCGATCTCGA", useMutableString = True)
+    r = FastaSequence("name", "ATCGATCGATCGATCTCGA", lineWidth=5,
+                      useMutableString = True)
     expect = ">name\n" +\
              "ATCGA\n" +\
              "TCGAT\n" +\
              "CGATC\n" +\
              "TCGA"
-    got = r.formattedString(width=5)
+    got = r.formattedString()
     self.assertTrue(got == expect)
 
   def testeq(self):
