@@ -4,6 +4,9 @@ Pyokit: Python Bio Toolkit
 Pyokit is a python library with a collection of tools to make the processing
 and analysis of high-throughput biological datasets in python easier.
 
+The project's current build status is:  
+[![Build Status](https://travis-ci.org/pjuren/pyokit.svg?branch=master)](https://travis-ci.org/pjuren/pyokit)
+
 Dependencies
 ------------
 Pyokit depends on rpy2 for some of its functionality. You don't strictly
@@ -13,7 +16,7 @@ functionality will not be supported.
 Installing
 ----------
 **From PyPI.** Pyokit is available from the Python package index. The easiest
-way to install it is to use pip. Note that You may need to prefix certain
+way to install it is to use pip. Note that you may need to prefix certain
 commands below with ```sudo``` if you're installing to the global python
 installation.
 
