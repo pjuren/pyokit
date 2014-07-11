@@ -52,8 +52,8 @@ where a.b.c is the version you downloaded.
 
 Using Pyokit
 ------------
-Everything you need to know should be in the Pyokit manual:
-http://pjuren.github.io/pyokit
+Everything you need to know should be in the Pyokit manual. You can find
+it here: http://pjuren.github.io/pyokit
 
 Contacts and bug reports
 ------------------------
