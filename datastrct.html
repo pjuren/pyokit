@@ -1,0 +1,927 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pyokit data-structures &mdash; Pyokit 0.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="Pyokit 0.2.0 documentation" href="index.html" />
+    <link rel="prev" title="Biological Sequences" href="sequences.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="sequences.html" title="Biological Sequences"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="pyokit-data-structures">
+<h1>Pyokit data-structures<a class="headerlink" href="#pyokit-data-structures" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="genomic-intervals">
+<h2>Genomic Intervals<a class="headerlink" href="#genomic-intervals" title="Permalink to this headline">¶</a></h2>
+<p>Genomic intervals in pyokit are represented using the <cite>GenomicInterval</cite> class.
+The basic information needed to define an interval is the chromosome it&#8217;s on,
+and the start and end indices for the itnerval. We consider the end interval to
+be exclusive (i.e. it&#8217;s not included in the interval). All intervals also have a
+DNA strand, which defaults to the positive strand if not set. Additionally,
+intervals can be given names and scores. The <cite>GenomicInterval</cite> class is
+described below. For more information about using objects created from this
+class, see  <a class="reference internal" href="genomicIntervals.html#genomicintervalssection"><em>Genomic Intervals</em></a>.</p>
+<div class="section" id="the-genomicinterval-class">
+<h3>The GenomicInterval class<a class="headerlink" href="#the-genomicinterval-class" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="pyokit.datastruct.genomicInterval.GenomicInterval">
+<em class="property">class </em><tt class="descclassname">pyokit.datastruct.genomicInterval.</tt><tt class="descname">GenomicInterval</tt><big>(</big><em>chrom</em>, <em>start</em>, <em>end</em>, <em>name=None</em>, <em>score=None</em>, <em>strand=None</em>, <em>scoreType=&lt;type 'int'&gt;</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents a contiguous segment of a genome; inclusive of the start, but not
+the end coordinate</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>chrom</strong> &#8211; The chromosome this genomic interval is on.</li>
+<li><strong>start</strong> &#8211; The start of this genomic interval (inclusive).</li>
+<li><strong>end</strong> &#8211; The end of this genomic interval (exclusive).</li>
+<li><strong>name</strong> &#8211; A name associated with this genomic interval.</li>
+<li><strong>score</strong> &#8211; A score associated with this genomic interval.</li>
+<li><strong>strand</strong> &#8211; The DNA strand (+ or -) that this genomic interval is on.</li>
+<li><strong>scoreType</strong> &#8211; The type (e.g. int, float) of the score associated with this
+genomic interval</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pyokit.datastruct.genomicInterval.GenomicInterval.distance">
+<tt class="descname">distance</tt><big>(</big><em>e</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval.distance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the distance from this genomic interval to another. We consider
+intervals that overlap to have a distance of 0 to each other. The distance
+between two intervals on different chromosomes is considered undefined, and
+causes an exception to be raised.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">the distance from this GenomicInterval to e.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Parameters:</th><td class="field-body"><strong>e</strong> &#8211; the other genomic interval to find the distance to.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name" colspan="2">Raises GenomicIntervalError:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">if self and e are on different chromosomes.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.genomicInterval.GenomicInterval.intersects">
+<tt class="descname">intersects</tt><big>(</big><em>e</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval.intersects" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check whether e intersects self.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">true if this elements intersects the element e</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.genomicInterval.GenomicInterval.isNegativeStrand">
+<tt class="descname">isNegativeStrand</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval.isNegativeStrand" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if this genomic interval is on the negative strand</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if this element is on the negative strand</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.genomicInterval.GenomicInterval.isPositiveStrand">
+<tt class="descname">isPositiveStrand</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval.isPositiveStrand" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if this genomic region is on the positive strand.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if this element is on the positive strand</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.genomicInterval.GenomicInterval.sameRegion">
+<tt class="descname">sameRegion</tt><big>(</big><em>e</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval.sameRegion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check whether self represents the same DNA region as e</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>e</strong> &#8211; genomic region to compare against</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True if self and e are for the same region (ignores differences
+in non-region related fields, such as name or score &#8211; but does
+consider strand)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.genomicInterval.GenomicInterval.signedDistance">
+<tt class="descname">signedDistance</tt><big>(</big><em>e</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval.signedDistance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the signed distance from this genomic interval to another one. We
+consider intervals that overlap to have a distance of 0 to each other. The
+distance between two intervals on different chromosomes is considered
+undefined, and causes an exception to be raised. If e comes earlier than
+self, the distance will be negative.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">the signed distance from this GenomicInterval to e.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Parameters:</th><td class="field-body"><strong>e</strong> &#8211; the other genomic interval to find the distance to.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name" colspan="2">Raises GenomicIntervalError:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">if self and e are on different chromosomes.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.genomicInterval.GenomicInterval.sizeOfOverlap">
+<tt class="descname">sizeOfOverlap</tt><big>(</big><em>e</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval.sizeOfOverlap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the size of the overlap between self and e</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">the number of bases that are shared in common between self and e.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.genomicInterval.GenomicInterval.subtract">
+<tt class="descname">subtract</tt><big>(</big><em>es</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval.subtract" title="Permalink to this definition">¶</a></dt>
+<dd><p>Subtracts the BED elements in es from self</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>es</strong> &#8211; a list of BED elements (or anything with chrom, start, end)</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">a list of BED elements which represent what is left of
+self after the subtraction. This might be an empty list.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="interval-trees">
+<span id="intervaltreessection"></span><h2>Interval Trees<a class="headerlink" href="#interval-trees" title="Permalink to this headline">¶</a></h2>
+<p>Interval trees are binary trees that allow random access lookup of intervals
+that are intersected by a given point or interval.</p>
+<div class="section" id="the-intervaltree-class">
+<h3>The IntervalTree class<a class="headerlink" href="#the-intervaltree-class" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="pyokit.datastruct.intervalTree.IntervalTree">
+<em class="property">class </em><tt class="descclassname">pyokit.datastruct.intervalTree.</tt><tt class="descname">IntervalTree</tt><big>(</big><em>intervals</em>, <em>openEnded=False</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.intervalTree.IntervalTree" title="Permalink to this definition">¶</a></dt>
+<dd><p>An interval tree is a binary tree that allows fast O(log(n)) lookup of
+intervals that intersect a given point or interval.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>intervals</strong> &#8211; list of intervals, doesn&#8217;t need to be sorted in any way.
+Can be any object, as long as they have &#8216;start&#8217; and &#8216;end&#8217;
+attributes.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pyokit.datastruct.intervalTree.IntervalTree.intersectingInterval">
+<tt class="descname">intersectingInterval</tt><big>(</big><em>start</em>, <em>end</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.intervalTree.IntervalTree.intersectingInterval" title="Permalink to this definition">¶</a></dt>
+<dd><p>given an interval, determine which set of intervals in the tree are
+intersected.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>start</strong> &#8211; start of the intersecting interval</li>
+<li><strong>end</strong> &#8211; end of the intersecting interval</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">the list of intersected intervals</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.intervalTree.IntervalTree.intersectingIntervalIterator">
+<tt class="descname">intersectingIntervalIterator</tt><big>(</big><em>start</em>, <em>end</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.intervalTree.IntervalTree.intersectingIntervalIterator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get an iterator which will iterate over those objects in the tree which
+intersect the given interval - sorted in order of start index</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>start</strong> &#8211; find intervals in the tree that intersect an interval with
+with this start index (inclusive)</li>
+<li><strong>end</strong> &#8211; find intervals in the tree that intersect an interval with
+with this end index (exclusive)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">an iterator that will yield intersected intervals</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.intervalTree.IntervalTree.intersectingPoint">
+<tt class="descname">intersectingPoint</tt><big>(</big><em>p</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.intervalTree.IntervalTree.intersectingPoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>given a point, determine which set of intervals in the tree are intersected.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>p</strong> &#8211; intersection point</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">the list of intersected intervals</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="sequences">
+<h2>Sequences<a class="headerlink" href="#sequences" title="Permalink to this headline">¶</a></h2>
+<p>Sequences in Pyokit are represented using the Sequence class, which wraps a
+name and the actual sequence data, and provides a lot of the basic functionality
+for manipulating sequences. Specializations exist for particular sequence
+formats. At present, fasta and fastq are supported. The Sequence, FastaSequence
+and FastqSequence classes are described below. For more information about
+manipulating sequence data, see <a class="reference internal" href="sequences.html#sequencessection"><em>Biological Sequences</em></a></p>
+<div class="section" id="the-sequence-class">
+<span id="sequenceclasssection"></span><h3>The Sequence class<a class="headerlink" href="#the-sequence-class" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="pyokit.datastruct.sequence.Sequence">
+<em class="property">class </em><tt class="descclassname">pyokit.datastruct.sequence.</tt><tt class="descname">Sequence</tt><big>(</big><em>seqName</em>, <em>seqData</em>, <em>useMutableString=False</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the base class for all sequences in Pyokit. Objects from this class
+will have only a sequence name and actual nucleotide sequence data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>seqName</strong> &#8211; A name describing the sequence. Can be any string.</li>
+<li><strong>seqData</strong> &#8211; The nucleotide sequence data. Can be DNA or RNA.
+Note that there is no check to make sure the
+sequence data is valid, that&#8217;s the responsibility
+of the caller.</li>
+<li><strong>useMutableString</strong> &#8211; Store the sequence data as a mutable string, rather
+than a regular python string. This should make
+editing operations must faster, but it comes at the
+expense of less flexibility (e.g. the object can
+not be used as a hash key because it is mutable.)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.clipAdaptor">
+<tt class="descname">clipAdaptor</tt><big>(</big><em>adaptor</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.clipAdaptor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clip an adaptor sequence from this sequence. We assume it&#8217;s in the 3&#8217; end.
+This is basically a convenience wrapper for clipThreePrime. It requires
+8 out of 10 of the first bases in the adaptor sequence to match for
+clipping to occur.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>adaptor</strong> &#8211; sequence to look for. We only use the first 10 bases; must
+be a full Sequence object, not just a string.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.clipThreePrime">
+<tt class="descname">clipThreePrime</tt><big>(</big><em>seq</em>, <em>mm_score</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.clipThreePrime" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clip a sequence from the 3&#8217; end of the sequence &#8211; we assume the sequence
+to be clipped will always begin somewhere in this sequence, but may not be
+fully contained. If found, replaced with Ns.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>seq</strong> &#8211; sequence to be clipped</li>
+<li><strong>mm_score</strong> &#8211; the number of matching bases needed to consider a hit,
+mm_score = len(seq) would be 100% match</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.containsAdaptor">
+<tt class="descname">containsAdaptor</tt><big>(</big><em>adaptor</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.containsAdaptor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check whether this sequence contains adaptor contamination. If it exists,
+we assume it&#8217;s in the 3&#8217; end. This function requires 8 out of 10 of the
+first bases in the adaptor sequence to match for an occurrence to be
+reported.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>adaptor</strong> &#8211; sequence to look for. We only use first 10 bases; must be
+a full Sequence object, not just string.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True if there is an occurence of &lt;adaptor&gt;, False otherwise</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.copy">
+<tt class="descname">copy</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.copy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copy constructor for Sequence objects.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.effectiveLength">
+<tt class="descname">effectiveLength</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.effectiveLength" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the length of the sequence if N&#8217;s are disregarded.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.isDNA">
+<tt class="descname">isDNA</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.isDNA" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a guess as to whether this sequence is a DNA sequence or not by
+looking at the symbols it contains.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if contains only DNA nucleotides, False otherwise</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.isLowQuality">
+<tt class="descname">isLowQuality</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.isLowQuality" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine whether this is a low quality sequence. To be considered a low
+quality sequence, it must have &gt; 10% Ns.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if this sequence meets the above definition of low-quality.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.isPolyA">
+<tt class="descname">isPolyA</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.isPolyA" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine whether this sequence is polyA. To be a polyA sequence, it
+must have &gt; 90% Adenine.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if the sequence is PolyA by the above definition.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.isPolyT">
+<tt class="descname">isPolyT</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.isPolyT" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine whether this sequence is polyT. To be a polyT sequence, it
+must have &gt; 90% Thymine.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if the sequence is PolyT by the above definition.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.isRNA">
+<tt class="descname">isRNA</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.isRNA" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a guess as to whether this sequence is an RNA sequence or not by
+looking at the symbols it contains.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if contains only RNA nucleotides, False otherwise</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.maskMatch">
+<tt class="descname">maskMatch</tt><big>(</big><em>mask</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.maskMatch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine whether this sequence matches the given mask.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>mask</strong> &#8211; string to match against. Ns in the mask are considered to
+match anything in the sequence &#8211; all other chars must
+match exactly.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True if the mask matches at all places, otherwise false</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.maskRegion">
+<tt class="descname">maskRegion</tt><big>(</big><em>region</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.maskRegion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace nucleotides in this sequence in the regions given by Ns</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>region</strong> &#8211; any object with .start and .end attributes. Co-ords are
+zero based and inclusive of both end points. Any other
+attributes (e.g. chrom.) are ignored.</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Raises SequenceError:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">if region specifies nucleotides not present in
+this sequence</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.maskRegions">
+<tt class="descname">maskRegions</tt><big>(</big><em>regions</em>, <em>verbose=False</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.maskRegions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mask the given regions in this sequence with Ns.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>region</strong> &#8211; iterable of regions to mask. Each region can be any object
+with .start and .end attributes. Co-ords are zero based and
+inclusive of both end points. Any other attributes (e.g.
+chrom.) are ignored.</li>
+<li><strong>verbose</strong> &#8211; print status messages to stderr if True</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.nsLeft">
+<tt class="descname">nsLeft</tt><big>(</big><em>amount</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.nsLeft" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace leftmost &lt;amount&gt; bases by Ns.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.nsRight">
+<tt class="descname">nsRight</tt><big>(</big><em>amount</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.nsRight" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace rightmost &lt;amount&gt; bases by Ns</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.percentNuc">
+<tt class="descname">percentNuc</tt><big>(</big><em>nuc</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.percentNuc" title="Permalink to this definition">¶</a></dt>
+<dd><p>return the percentage of the sequence which is equal to the passed nuc.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>nuc</strong> &#8211; the nucleotide to compute percentage composition for. There is
+no check to make sure this is a valid nucleotide.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">the percentage of the sequence that is &lt;nuc&gt;</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.reverseComplement">
+<tt class="descname">reverseComplement</tt><big>(</big><em>isRNA=None</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.reverseComplement" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reverse complement this sequence in-place.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>isRNA</strong> &#8211; if True, treat this sequence as RNA. If False, treat it as
+DNA. If None (default), inspect the sequence and make a
+guess as to whether it is RNA or DNA.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.similarity">
+<tt class="descname">similarity</tt><big>(</big><em>self_start</em>, <em>self_end</em>, <em>other_start</em>, <em>other_end</em>, <em>other</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.similarity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the number of matching bases in the subsequences self[start, end]
+and other[o_start, o_end]. Note that the subsequences must be the same
+length.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>self_start</strong> &#8211; start index for sub-sequence in self</li>
+<li><strong>self_end</strong> &#8211; end index for sub-sequence in self</li>
+<li><strong>other_start</strong> &#8211; start index for subsequence in other sequence</li>
+<li><strong>other_end</strong> &#8211; end index for subsequence in other sequence</li>
+<li><strong>other</strong> &#8211; other sequence to compare to this.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.split">
+<tt class="descname">split</tt><big>(</big><em>point=None</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.split" title="Permalink to this definition">¶</a></dt>
+<dd><p>Split this sequence into two halves and return them. The original sequence
+remains unmodified.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>point</strong> &#8211; defines the split point, if None then the centre is used</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">two Sequence objects &#8211; one for each side</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.toDNA">
+<tt class="descname">toDNA</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.toDNA" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert this sequence in-place to a DNA sequence by changing any Us to Ts</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.toRNA">
+<tt class="descname">toRNA</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.toRNA" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert this sequence in-place to an RNA sequence by changing any Ts to Us</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.truncate">
+<tt class="descname">truncate</tt><big>(</big><em>newLength</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.truncate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Truncate this sequence in-place so it&#8217;s only &lt;newLength&gt; nucleotides long.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>newLength</strong> &#8211; the length to truncate this sequence to.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="the-fastasequence-class">
+<span id="fastasequenceclasssection"></span><h3>The FastaSequence class<a class="headerlink" href="#the-fastasequence-class" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="pyokit.datastruct.sequence.FastaSequence">
+<em class="property">class </em><tt class="descclassname">pyokit.datastruct.sequence.</tt><tt class="descname">FastaSequence</tt><big>(</big><em>seqName</em>, <em>seqData=''</em>, <em>lineWidth=None</em>, <em>useMutableString=False</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.FastaSequence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Data-structure for holding information about a Fasta-formatted sequence.
+This is basically just a wrapper around a regular Sequence object which
+provides the neccessary formatting for output.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>seqName</strong> &#8211; the name of the sequence</li>
+<li><strong>seqData</strong> &#8211; the actual nucleotide sequence</li>
+<li><strong>lineWidth</strong> &#8211; width of sequence data lines for output. If None,
+all sequence data will be output on a single line</li>
+<li><strong>useMustableString</strong> &#8211; </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.FastaSequence.formattedString">
+<tt class="descname">formattedString</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.FastaSequence.formattedString" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a formatted version of the seq where no row of sequence data exceeds
+the line length for this object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Raise:</th><td class="field-body">SequenceError if this object has no line width specified.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="the-fastqsequence-class">
+<span id="fastqsequenceclasssection"></span><h3>The FastqSequence class<a class="headerlink" href="#the-fastqsequence-class" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="pyokit.datastruct.sequence.FastqSequence">
+<em class="property">class </em><tt class="descclassname">pyokit.datastruct.sequence.</tt><tt class="descname">FastqSequence</tt><big>(</big><em>seqName</em>, <em>seqData=None</em>, <em>seqQual=None</em>, <em>useMutableString=False</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Data structure fo holding informaton about a Fastq-formatted sequence.
+Fastq-formatted sequences differ from regular sequences by the inclusion of
+a quality score for each nucleotide in the sequence, encoded as a string.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>seqName</strong> &#8211; A name describing the sequence. Can be any string.</li>
+<li><strong>seqData</strong> &#8211; The nucleotide sequence data. Can be DNA or RNA.
+Note that there is no check to make sure the
+sequence data is valid, that&#8217;s the responsibility
+of the caller.</li>
+<li><strong>seqQual</strong> &#8211; The quality string for this sequence &#8211; must be
+the same length as the nucleotide sequence.</li>
+<li><strong>useMutableString</strong> &#8211; Store the sequence data as a mutable string, rather
+than a regular python string. This should make
+editing operations must faster, but it comes at the
+expense of less flexibility (e.g. the object can
+not be used as a hash key because it is mutable.)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Raises SequenceError:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first last">if the sequence data is not the same length as the
+quality data.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.FastqSequence.merge">
+<tt class="descname">merge</tt><big>(</big><em>other</em>, <em>forceMerge=False</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.merge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Merge two fastqSequences by concatenating their sequence data and their
+quality data (&lt;self&gt; first, then &lt;other&gt;); &lt;self&gt; and &lt;other&gt; must have
+the same sequence name. A new merged FastqSequence object is returned;
+&lt;Self&gt; and &lt;other&gt; are left unaltered.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>other</strong> &#8211; the other sequence to merge with self.</li>
+<li><strong>forceMerge</strong> &#8211; force the merge to occur, even if sequences names don&#8217;t
+match. In this case, &lt;self&gt; takes precedence.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A new FastqSequence that represents the merging of &lt;self&gt; and
+&lt;other&gt;</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raise:</th><td class="field-body"><p class="first last">FastqSequenceError if the sequences names do not match, and the
+forceMerge parameter is not set.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.FastqSequence.qualityToSolexa">
+<tt class="descname">qualityToSolexa</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.qualityToSolexa" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert the quality data for this fastqSequence in-place, from sanger to
+solexa format. Note that no checking is done to make sure the data was
+originally in sanger format; if it wasn&#8217;t, the result will be junk.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.FastqSequence.reverseComplement">
+<tt class="descname">reverseComplement</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.reverseComplement" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reverse complement this fastq sequence in-place.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.FastqSequence.split">
+<tt class="descname">split</tt><big>(</big><em>point=None</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.split" title="Permalink to this definition">¶</a></dt>
+<dd><p>Split this fastq sequence into two halves. The original sequence is left
+unaltered.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>point</strong> &#8211; the point (index) at which to split this sequence. If None
+(the default), then we split in the middle.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">two FastqSequence objects which correspond to the split of this
+sequence.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.FastqSequence.trimLeft">
+<tt class="descname">trimLeft</tt><big>(</big><em>amount</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.trimLeft" title="Permalink to this definition">¶</a></dt>
+<dd><p>Trim this fastqSequence in-place by removing &lt;amount&gt; nucleotides from the
+5&#8217; end (left end).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>amount</strong> &#8211; the number of nucleotides to trim from the left-side of
+this sequence.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.FastqSequence.trimRight">
+<tt class="descname">trimRight</tt><big>(</big><em>amount</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.trimRight" title="Permalink to this definition">¶</a></dt>
+<dd><p>Trim this fastqSequence in-place by removing &lt;amount&gt; nucleotides from the
+3&#8217; end (right end).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>amount</strong> &#8211; the number of nucleotides to trim from the right-side of
+this sequence.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.FastqSequence.truncate">
+<tt class="descname">truncate</tt><big>(</big><em>size</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.truncate" title="Permalink to this definition">¶</a></dt>
+<dd><p>truncate this fastqSequence in-place so it is only &lt;size&gt; nucleotides long</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>size</strong> &#8211; the number of nucleotides to truncate to.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Pyokit data-structures</a><ul>
+<li><a class="reference internal" href="#genomic-intervals">Genomic Intervals</a><ul>
+<li><a class="reference internal" href="#the-genomicinterval-class">The GenomicInterval class</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#interval-trees">Interval Trees</a><ul>
+<li><a class="reference internal" href="#the-intervaltree-class">The IntervalTree class</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#sequences">Sequences</a><ul>
+<li><a class="reference internal" href="#the-sequence-class">The Sequence class</a></li>
+<li><a class="reference internal" href="#the-fastasequence-class">The FastaSequence class</a></li>
+<li><a class="reference internal" href="#the-fastqsequence-class">The FastqSequence class</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="sequences.html"
+                        title="previous chapter">Biological Sequences</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/datastrct.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="sequences.html" title="Biological Sequences"
+             >previous</a> |</li>
+        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Philip J. Uren.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
