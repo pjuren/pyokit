@@ -8,12 +8,12 @@ env:
   global:
     - secure: "gCIVQ/G/+OiTl4VOy2BVkkG6At29F5xng7AyqJmxWqbQeWssydWtS2fJXP9pie3jW3fMSWyaB3mwv+WVKq5mJiN92ONX8Yy5E8Vx3vRybXoKNGfP+r51vkt3lxI7CZ3dRNyWSlO5TxXYSPsBaZgeYnNqDH44IWeORkjZWgzIuCc="
 after_success:
-  - ## the following automatically builds the doxygen 
-  - ## documentation and pushes it to the gh_pages branch 
-  - 
-  - # First, set up credentials using the environment variables 
+  - ## the following automatically builds the doxygen
+  - ## documentation and pushes it to the gh_pages branch
+  -
+  - # First, set up credentials using the environment variables
   - # GIT_NAME, GIT_EMAIL and GH_TOKEN. These were passed
-  - # encrypted to travis and should have been decrypted 
+  - # encrypted to travis and should have been decrypted
   - # using travis' private key before this script was run.
   - git config --global user.name "${GIT_NAME}"
   - git config --global user.email ${GIT_EMAIL}
@@ -33,9 +33,8 @@ after_success:
   - cd ../
   - make docs
   -
-  - # cd into the docs dir and commit and push the new docs. 
+  - # cd into the docs dir and commit and push the new docs.
   - cd Docs
   - git add --all .
   - git commit -m "Auto-updating developer documentation"
-  - git push https://${GH_TOKEN}@github.com/pjuren/pyokit gh-pages
-
+  - git push --quiet https://${GH_TOKEN}@github.com/pjuren/pyokit gh-pages && echo "Pushed to updated documentation."
