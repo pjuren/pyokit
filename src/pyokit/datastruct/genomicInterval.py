@@ -119,10 +119,11 @@ def collapseRegions(s):
       sys.stderr.write("\tcurrent is: " + str(current) + "\n")
 
     # make sure things are sorted..
-    if (s[i].chrom < s[i-1].chrom) or \
-       (s[i].chrom == s[i-1].chrom and s[i].start < s[i-1].start) :
-      raise BEDError("collapsing regions failed. saw this region: " +\
-                     str(s[i-1]) + " before this one: " + str(s[i]))
+    if (s[i].chrom < s[i - 1].chrom) or \
+       (s[i].chrom == s[i - 1].chrom and s[i].start < s[i - 1].start):
+      raise GenomicIntervalError("collapsing regions failed. saw this region: "
+                                 + str(s[i - 1]) + " before this one: "
+                                 + str(s[i]))
 
     # because of sorting order, we know that nothing else exists with
     # start less than s[i] which we haven't already seen.
