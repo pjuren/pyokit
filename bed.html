@@ -152,23 +152,23 @@ using the iterator to find all the matching intervals in a set of BED files.</p>
 </div>
 <p>Given the following contents of <tt class="docutils literal"><span class="pre">one.bed</span></tt>, <tt class="docutils literal"><span class="pre">two.bed</span></tt> and <tt class="docutils literal"><span class="pre">three.bed</span></tt>:</p>
 <div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>cat one.bed
-chr1  10      20      reg1    1       +
-chr1  40      50      reg2    2       -
+chr1  <span class="m">10</span>      <span class="m">20</span>      reg1    <span class="m">1</span>       +
+chr1  <span class="m">40</span>      <span class="m">50</span>      reg2    <span class="m">2</span>       -
 <span class="nv">$ </span>cat two.bed
-chr1  10      20      regA    1       +
-chr1  30      35      regB    5       -
-chr1  40      50      regC    2       -
-chr2  10      20      regD    2       +
+chr1  <span class="m">10</span>      <span class="m">20</span>      regA    <span class="m">1</span>       +
+chr1  <span class="m">30</span>      <span class="m">35</span>      regB    <span class="m">5</span>       -
+chr1  <span class="m">40</span>      <span class="m">50</span>      regC    <span class="m">2</span>       -
+chr2  <span class="m">10</span>      <span class="m">20</span>      regD    <span class="m">2</span>       +
 <span class="nv">$ </span>cat three.bed
-chr1  10      20      regW    1       +
-chr1  30      35      regX    5       -
-chr1  40      50      regY    2       -
-chr2  10      20      regZ    2       +
+chr1  <span class="m">10</span>      <span class="m">20</span>      regW    <span class="m">1</span>       +
+chr1  <span class="m">30</span>      <span class="m">35</span>      regX    <span class="m">5</span>       -
+chr1  <span class="m">40</span>      <span class="m">50</span>      regY    <span class="m">2</span>       -
+chr2  <span class="m">10</span>      <span class="m">20</span>      regZ    <span class="m">2</span>       +
 </pre></div>
 </div>
 <p>The output of the above script would be:</p>
-<div class="highlight-bash"><div class="highlight"><pre>region at chr1 10 20 has name reg1 in one.bed, regA in two.bed, regW in three.bed
-region at chr1 40 50 has name reg2 in one.bed, regC in two.bed, regY in three.bed
+<div class="highlight-bash"><div class="highlight"><pre>region at chr1 <span class="m">10</span> <span class="m">20</span> has name reg1 in one.bed, regA in two.bed, regW in three.bed
+region at chr1 <span class="m">40</span> <span class="m">50</span> has name reg2 in one.bed, regC in two.bed, regY in three.bed
 </pre></div>
 </div>
 <p>Here&#8217;s the signature of the paired BED iterator function:</p>
@@ -331,7 +331,7 @@ file/stream must be BED.</li>
     </div>
     <div class="footer">
         &copy; Copyright 2014, Philip J. Uren.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>
