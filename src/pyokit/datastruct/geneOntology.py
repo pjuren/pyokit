@@ -30,12 +30,31 @@
 
 class GeneOntologyTerm(object):
   """
-    Represents a gene ontology term, which may or may not have been scored
-    for significance
+    Represents a gene ontology term.
   """
 
-  def __init__(self, name, catagory=None):
+  def __init__(self, name, identified=None, catagory=None):
+    """
+    :param name:        the term name, can contain spaces;
+                        e.g.: intracellular transport
+    :param identifier:  the term identifier; e.g: GO:0046907
+    :param catagory:    the database or catagory the term belongs to;
+                        e.g.: GOTERM_BP_FAT
+    """
     self.name = name
     self.catagory = catagory
-    self.pvalue = None
-    self.corrected_pvalue = None
+
+
+class GeneOntologyEnrichmentResult(GeneOntologyTerm):
+  """
+  Represents the result of a gene ontology enrichment calculation for a
+  single GO term.
+  """
+
+  def __init__(self, name, pvalue, identifier=None, catagory=None):
+    """
+
+    """
+    super(GeneOntologyEnrichmentResult, self).__init__(name,
+                                                       identifier, catagory)
+    self.pvalue = pvalue
