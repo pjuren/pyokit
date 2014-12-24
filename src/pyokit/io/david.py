@@ -31,6 +31,7 @@ from pyokit.datastruct.geneOntology import GeneOntologyEnrichmentResult
 ###############################################################################
 
 NUM_FIELDS_IN_DAVID_RECORD = 13
+PVAL_FIELD_NUM = 11
 
 
 ###############################################################################
@@ -45,19 +46,19 @@ def david_results_iterator(fn, verbose=False):
 
        Field            -- Type   -- Example
   -----------------------------------------------------------------------------
-  (1)  Category         -- string -- GOTERM_BP_FAT
-  (2)  Term             -- string -- GO:0046907~intracellular transport
-  (3)  Count            -- int    -- 43
-  (4)  Percent          -- float  -- 11.345646437994723
-  (5)  PValue           -- float  -- 1.3232857694449546E-9
-  (6)  Genes            -- string -- ARSB, KPNA6, GNAS,
-  (7)  List Total       -- int    -- 310
-  (8)  Pop Hits	        -- int    -- 657
-  (9)  Pop Total	      -- int    -- 13528
-  (10) Fold Enrichment	-- float  -- 2.8561103746256196
-  (11) Bonferroni	      -- float  -- 2.6293654579179204E-6
-  (12) Benjamini	      -- float  -- 2.6293654579179204E-6
-  (13) FDR              -- float  -- 2.2734203852792234E-6
+  (0)  Category         -- string -- GOTERM_BP_FAT
+  (1)  Term             -- string -- GO:0046907~intracellular transport
+  (2)  Count            -- int    -- 43
+  (3)  Percent          -- float  -- 11.345646437994723
+  (4)  PValue           -- float  -- 1.3232857694449546E-9
+  (5)  Genes            -- string -- ARSB, KPNA6, GNAS,
+  (6)  List Total       -- int    -- 310
+  (7)  Pop Hits	        -- int    -- 657
+  (8)  Pop Total	      -- int    -- 13528
+  (9)  Fold Enrichment	-- float  -- 2.8561103746256196
+  (10) Bonferroni	      -- float  -- 2.6293654579179204E-6
+  (11) Benjamini	      -- float  -- 2.6293654579179204E-6
+  (12) FDR              -- float  -- 2.2734203852792234E-6
 
   The first line is a header giving the field names -- this is ignored though,
   and we expect them in the order given above.
@@ -69,24 +70,33 @@ def david_results_iterator(fn, verbose=False):
   :param fn: the file to parse
   :param verbose: if True, output progress to stderr.
   """
+  first = True
   for line in open(fn):
     line = line.strip()
+    if line == "":
+      continue
+    if first:
+      first = False
+      continue
+
     parts = line.split("\t")
     if len(parts) != NUM_FIELDS_IN_DAVID_RECORD:
       raise IOError("failed to parse " + fn + " as DAVID result file. "
                     + "Expected " + str(NUM_FIELDS_IN_DAVID_RECORD) + " "
                     + "tab-separated fields, but found "
                     + str(len(parts)) + " instead")
-    n_parts = parts[2].split("~")
+    n_parts = parts[1].split("~")
     name = n_parts[-1].strip()
     identifier = n_parts[0] if len(n_parts) > 1 else None
-    catagory = parts[1].strip()
+    catagory = parts[0].strip()
     try:
-      p_val = float(parts[13])
+      p_val = float(parts[PVAL_FIELD_NUM])
     except ValueError:
       raise IOError("Failed to parse " + fn + " as DAVID result file. "
-                    + "Expected field 13 to contain floating point number "
-                    + "(FDR), found this instead: " + str(parts[13]))
+                    + "Expected field " + str(PVAL_FIELD_NUM) + " "
+                    + "to contain a floating point number "
+                    + "(Benjamini), found this instead: "
+                    + str(parts[PVAL_FIELD_NUM]))
     yield GeneOntologyEnrichmentResult(name, p_val, identifier, catagory)
 
 
