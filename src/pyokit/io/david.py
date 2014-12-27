@@ -44,28 +44,30 @@ def david_results_iterator(fn, verbose=False):
   representing each of the terms reported. The expected format for a DAVID
   result file is tab-seperated format. The following fields should be present:
 
-       Field            -- Type   -- Example
-  -----------------------------------------------------------------------------
-  (0)  Category         -- string -- GOTERM_BP_FAT
-  (1)  Term             -- string -- GO:0046907~intracellular transport
-  (2)  Count            -- int    -- 43
-  (3)  Percent          -- float  -- 11.345646437994723
-  (4)  PValue           -- float  -- 1.3232857694449546E-9
-  (5)  Genes            -- string -- ARSB, KPNA6, GNAS,
-  (6)  List Total       -- int    -- 310
-  (7)  Pop Hits	        -- int    -- 657
-  (8)  Pop Total	      -- int    -- 13528
-  (9)  Fold Enrichment	-- float  -- 2.8561103746256196
-  (10) Bonferroni	      -- float  -- 2.6293654579179204E-6
-  (11) Benjamini	      -- float  -- 2.6293654579179204E-6
-  (12) FDR              -- float  -- 2.2734203852792234E-6
+  ===  ===============  ==========  ====================================
+  Num  Field                 Type        Example
+  ===  ===============  ==========  ====================================
+  0    Category         string      GOTERM_BP_FAT
+  1    Term             string      GO:0046907~intracellular transport
+  2    Count            int         43
+  3    Percent          float       11.345646437994723
+  4    PValue           float       1.3232857694449546E-9
+  5    Genes            string      ARSB, KPNA6, GNAS
+  6    List Total       int         310
+  7    Pop Hits         int         657
+  8    Pop Total        int         13528
+  9    Fold Enrichment  float       2.8561103746256196
+  10   Bonferroni       float       2.6293654579179204E-6
+  11   Benjamini        float       2.6293654579179204E-6
+  12   FDR              float       2.2734203852792234E-6
+  ===  ===============  ==========  ====================================
 
   The first line is a header giving the field names -- this is ignored though,
   and we expect them in the order given above.
 
-  Most of the fields are ignored at present; we take fields 1,2, and 13 (as the
-  signficiant/p-value). When parsing the term field, we try to extract a term
-  ID by splitting on tilde.
+  Most of the fields are ignored at present; we take fields 0,1, and 11 (as the
+  significance/p-value). When parsing the term field, we try to extract a term
+  ID by splitting on tilde, but if we can't then this is set to None.
 
   :param fn: the file to parse
   :param verbose: if True, output progress to stderr.
