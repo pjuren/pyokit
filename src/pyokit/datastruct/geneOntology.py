@@ -30,16 +30,19 @@
 
 class GeneOntologyTerm(object):
   """
-    Represents a gene ontology term.
+  Represents a gene ontology term.
+
+  :param name: the term name, can contain spaces;
+               e.g.: intracellular transport
+  :param identifier: the term identifier; e.g: GO:0046907
+  :param catagory: the database or catagory the term belongs to;
+                   e.g.: GOTERM_BP_FAT
   """
 
   def __init__(self, name, identified=None, catagory=None):
     """
-    :param name:        the term name, can contain spaces;
-                        e.g.: intracellular transport
-    :param identifier:  the term identifier; e.g: GO:0046907
-    :param catagory:    the database or catagory the term belongs to;
-                        e.g.: GOTERM_BP_FAT
+    Constructor for GeneOntology objects. See class docs for details about
+    parameters.
     """
     self.name = name
     self.catagory = catagory
@@ -49,11 +52,19 @@ class GeneOntologyEnrichmentResult(GeneOntologyTerm):
   """
   Represents the result of a gene ontology enrichment calculation for a
   single GO term.
+
+  :param name:        the term name, can contain spaces;
+                      e.g.: intracellular transport
+  :param pvalue:      significance of the enrichment of this term
+  :param identifier:  the term identifier; e.g: GO:0046907
+  :param catagory:    the database or catagory the term belongs to;
+                      e.g.: GOTERM_BP_FAT
   """
 
   def __init__(self, name, pvalue, identifier=None, catagory=None):
     """
-
+    Constructor for GeneOntologyEnrichmentResult objects. See class docs for
+    details about parameters.
     """
     super(GeneOntologyEnrichmentResult, self).__init__(name,
                                                        identifier, catagory)
