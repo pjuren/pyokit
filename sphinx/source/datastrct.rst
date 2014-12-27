@@ -79,3 +79,23 @@ The FastqSequence class
 
 .. autoclass:: pyokit.datastruct.sequence.FastqSequence
    :members:
+
+
+
+.. _ontologyClassSection:
+
+-------------
+Gene Ontology
+-------------
+There are two classes for representing gene ontology data in Pyokit. The
+first of these is a simple data type wrapping basic information about a GO
+term:
+
+.. autoclass:: pyokit.datastruct.geneOntology.GeneOntologyTerm
+   :members:
+
+While the second is a subclass of the general GO term class which adds
+additional information about term enrichment.
+
+.. autoclass:: pyokit.datastruct.geneOntology.GeneOntologyEnrichmentResult
+   :members:
