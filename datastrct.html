@@ -25,7 +25,8 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="Pyokit 0.2.0 documentation" href="index.html" />
-    <link rel="prev" title="Biological Sequences" href="sequences.html" /> 
+    <link rel="next" title="Developer documentation" href="developer.html" />
+    <link rel="prev" title="Gene Ontology" href="gene_ontology.html" /> 
   </head>
   <body>
     <div class="related">
@@ -35,7 +36,10 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="sequences.html" title="Biological Sequences"
+          <a href="developer.html" title="Developer documentation"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="gene_ontology.html" title="Gene Ontology"
              accesskey="P">previous</a> |</li>
         <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li> 
       </ul>
@@ -853,6 +857,58 @@ this sequence.</td>
 
 </div>
 </div>
+<div class="section" id="gene-ontology">
+<span id="ontologyclasssection"></span><h2>Gene Ontology<a class="headerlink" href="#gene-ontology" title="Permalink to this headline">¶</a></h2>
+<p>There are two classes for representing gene ontology data in Pyokit. The
+first of these is a simple data type wrapping basic information about a GO
+term:</p>
+<dl class="class">
+<dt id="pyokit.datastruct.geneOntology.GeneOntologyTerm">
+<em class="property">class </em><tt class="descclassname">pyokit.datastruct.geneOntology.</tt><tt class="descname">GeneOntologyTerm</tt><big>(</big><em>name</em>, <em>identified=None</em>, <em>catagory=None</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.geneOntology.GeneOntologyTerm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents a gene ontology term.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> &#8211; the term name, can contain spaces;
+e.g.: intracellular transport</li>
+<li><strong>identifier</strong> &#8211; the term identifier; e.g: <a class="reference external" href="GO:0046907">GO:0046907</a></li>
+<li><strong>catagory</strong> &#8211; the database or catagory the term belongs to;
+e.g.: GOTERM_BP_FAT</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<p>While the second is a subclass of the general GO term class which adds
+additional information about term enrichment.</p>
+<dl class="class">
+<dt id="pyokit.datastruct.geneOntology.GeneOntologyEnrichmentResult">
+<em class="property">class </em><tt class="descclassname">pyokit.datastruct.geneOntology.</tt><tt class="descname">GeneOntologyEnrichmentResult</tt><big>(</big><em>name</em>, <em>pvalue</em>, <em>identifier=None</em>, <em>catagory=None</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.geneOntology.GeneOntologyEnrichmentResult" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents the result of a gene ontology enrichment calculation for a
+single GO term.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> &#8211; the term name, can contain spaces;
+e.g.: intracellular transport</li>
+<li><strong>pvalue</strong> &#8211; significance of the enrichment of this term</li>
+<li><strong>identifier</strong> &#8211; the term identifier; e.g: <a class="reference external" href="GO:0046907">GO:0046907</a></li>
+<li><strong>catagory</strong> &#8211; the database or catagory the term belongs to;
+e.g.: GOTERM_BP_FAT</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
 </div>
 
 
@@ -878,13 +934,17 @@ this sequence.</td>
 <li><a class="reference internal" href="#the-fastqsequence-class">The FastqSequence class</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#gene-ontology">Gene Ontology</a></li>
 </ul>
 </li>
 </ul>
 
   <h4>Previous topic</h4>
-  <p class="topless"><a href="sequences.html"
-                        title="previous chapter">Biological Sequences</a></p>
+  <p class="topless"><a href="gene_ontology.html"
+                        title="previous chapter">Gene Ontology</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="developer.html"
+                        title="next chapter">Developer documentation</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/datastrct.txt"
@@ -914,7 +974,10 @@ this sequence.</td>
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="sequences.html" title="Biological Sequences"
+          <a href="developer.html" title="Developer documentation"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="gene_ontology.html" title="Gene Ontology"
              >previous</a> |</li>
         <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li> 
       </ul>

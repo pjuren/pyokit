@@ -1,0 +1,150 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Developer documentation &mdash; Pyokit 0.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="Pyokit 0.2.0 documentation" href="index.html" />
+    <link rel="prev" title="Pyokit data-structures" href="datastrct.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="datastrct.html" title="Pyokit data-structures"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="developer-documentation">
+<h1>Developer documentation<a class="headerlink" href="#developer-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="testing-your-changes">
+<h2>Testing your changes<a class="headerlink" href="#testing-your-changes" title="Permalink to this headline">¶</a></h2>
+<p>All of the test scripts (and indeed anything else you write that uses Pyokit)
+are using the INSTALLED version of the library, not the source. So if you
+make changes, you&#8217;ll need to rebuild and reinstall the library to test them
+out.</p>
+<p>The Python package manager will not install Pyokit again if the version number
+has not changed &#8211; which it often won&#8217;t while you&#8217;re making changes. To get
+around this, you just need to uninstall the library first, the install it again.
+So, in practice, this:</p>
+<div class="highlight-bash"><div class="highlight"><pre>make uninstall<span class="p">;</span> make install
+</pre></div>
+</div>
+</div>
+<div class="section" id="maintaining-documentation">
+<h2>Maintaining documentation<a class="headerlink" href="#maintaining-documentation" title="Permalink to this headline">¶</a></h2>
+<p>Pyokit uses Sphinx for documentation. All of these docs are constructed
+automatically from the Pyokit source code and the documentation source
+(which can be found in the sphinx/source directory). The documentation is
+hosted on Github pages. Travis CI is used to automatically build it and
+push the new copy every time there is a push to the Pyokit repository on
+GitHub.</p>
+<p>To update the documentation, you should edit the sphinx source .rst files.
+The Makefile has a target that will rebuild the (local) documentation for you:</p>
+<div class="highlight-bash"><div class="highlight"><pre>make docs
+</pre></div>
+</div>
+<p>Sphinx will tell you where the output documentation was placed (Docs/html at
+present, relative to the project root). These are just HTML files and you
+can open the Index.html in any web browser to preview the documentation.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">It is the INSTALLED version of Pyokit source code that is used
+when building these, but the SOURCE .rst files. Practically, that
+means you can get away with just rebuilding the documentation if
+you are only editing the Sphinx .rst source files, but changes
+to the Pyokit source will not register until you rebuild and
+install the library itself locally.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Developer documentation</a><ul>
+<li><a class="reference internal" href="#testing-your-changes">Testing your changes</a></li>
+<li><a class="reference internal" href="#maintaining-documentation">Maintaining documentation</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="datastrct.html"
+                        title="previous chapter">Pyokit data-structures</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/developer.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="datastrct.html" title="Pyokit data-structures"
+             >previous</a> |</li>
+        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Philip J. Uren.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,250 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Gene Ontology &mdash; Pyokit 0.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="Pyokit 0.2.0 documentation" href="index.html" />
+    <link rel="up" title="Using Pyokit" href="using.html" />
+    <link rel="next" title="Pyokit data-structures" href="datastrct.html" />
+    <link rel="prev" title="Retrotransposons" href="retrotransposons.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="datastrct.html" title="Pyokit data-structures"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="retrotransposons.html" title="Retrotransposons"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li><a href="using.html" accesskey="U">Using Pyokit</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="gene-ontology">
+<h1>Gene Ontology<a class="headerlink" href="#gene-ontology" title="Permalink to this headline">¶</a></h1>
+<p>Gene ontology data is represented by two data types; you can find details
+of these in <a class="reference internal" href="datastrct.html#ontologyclasssection"><em>Gene Ontology</em></a>. At present, the only input
+format supported is that produced by DAVID. Here&#8217;s an example of loading
+several DAVID output files and producing a new data frame containing the
+GO terms, catagories, and significance (p-value) from each enrichment analysis
+for those terms where at least one of the analyses was significant:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">sys</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyokit.io.david</span> <span class="kn">import</span> <span class="n">david_results_iterator</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">PVAL_THRESHOLD</span> <span class="o">=</span> <span class="mf">0.01</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">filenames</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c"># load all of the DAVID results for each file</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">by_trm</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">filenames</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">david_results_iterator</span><span class="p">(</span><span class="n">fn</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">if</span> <span class="ow">not</span> <span class="n">r</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">by_trm</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>      <span class="n">by_trm</span><span class="p">[</span><span class="n">r</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">by_trm</span><span class="p">[</span><span class="n">r</span><span class="o">.</span><span class="n">name</span><span class="p">][</span><span class="n">fn</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c"># drop terms where no file has p &lt; threshold</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">by_trm</span> <span class="o">=</span> <span class="p">{</span><span class="n">term</span><span class="p">:</span><span class="n">by_trm</span><span class="p">[</span><span class="n">term</span><span class="p">]</span> <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="n">by_trm</span>
+<span class="gp">&gt;&gt;&gt; </span>           <span class="k">if</span> <span class="nb">min</span><span class="p">([</span><span class="n">by_trm</span><span class="p">[</span><span class="n">term</span><span class="p">][</span><span class="n">fn</span><span class="p">]</span> <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">by_trm</span><span class="p">[</span><span class="n">term</span><span class="p">]])</span> <span class="o">&gt;</span> <span class="n">PVAL_THRESHOLD</span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c"># output</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="n">by_trm</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">by_trm</span><span class="p">[</span><span class="n">term</span><span class="p">]:</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">r</span> <span class="o">=</span> <span class="n">by_trm</span><span class="p">[</span><span class="n">term</span><span class="p">][</span><span class="n">fn</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">print</span> <span class="n">r</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\t</span><span class="s">&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">pvalue</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\t</span><span class="s">&quot;</span> <span class="o">+</span> <span class="n">r</span><span class="o">.</span><span class="n">catagory</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\t</span><span class="s">&quot;</span> <span class="o">+</span> <span class="n">fn</span>
+</pre></div>
+</div>
+<p>This makes use of an iterator for DAVID otuput-format files. Here are the
+details of that function:</p>
+<dl class="function">
+<dt id="pyokit.io.david.david_results_iterator">
+<tt class="descclassname">pyokit.io.david.</tt><tt class="descname">david_results_iterator</tt><big>(</big><em>fn</em>, <em>verbose=False</em><big>)</big><a class="headerlink" href="#pyokit.io.david.david_results_iterator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterate over a DAVID result set and yeild GeneOntologyTerm objects
+representing each of the terms reported. The expected format for a DAVID
+result file is tab-seperated format. The following fields should be present:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="5%" />
+<col width="23%" />
+<col width="16%" />
+<col width="56%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Num</th>
+<th class="head">Field</th>
+<th class="head">Type</th>
+<th class="head">Example</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>0</td>
+<td>Category</td>
+<td>string</td>
+<td>GOTERM_BP_FAT</td>
+</tr>
+<tr class="row-odd"><td>1</td>
+<td>Term</td>
+<td>string</td>
+<td><a class="reference external" href="GO:0046907~intracellular">GO:0046907~intracellular</a> transport</td>
+</tr>
+<tr class="row-even"><td>2</td>
+<td>Count</td>
+<td>int</td>
+<td>43</td>
+</tr>
+<tr class="row-odd"><td>3</td>
+<td>Percent</td>
+<td>float</td>
+<td>11.345646437994723</td>
+</tr>
+<tr class="row-even"><td>4</td>
+<td>PValue</td>
+<td>float</td>
+<td>1.3232857694449546E-9</td>
+</tr>
+<tr class="row-odd"><td>5</td>
+<td>Genes</td>
+<td>string</td>
+<td>ARSB, KPNA6, GNAS</td>
+</tr>
+<tr class="row-even"><td>6</td>
+<td>List Total</td>
+<td>int</td>
+<td>310</td>
+</tr>
+<tr class="row-odd"><td>7</td>
+<td>Pop Hits</td>
+<td>int</td>
+<td>657</td>
+</tr>
+<tr class="row-even"><td>8</td>
+<td>Pop Total</td>
+<td>int</td>
+<td>13528</td>
+</tr>
+<tr class="row-odd"><td>9</td>
+<td>Fold Enrichment</td>
+<td>float</td>
+<td>2.8561103746256196</td>
+</tr>
+<tr class="row-even"><td>10</td>
+<td>Bonferroni</td>
+<td>float</td>
+<td>2.6293654579179204E-6</td>
+</tr>
+<tr class="row-odd"><td>11</td>
+<td>Benjamini</td>
+<td>float</td>
+<td>2.6293654579179204E-6</td>
+</tr>
+<tr class="row-even"><td>12</td>
+<td>FDR</td>
+<td>float</td>
+<td>2.2734203852792234E-6</td>
+</tr>
+</tbody>
+</table>
+<p>The first line is a header giving the field names &#8211; this is ignored though,
+and we expect them in the order given above.</p>
+<p>Most of the fields are ignored at present; we take fields 0,1, and 11 (as the
+significance/p-value). When parsing the term field, we try to extract a term
+ID by splitting on tilde, but if we can&#8217;t then this is set to None.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fn</strong> &#8211; the file to parse</li>
+<li><strong>verbose</strong> &#8211; if True, output progress to stderr.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="retrotransposons.html"
+                        title="previous chapter">Retrotransposons</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="datastrct.html"
+                        title="next chapter">Pyokit data-structures</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/gene_ontology.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="datastrct.html" title="Pyokit data-structures"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="retrotransposons.html" title="Retrotransposons"
+             >previous</a> |</li>
+        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li><a href="using.html" >Using Pyokit</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Philip J. Uren.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>
