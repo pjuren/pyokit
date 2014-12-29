@@ -21,7 +21,7 @@ for those terms where at least one of the analyses was significant:
 >>>     by_trm[r.name][fn] = r
 >>> # drop terms where no file has p < threshold
 >>> by_trm = {term:by_trm[term] for term in by_trm
->>>            if min([by_trm[term][fn] for fn in by_trm[term]]) > PVAL_THRESHOLD}
+>>>           if min([by_term[term][fn].pvalue for fn in by_term[term]]) < PVAL_THRESHOLD}
 >>> # output
 >>> for term in by_trm:
 >>>   for fn in by_trm[term]:
@@ -30,6 +30,5 @@ for those terms where at least one of the analyses was significant:
 
 This makes use of an iterator for DAVID otuput-format files. Here are the
 details of that function:
-
 
 .. autofunction:: pyokit.io.david.david_results_iterator
