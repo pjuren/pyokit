@@ -341,6 +341,10 @@ def repeat_masker_alignment_iterator(fn):
   yield PairwiseAlignment(s1, s2, meta_data)
 
 
+###############################################################################
+#                         UNIT TESTS FOR THIS MODULE                          #
+###############################################################################
+
 class TestAlignmentIterators(unittest.TestCase):
 
   def test_repeat_masker_alignment_iterator(self):
