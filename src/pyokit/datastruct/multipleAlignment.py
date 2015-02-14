@@ -23,6 +23,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+# standard python imports
+import unittest
 
 ###############################################################################
 #                                 CONSTANTS                                   #
@@ -208,6 +210,12 @@ class PairwiseAlignment(object):
     res += self.meta[RM_ID_KEY]
     return res
 
+  def __str__(self):
+    """
+    return a string representation of this pairwise alignment
+    """
+    return self.to_repeat_masker_string()
+
   def to_repeat_masker_string(self, column_width=DEFAULT_COL_WIDTH,
                               m_name_width=DEFAULT_MAX_NAME_WIDTH):
     """
@@ -300,3 +308,16 @@ class PairwiseAlignment(object):
     # remove any trailing whitespace
     res = res.strip()
     return res
+
+
+###############################################################################
+#                         UNIT TESTS FOR THIS MODULE                          #
+###############################################################################
+class TestAlignments(unittest.TestCase):
+
+  def test_pairwise_liftover(self):
+    """
+    test lifting co-rodinates from one sequence in a pairwise alignment to
+    another.
+    """
+    pass
