@@ -230,7 +230,7 @@ class IndexedFile(object):
     """
     handle = fh
     try:
-      handle = open(fh)
+      handle = open(fh, "w")
     except TypeError:
       # okay, not a filename, try to treat it as a stream to write to.
       pass
