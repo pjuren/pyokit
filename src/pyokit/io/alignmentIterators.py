@@ -241,7 +241,7 @@ def _rm_parse_meta_line(parts):
     return k.strip(), v.strip()
 
 
-def repeat_masker_alignment_iterator(fn):
+def repeat_masker_alignment_iterator(fn, index_friendly=True):
   """
   Iterate over a file/stream of full repeat alignments in the repeatmasker
   format. Briefly, this format is as follows: each record (alignment) begins
@@ -263,12 +263,28 @@ def repeat_masker_alignment_iterator(fn):
   central string gives information about matches; "-" indicates an
   insertion/deletion, "i" a transition (G<->A, C<->T) and "v" a transversion
   (all other substitutions).
+
+  :param index_friendly: if True, we will ensure the file/stream
+                         position is before the start of the record when we
+                         yield it; this requires the ability to seek within
+                         the stream though, so if iterating over a
+                         stream wtihout that ability, you'll have to set this
+                         to false. Further, this will disable buffering for
+                         the file, to ensure file.tell() behaves correctly,
+                         so a performance hit will be incurred.
   """
 
+  # step 1 -- build our iterator for the stream..
   try:
     fh = open(fn)
   except (TypeError):
     fh = fn
+  iterable = fh
+  if index_friendly:
+    iterable = iter(fh.readline, '')
+
+  old_fh_pos = None
+  new_fh_pos = fh.tell()
 
   s1 = None
   s2 = None
@@ -277,7 +293,10 @@ def repeat_masker_alignment_iterator(fn):
   alig_l_space = 0
   prev_seq_len = 0
 
-  for line in fh:
+  for line in iterable:
+    if index_friendly:
+      old_fh_pos = new_fh_pos
+      new_fh_pos = fh.tell()
     line = line.rstrip()
     if line.lstrip() == "" and alignment_line_counter % 3 != 1:
       continue
@@ -307,7 +326,11 @@ def repeat_masker_alignment_iterator(fn):
         if multipleAlignment.ANNOTATION_KEY in meta_data:
           meta_data[multipleAlignment.ANNOTATION_KEY] = \
               meta_data[multipleAlignment.ANNOTATION_KEY].rstrip()
+        if index_friendly:
+          fh.seek(old_fh_pos)
         yield PairwiseAlignment(s1, s2, meta_data)
+        if index_friendly:
+          fh.seek(new_fh_pos)
       meta_data = {}
       s1 = ""
       s2 = ""
@@ -338,7 +361,11 @@ def repeat_masker_alignment_iterator(fn):
     else:
       k, v = _rm_parse_meta_line(parts)
       meta_data[k] = v
+  if index_friendly:
+    fh.seek(old_fh_pos)
   yield PairwiseAlignment(s1, s2, meta_data)
+  if index_friendly:
+    fh.seek(new_fh_pos)
 
 
 ###############################################################################
