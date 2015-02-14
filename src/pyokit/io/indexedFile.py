@@ -135,6 +135,7 @@ class IndexedFile(object):
   def __build_index(self, until=None, flush=False):
     """
     build/expand the index for this file.
+
     :param until: expand the index until the record with this hash has been
                   incorporated and then stop. If None, go until the iterator
                   is exhausted. Note that if this hash is already in the index,
@@ -155,6 +156,7 @@ class IndexedFile(object):
   def __getitem__(self, hash_value):
     """
     retrieve the record from the file which hashed to the given value.
+
     :return: the item in the indexed file that hashed to the given value.
     :raise IndexError:
     """
@@ -172,6 +174,7 @@ class IndexedFile(object):
 
     # we got a match to the hash_value, attempt to seek to this location and
     # return the next element
+    orig_pos = self._indexed_file_handle.tell()
     self._indexed_file_handle.seek(self._index[hash_value])
     r_iter = self.record_iterator(self._indexed_file_handle)
     try:
@@ -181,20 +184,144 @@ class IndexedFile(object):
             if self._indexed_filename is None else "")
       raise IndexError("Fatal error, index" + fn
                        + " specifies location beyond end of indexed file")
+    finally:
+      self._indexed_file_handle.seek(orig_pos)
 
-  def write_index(self, fn):
+  def __eq__(self, other):
     """
-    write this index to a file
-    """
-    raise IndexError("writing index to file not yet implemented")
+    determine whether two IndexedFile objects are equal. To be so, the index
+    dictionaries themselves must be equal. We will not compare filename;
+    basically, we don't care where the index information came from or whether
+    it might cease to be equal later, as long as the actual index itself is
+    the same.
 
-  def read_index(self, fn):
+    :param other: the other IndexedFile to compare against.
     """
-    populate this index from a file
-    :raise IndexError: if the record iterator or record hash function is not
-                       set
+    return self._index == other._index
+
+  def __str__(self):
     """
-    raise IndexError("reading index from file not yet implemented")
+    Produce a string representation of this index. Use this with caution,
+    as the full index is converted to string, which might be quite large.
+    """
+    res = ""
+    for key in self._index:
+      res += (str(key) + "\t" + str(self._index[key]) + "\n")
+    return res
+
+  def write_index(self, fh, to_str_func=str, generate=True):
+    """
+    Write this index to a file. Only the index dictionary itself is stored,
+    no informatiom about the indexed file, or the open filehandle is retained.
+    The Output format is just a tab-separated file, one record per line. The
+    last column is the file location for the record and all columns before that
+    are collectively considered to be the hash key for that record (which is
+    probably only 1 column, but this allows us to permit tabs in hash keys).
+
+    :param fh:           either a string filename or a stream-like object to
+                         write to.
+    :param to_str_func:  a function to convert hash values to strings. We'll
+                         just use str() if this isn't provided.
+    :generate:           build the full index from the indexed file if it
+                         hasn't already been built. This is the default, and
+                         almost certainly what you want, otherwise just the
+                         part of the index already constructed is written
+                         (which might be nothing...)
+    """
+    handle = fh
+    try:
+      handle = open(fh)
+    except TypeError:
+      # okay, not a filename, try to treat it as a stream to write to.
+      pass
+    if generate:
+      self.__build_index()
+    for key in self._index:
+      handle.write(to_str_func(key) + "\t" + str(self._index[key]) + "\n")
+
+  def read_index(self, fh, indexed_fh, record_iterator=None,
+                 record_hash_function=None, parse_hash=str, flush=True):
+    """
+    Populate this index from a file. Input format is just a tab-separated file,
+    one record per line. The last column is the file location for the record
+    and all columns before that are collectively considered to be the hash key
+    for that record (which is probably only 1 column, but this allows us to
+    permit tabs in hash keys). Lines consisting only of whitespace are skipped.
+
+    :param fh:                   filename or stream-like object to read from.
+    :param indexed_fh:           either the filename of the indexed file or
+                                 handle to it.
+    :param record_iterator:      a function that will return an interator for
+                                 the indexed file type (not the iterator for
+                                 the file itself). This function must take a
+                                 single argument which is the name the file to
+                                 iterate over, or a stream like object similar
+                                 to a filestream.
+    :param record_hash_function: a function that accepts the record type
+                                 produced by the iterator and produces a
+                                 unique hash for each record.
+    :param parse_hash:           a function to convert the string
+                                 representation of the hash into whatever type
+                                 is needed. By default, we just leave these as
+                                 strings.
+    :param flush:                remove everything currently in the index and
+                                 discard any details about a file that is
+                                 already fully/partially indexed by this
+                                 object. This is the default behavior.
+                                 If False, then data from <fh> is just added
+                                 to the existing index data (potentially
+                                 overwriting some of it) and the existing
+                                 index can continue to be used as before.
+
+    :raise IndexError: on malformed line in input file/stream
+    """
+    # set the record iterator and hash functions, if they were given
+    if record_iterator != None:
+      self.record_iterator = record_iterator
+    if record_hash_function != None:
+      self.record_hash_function = record_hash_function
+
+    # figure out what kind of index identifier we got: handle or filename?
+    handle = fh
+    try:
+      handle = open(fh)
+    except TypeError:
+      # okay, not a filename, try to treat it as a stream to read from.
+      pass
+
+    # clear this index?
+    if flush:
+      self._index = {}
+      self._indexed_file_handle = None
+      self._indexed_file_name = None
+
+    # replace the name/handle for the indexed file
+    indexed_fn = None
+    try:
+      # try treating this as a filename
+      self.indexed_file = (indexed_fh, None)
+      indexed_fn = indexed_fh
+    except TypeError:
+      try:
+        # try treating this as a file handle
+        self.indexed_file = (None, indexed_fh)
+      except TypeError:
+        fn = " from " + str(fh) if indexed_fn != None else ""
+        raise IndexError("failed to read index" + fn + "; "
+                         "reason: expected indexed filename or stream-like "
+                         "object, got " + str(type(indexed_fh)))
+
+    # read the index file and populate this object
+    for line in handle:
+      line = line.rstrip()
+      if line.isspace():
+        continue
+      parts = line.split("\t")
+      if len(parts) < 2 :
+        raise IndexError("failed to parse line: '" + line + "'")
+      key = parse_hash("\t".join(parts[:-1]))
+      value = parts[-1]
+      self._index[key] = int(value)
 
 
 ###############################################################################
@@ -283,13 +410,27 @@ class TestAlignmentIterators(unittest.TestCase):
   def test_indexedFile_write_read_equality(self):
     """
       test writing an index to file, reading it back and checking equality.
-      :note: these aren't implemented yet, when they are this test should be
-             updated.
     """
-    index = IndexedFile(StringIO.StringIO(self.test_case_0), self.r_iter,
-                        self.r_hash)
-    self.assertRaises(IndexError, index.write_index, StringIO.StringIO())
-    self.assertRaises(IndexError, index.read_index, StringIO.StringIO())
+    # create dummy files
+    indexed_fh = StringIO.StringIO(self.test_case_0)
+    index_fh = StringIO.StringIO()
+
+    # index the dummy 'indexed' file to create an in-memory index
+    index = IndexedFile(indexed_fh, self.r_iter, self.r_hash)
+
+    # write out in-memory index to 'disk'
+    index.write_index(index_fh)
+
+    # reset both indexed and index files back to start, then read index
+    # from 'disk' into new index object
+    index_fh.seek(0)
+    index_2 = IndexedFile(record_iterator=self.r_iter,
+                          record_hash_function=self.r_hash)
+    index_2.read_index(index_fh, indexed_fh, parse_hash=int)
+
+    # compare...
+    self.assertEqual(index[5], index_2[5])
+    self.assertEqual(index, index_2)
 
 
 ###############################################################################
