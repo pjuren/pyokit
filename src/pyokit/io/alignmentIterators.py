@@ -24,6 +24,7 @@
 """
 
 # Pyokit imports
+from pyokit.util.progressIndicator import ProgressIndicator
 from pyokit.datastruct.multipleAlignment import PairwiseAlignment
 from pyokit.datastruct import multipleAlignment
 
@@ -286,7 +287,7 @@ def _rm_extract_sequence_and_name(alig_str_parts, s1_name, s2_name):
                                  + s2_name + ")")
 
 
-def repeat_masker_alignment_iterator(fn, index_friendly=True):
+def repeat_masker_alignment_iterator(fn, index_friendly=True, verbose=False):
   """
   Iterate over a file/stream of full repeat alignments in the repeatmasker
   format. Briefly, this format is as follows: each record (alignment) begins
@@ -309,6 +310,7 @@ def repeat_masker_alignment_iterator(fn, index_friendly=True):
   insertion/deletion, "i" a transition (G<->A, C<->T) and "v" a transversion
   (all other substitutions).
 
+  :param fh:             filename or stream-like object to read from.
   :param index_friendly: if True, we will ensure the file/stream
                          position is before the start of the record when we
                          yield it; this requires the ability to seek within
@@ -317,6 +319,7 @@ def repeat_masker_alignment_iterator(fn, index_friendly=True):
                          to false. Further, this will disable buffering for
                          the file, to ensure file.tell() behaves correctly,
                          so a performance hit will be incurred.
+  :param verbose:        if true, output progress messages to stderr.
   """
 
   # step 1 -- build our iterator for the stream..
@@ -327,6 +330,24 @@ def repeat_masker_alignment_iterator(fn, index_friendly=True):
   iterable = fh
   if index_friendly:
     iterable = iter(fh.readline, '')
+
+  # build progress indicator, if we want one and we're able to
+  if verbose:
+    try :
+      m_fn = ": " + fh.name
+    except TypeError:
+      m_fn = ""
+    try :
+      current = fh.tell()
+      fh.seek(0, 2)
+      total_progress = fh.tell()
+      fh.seek(current)
+      pind = ProgressIndicator(totalToDo=total_progress,
+                               messagePrefix="completed",
+                               messageSuffix="of processing repeat-masker "
+                                             "alignment file" + m_fn)
+    except IOError:
+      pind = None
 
   old_fh_pos = None
   new_fh_pos = fh.tell()
@@ -339,6 +360,10 @@ def repeat_masker_alignment_iterator(fn, index_friendly=True):
   prev_seq_len = 0
 
   for line in iterable:
+    if verbose and pind != None :
+      pind.done = fh.tell()
+      pind.showProgress()
+
     if index_friendly:
       old_fh_pos = new_fh_pos
       new_fh_pos = fh.tell()
