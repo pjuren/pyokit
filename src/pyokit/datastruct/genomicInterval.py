@@ -25,32 +25,33 @@
 """
 
 # standard python library imports
-import sys, os, unittest, copy
+import sys
+import unittest
+import copy
 from heapq import heappush, heappop
 
 # pyokit imports
-from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
 from pyokit.util.progressIndicator import ProgressIndicator
-from pyokit.util.fileUtils import linesInFile
 from pyokit.datastruct.intervalTree import IntervalTree
 
 
 ###############################################################################
-##                           EXCEPTION CLASSES                               ##
+#                            EXCEPTION CLASSES                                #
 ###############################################################################
 
 class GenomicIntervalError(Exception):
   def __init__(self, msg):
     self.value = msg
+
   def __str__(self):
     return repr(self.value)
 
 
 ###############################################################################
-##       FUNCTIONS FOR MANIPULATING COLLECTIONS OF GENOMIC INTERVALS         ##
+#        FUNCTIONS FOR MANIPULATING COLLECTIONS OF GENOMIC INTERVALS          #
 ###############################################################################
 
-def intervalTreesFromList(inElements, verbose = False, openEnded=False):
+def intervalTreesFromList(inElements, verbose=False, openEnded=False):
   """
   build a dictionary, indexed by chromosome name, of interval trees for each
   chromosome.
@@ -62,12 +63,13 @@ def intervalTreesFromList(inElements, verbose = False, openEnded=False):
   elements = {}
   if verbose :
     totalLines = len(inElements)
-    pind = ProgressIndicator(totalToDo = totalLines,
-                                   messagePrefix = "completed",
-                                   messageSuffix = "of parsing")
+    pind = ProgressIndicator(totalToDo=totalLines,
+                             messagePrefix="completed",
+                             messageSuffix="of parsing")
 
   for element in inElements :
-    if not element.chrom in elements : elements[element.chrom] = []
+    if element.chrom not in elements:
+      elements[element.chrom] = []
     elements[element.chrom].append(element)
     if verbose :
       pind.done += 1
@@ -77,9 +79,9 @@ def intervalTreesFromList(inElements, verbose = False, openEnded=False):
   trees = {}
   if verbose:
     totalLines = len(elements)
-    pind = ProgressIndicator(totalToDo = totalLines,
-                                   messagePrefix = "completed",
-                                   messageSuffix = "of making interval trees")
+    pind = ProgressIndicator(totalToDo=totalLines,
+                             messagePrefix="completed",
+                             messageSuffix="of making interval trees")
   for chrom in elements :
     trees[chrom] = IntervalTree(elements[chrom], openEnded)
     if verbose:
@@ -101,12 +103,13 @@ def collapseRegions(s):
             or altered. Returned regions will all have name "X", strand +
             and score 0
   :param s: list of genomic regions to collapse
-  :raise BEDError: if the input regions are not correctly sorted (chromosome
-                     then start)
+  :raise GenomicIntervalError: if the input regions are not correctly sorted
+                               (chromosome then start)
   """
   debug = False
 
-  if len(s) == 0 or len(s) == 1 : return copy.deepcopy(s)
+  if len(s) == 0 or len(s) == 1:
+    return copy.deepcopy(s)
 
   res = []
   current = copy.copy(s[0])
@@ -153,7 +156,7 @@ def regionsIntersection(s1, s2):
            score 0
   :param s1: first list of genomic regions
   :param s2: second list of genomic regions
-  :raise BEDError: if the input regions are not sorted correctly (by
+  :raise GenomicIntervalError: if the input regions are not sorted correctly (by
                    chromosome and start index)
   :note: O(n) time, O(n) space; informally, might use up to 3x space of input
   """
@@ -164,7 +167,8 @@ def regionsIntersection(s1, s2):
   s1_c = collapseRegions(s1)
   s2_c = collapseRegions(s2)
 
-  if len(s1_c) == 0 or len(s2_c) == 0 : return []
+  if len(s1_c) == 0 or len(s2_c) == 0:
+    return []
 
   res = []
   j = 0
@@ -174,10 +178,11 @@ def regionsIntersection(s1, s2):
 
     # find first thing in s2_c with end in or after s1_c[i]
     hits = True
-    if debug : sys.stderr.write("i = " + str(i) + " and j = " + str(j) + "\n")
-    while j < len(s2_c) and \
-          (s2_c[j].chrom < s1_c[i].chrom or \
-          (s2_c[j].chrom == s1_c[i].chrom and s2_c[j].end <= s1_c[i].start)) :
+    if debug:
+      sys.stderr.write("i = " + str(i) + " and j = " + str(j) + "\n")
+    while (j < len(s2_c) and
+           (s2_c[j].chrom < s1_c[i].chrom or
+           (s2_c[j].chrom == s1_c[i].chrom and s2_c[j].end <= s1_c[i].start))):
       j += 1
     # nothing intersects if we hit the end of s2, or the end of the chrom,
     # or we're still on the same chrom but start after the end of s2_c[i]
@@ -190,20 +195,22 @@ def regionsIntersection(s1, s2):
     while s2_c[j].start < s1_c[i].end :
       s = max(s1_c[i].start, s2_c[j].start)
       e = min(s1_c[i].end, s2_c[j].end)
-      overlap = GenomicInterval(s1_c[i].chrom,s,e,"X",0,"+")
-      if debug : sys.stderr.write("\tadding to overlaps: " +\
-                                  str(overlap) + "\n")
+      overlap = GenomicInterval(s1_c[i].chrom, s, e, "X", 0, "+")
+      if debug:
+        sys.stderr.write("\tadding to overlaps: " + str(overlap) + "\n")
       res.append(overlap)
       j += 1
-      if j >= len(s2_c) or s2_c[j].chrom != s1_c[i].chrom : break
+      if j >= len(s2_c) or s2_c[j].chrom != s1_c[i].chrom:
+        break
 
     # it's possible the last intersecting element runs on to the
     # next element from s1_c, so...
     j -= 1
-    if debug : sys.stderr.write("\tmoving s2_c index back to " +\
-                                str(s2_c[j]) + "\n")
+    if debug:
+      sys.stderr.write("\tmoving s2_c index back to " + str(s2_c[j]) + "\n")
 
   return res
+
 
 def bucketIterator(elements, buckets) :
   """
@@ -218,30 +225,36 @@ def bucketIterator(elements, buckets) :
                     a list, or an iterator
   """
 
-  class peekableIter :
+  class peekableIter(object):
     def __init__(self, iterable) :
       self._iterable = iter(iterable)
       self._head = None
       self._fill()
-    def __iter__(self) : return self
+
+    def __iter__(self):
+      return self
+
     def _fill(self) :
       try :
         prev = self._head
         self._head = self._iterable.next()
         if (prev != None) and \
-           ((prev.chrom > self._head.chrom) or \
-            ((prev.chrom == self._head.chrom) and \
+           ((prev.chrom > self._head.chrom) or
+            ((prev.chrom == self._head.chrom) and
              (prev.start > self._head.start))) :
           raise GenomicIntervalError("not sorted")
-      except StopIteration :
+      except StopIteration:
         self._head = None
-    def __next__(self) :
+
+    def __next__(self):
       res = self._head
       self._fill()
       if res == None :
         raise StopIteration()
       return res
-    def peek(self) : return self._head
+
+    def peek(self):
+      return self._head
 
   def updateOpen(openHeap, elementIterator, bucketChrom,
                  bucketStart, bucketEnd) :
@@ -270,12 +283,12 @@ def bucketIterator(elements, buckets) :
     # index, so once we reach an element in the heap that does not end before
     # the start of this bucket, we are sure that no others will come after it
     # which do end before the start of this bucket. So we can stop dropping.
-    while len(openHeap) > 0 and ((openHeap[0].chrom < bucketChrom) or \
-                                 ((openHeap[0].chrom == bucketChrom) and \
+    while len(openHeap) > 0 and ((openHeap[0].chrom < bucketChrom) or
+                                 ((openHeap[0].chrom == bucketChrom) and
                                  (openHeap[0].end <= bucketStart))) :
       heappop(openHeap)
 
-    # now we're going to add new elements from the iterator to the heap. Because
+    # now we're going to add new elements from the iterator to the heap. As
     # we know that elements in the iterator are sorted by start index, we know
     # that once we see an element that has a start index greater than the end
     # of this bucket, we can stop -- everything else after it will also start
@@ -297,7 +310,7 @@ def bucketIterator(elements, buckets) :
   prevBucket = None
   elementIter = peekableIter(elements)
   for bucket in buckets :
-    ## make sure the buckets are sorted by start index
+    # make sure the buckets are sorted by start index
     if prevBucket != None and ((bucket.chrom < prevBucket.chrom) or
                                (bucket.chrom == prevBucket.chrom and
                                 bucket.start < prevBucket.start)) :
@@ -306,14 +319,14 @@ def bucketIterator(elements, buckets) :
 
     # be careful here not to leak a reference to the heap; if the caller
     # decides to mess with that list, it'll screw us up. Anyway, we need a
-    # final check here to make sure we trim off any elements that exceed the end
-    # of this bucket.
+    # final check here to make sure we trim off any elements that exceed the
+    # end of this bucket.
     yield bucket, [x for x in openElems if x.start < bucket.end]
     prevBucket = bucket
 
 
 ###############################################################################
-##                FUNCTIONS FOR PARSING GENOMIC INTERVALS                    ##
+#                 FUNCTIONS FOR PARSING GENOMIC INTERVALS                     #
 ###############################################################################
 
 def parseWigString(line, scoreType=int):
@@ -328,12 +341,13 @@ def parseWigString(line, scoreType=int):
   """
   parts = line.split("\t")
   if (len(parts) < 4) :
-    raise GenomicIntervalError("failed to parse " + s +\
-                               " as wig format, too few fields")
+    raise GenomicIntervalError("failed to parse " + line
+                               + " as wig format, too few fields")
   return GenomicInterval(parts[0].strip(), int(parts[1]), int(parts[2]), None,
                          scoreType(parts[3]))
 
-def parseBEDString(line, scoreType=int, dropAfter = None):
+
+def parseBEDString(line, scoreType=int, dropAfter=None):
   """
     @summary: Given a string in BED format, parse the string and return a
               GenomicInterval object
@@ -345,11 +359,12 @@ def parseBEDString(line, scoreType=int, dropAfter = None):
     @return: GenomicInterval object built from the BED string representation
   """
   peices = line.split("\t")
-  if dropAfter != None : peices = peices[0:dropAfter]
+  if dropAfter != None:
+    peices = peices[0:dropAfter]
   if len(peices) < 3 :
-    raise GenomicIntervalError("BED elements must have at least chrom, " +\
-                               "start and end; found only " +\
-                               str(len(peices)) + " in " + line)
+    raise GenomicIntervalError("BED elements must have at least chrom, "
+                               + "start and end; found only "
+                               + str(len(peices)) + " in " + line)
   chrom = peices[0]
   start = peices[1]
   end = peices[2]
@@ -358,15 +373,18 @@ def parseBEDString(line, scoreType=int, dropAfter = None):
   score = None
   strand = None
 
-  if len(peices) >= 4 != None : name = peices[3]
-  if len(peices) >= 5 != None : score = peices[4]
-  if len(peices) >= 6 != None : strand = peices[5]
+  if len(peices) >= 4 != None:
+    name = peices[3]
+  if len(peices) >= 5 != None:
+    score = peices[4]
+  if len(peices) >= 6 != None:
+    strand = peices[5]
 
   return GenomicInterval(chrom, start, end, name, score, strand, scoreType)
 
 
 ###############################################################################
-##                          GENOMIC INTERVAL CLASS                           ##
+#                           GENOMIC INTERVAL CLASS                            #
 ###############################################################################
 
 class GenomicInterval :
@@ -388,16 +406,16 @@ class GenomicInterval :
   NEGATIVE_STRAND = "-"
   DEFAULT_STRAND = POSITIVE_STRAND
 
-  def __init__(self, chrom, start, end, name = None, score = None,
-               strand = None, scoreType = int):
+  def __init__(self, chrom, start, end, name=None, score=None,
+               strand=None, scoreType=int):
     """
     Constructor for the GenomicInterval class. See class-level documentation
     for parameter descriptions
     """
     # the basic info -- we must get at least this much
     if chrom == None or start == None or end == None :
-      raise GenomicIntervalError("Must provided at least chrom, start, end " +\
-                                 "for Genomic Interval")
+      raise GenomicIntervalError("Must provided at least chrom, start, end "
+                                 + "for Genomic Interval")
     self.chrom = chrom.strip()
     self.start = int(start)
     self.end = int(end)
@@ -405,20 +423,23 @@ class GenomicInterval :
     # we might get the following too...
     # name:
     self.name = None
-    if name != None: self.name = name.strip()
+    if name != None:
+      self.name = name.strip()
 
     # score
     self.score = None
-    if score != None : self.score = scoreType(score)
+    if score != None:
+      self.score = scoreType(score)
 
     # strand
     self.strand = None
-    if strand != None : self.strand = strand.strip()
+    if strand != None:
+      self.strand = strand.strip()
     if self.strand != None and self.strand != self.POSITIVE_STRAND and \
        self.strand != self.NEGATIVE_STRAND :
-      raise GenomicIntervalError("Invalid strand: " + self.strand            +\
-                                 "; expected either " + self.POSITIVE_STRAND +\
-                                 " or " + self.NEGATIVE_STRAND)
+      raise GenomicIntervalError("Invalid strand: " + self.strand
+                                 + "; expected either " + self.POSITIVE_STRAND
+                                 + " or " + self.NEGATIVE_STRAND)
 
   def __hash__(self):
     """
@@ -432,11 +453,12 @@ class GenomicInterval :
 
     :return: True if self is equal to e
     """
-    if e == None : return False
+    if e == None:
+      return False
     try :
-      return  self.chrom == e.chrom and self.start == e.start and\
-              self.end == e.end and self.name == e.name and\
-              self.score == e.score and self.strand == e.strand
+      return (self.chrom == e.chrom and self.start == e.start and
+              self.end == e.end and self.name == e.name and
+              self.score == e.score and self.strand == e.strand)
     except AttributeError :
       return False
 
@@ -447,10 +469,14 @@ class GenomicInterval :
     :param rhs: object from the right-hand-side of the comparaison self < rhs
     :return: True if self is considered 'less' than rhs.
     """
-    if rhs == None : return False
-    if self.chrom < rhs.chrom : return True
-    if self.chrom > rhs.chrom : return False
-    if self.end < rhs.end : return True
+    if rhs == None:
+      return False
+    if self.chrom < rhs.chrom:
+      return True
+    if self.chrom > rhs.chrom:
+      return False
+    if self.end < rhs.end:
+      return True
     return False
 
   def sameRegion(self, e):
@@ -462,11 +488,11 @@ class GenomicInterval :
              in non-region related fields, such as name or score -- but does
              consider strand)
     """
-    if e == None : return False
+    if e == None:
+      return False
     return self.chrom == e.chrom and self.start == e.start and\
            self.end == e.end and self.name == e.name and\
            self.strand == e.strand
-
 
   def __len__(self):
     return (self.end - self.start)
@@ -484,7 +510,7 @@ class GenomicInterval :
     if self.score != None : res += (delim + str(self.score))
     if self.strand != None : res += (delim + str(self.strand))
 
-    return  res
+    return res
 
   def distance(self, e):
     """
@@ -519,9 +545,9 @@ class GenomicInterval :
     :raise GenomicIntervalError: if self and e are on different chromosomes.
     """
     dist = self.distance(e)
-    if e < self : dist = dist * -1
+    if e < self:
+      dist = dist * -1
     return dist
-
 
   def __singleIntersect(self, e):
     """
@@ -556,9 +582,8 @@ class GenomicInterval :
       r.end = e.start
       return [r]
     # oops, we screwed up if we got to here..
-    raise BEDError("fatal error - failed BED subtraction of " +\
-                   str(e) + " from " + str(self))
-
+    raise GenomicIntervalError("fatal error - failed BED subtraction of "
+                               + str(e) + " from " + str(self))
 
   def subtract(self, es):
     """
@@ -576,7 +601,6 @@ class GenomicInterval :
       workingSet = newWorkingSet
     return workingSet
 
-
   def sizeOfOverlap(self, e):
     """
     Get the size of the overlap between self and e
@@ -593,7 +617,6 @@ class GenomicInterval :
     # partial overlap
     if e.start > self.start : return (self.end - e.start)
     if self.start > e.start : return (e.end - self.start)
-
 
   def intersects(self, e):
     """
@@ -631,7 +654,7 @@ class GenomicInterval :
 
 
 ###############################################################################
-##                        UNIT TESTS FOR THIS MODULE                         ##
+#                         UNIT TESTS FOR THIS MODULE                          #
 ###############################################################################
 
 class GenomicIntervalUnitTests(unittest.TestCase):
