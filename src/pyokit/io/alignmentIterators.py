@@ -241,6 +241,51 @@ def _rm_parse_meta_line(parts):
     return k.strip(), v.strip()
 
 
+def _rm_extract_sequence_and_name(alig_str_parts, s1_name, s2_name):
+  """
+  parse an alignment line from a repeatmasker alignment and return the name
+  of the sequence it si from and the sequence portion contained in the line.
+
+  :param alig_str_parts: the alignment string, split around whitespace as list
+  :param s1_name: the name of the first sequence in the alignment this line is
+                  from
+  :param s2_name: the name of the second sequence in the alignment this line is
+                  from
+  :return: a tuple of name and sequence string; name will always be either
+           s1_name or s2_name
+  :raise AlignmentIteratorError: if the line doesn't have the expected number
+                                 of elements, or the name does not match
+                                 either of s1_name or s2_name
+  """
+  # first, based on the number of parts we have we'll guess whether its a
+  # reverse complement or not
+  if len(alig_str_parts) == 4:
+    # expect the first element to amtch something..
+    nm = alig_str_parts[0]
+    seq = alig_str_parts[2]
+  elif len(alig_str_parts) == 5:
+    # expect the second element to match something...
+    nm = alig_str_parts[1]
+    seq = alig_str_parts[3]
+  else:
+    raise AlignmentIteratorError("failed parsing alignment line '"
+                                 + " ".join(alig_str_parts) + "'; reason: "
+                                 + "expected this line to have 4 or 5 "
+                                 + "elements, but it has "
+                                 + str(len(alig_str_parts)))
+  if _rm_name_match(nm, s1_name):
+    return s1_name, seq
+  elif _rm_name_match(nm, s2_name):
+    return s2_name, seq
+  else:
+    raise AlignmentIteratorError("failed parsing alignment line '"
+                                 + " ".join(alig_str_parts) + "'; reason: "
+                                 + "extracted alignment name (" + nm + ") "
+                                 + "did not match either sequence name from "
+                                 + "header line (" + s1_name + " or "
+                                 + s2_name + ")")
+
+
 def repeat_masker_alignment_iterator(fn, index_friendly=True):
   """
   Iterate over a file/stream of full repeat alignments in the repeatmasker
@@ -339,25 +384,15 @@ def repeat_masker_alignment_iterator(fn, index_friendly=True):
     elif _rm_is_alignment_line(parts, meta_data[multipleAlignment.S1_NAME_KEY],
                                meta_data[multipleAlignment.S2_NAME_KEY]):
       alignment_line_counter += 1
-      if _rm_name_match(parts[0], meta_data[multipleAlignment.S1_NAME_KEY]):
-        s1 += parts[2]
-        alig_l_space = _rm_compute_leading_space_alig(s_pres_split, parts[2])
-        prev_seq_len = len(parts[2])
-      elif _rm_name_match(parts[0], meta_data[multipleAlignment.S2_NAME_KEY]):
-        s2 += parts[2]
-        alig_l_space = _rm_compute_leading_space_alig(s_pres_split, parts[2])
-        prev_seq_len = len(parts[2])
-      elif _rm_name_match(parts[1], meta_data[multipleAlignment.S2_NAME_KEY]):
-        s2 += parts[3]
-        alig_l_space = _rm_compute_leading_space_alig(s_pres_split, parts[3])
-        prev_seq_len = len(parts[3])
-      else:
-        raise AlignmentIteratorError("failed to assign alignment line '"
-                                     + line + "' to a sequence ( '"
-                                     + meta_data[multipleAlignment.S1_NAME_KEY]
-                                     + "' or '"
-                                     + meta_data[multipleAlignment.S2_NAME_KEY]
-                                     + "' )")
+      s1_n = meta_data[multipleAlignment.S1_NAME_KEY]
+      s2_n = meta_data[multipleAlignment.S2_NAME_KEY]
+      name, seq = _rm_extract_sequence_and_name(parts, s1_n, s2_n)
+      if name == s1_n:
+        s1 += seq
+      elif name == s2_n:
+        s2 += seq
+      alig_l_space = _rm_compute_leading_space_alig(s_pres_split, seq)
+      prev_seq_len = len(seq)
     else:
       k, v = _rm_parse_meta_line(parts)
       meta_data[k] = v
@@ -421,16 +456,25 @@ class TestAlignmentIterators(unittest.TestCase):
                "Transitions / transversions = 0.43 (3/7)           \n" +\
                "Gap_init rate = 0.02 (1 / 51), avg. gap size = 1.00 (1 / 1)"
 
+    alig_4_header = "487 20.75 0.93 0.93 chr1 158389 158411 (249092126) C " +\
+                    "Charlie29b#DNA/hAT-Charlie (532) 662 556 m_b3s502i21 231"
+    alig_4 = "  chr1          158389 TAGAATTTTTGTGGCAT-ATGA 158410    \n" +\
+             "                          i ii v ii     -  vi           \n" +\
+             "C Charlie29b#DN    662 TAAAGCTGGGCGTTATTGATGA 640       \n"
+    alig_4_m = ""
+
     records = [alig_1_header + "\n\n" + alig_1 + "\n\n" + alig_1_m,
                alig_2_header + "\n\n" + alig_2 + "\n\n" + alig_2_m,
-               alig_3_header + "\n\n" + alig_3 + "\n\n" + alig_3_m]
+               alig_3_header + "\n\n" + alig_3 + "\n\n" + alig_3_m,
+               alig_4_header + "\n\n" + alig_4 + "\n\n" + alig_4_m]
     input_d = "\n\n".join(records)
     results = [r for r in
                repeat_masker_alignment_iterator(StringIO.StringIO(input_d))]
     self.failUnlessEqual(len(results), len(records))
     for i, trail_meta_size, c_width, m_width in [(0, 4, 29, None),
                                                  (1, 4, 30, None),
-                                                 (2, 3, 31, 13)]:
+                                                 (2, 3, 31, 13),
+                                                 (3, 0, 22, 13)]:
       rm_str = results[i].to_repeat_masker_string(column_width=c_width,
                                                   m_name_width=m_width)
       if debug:
