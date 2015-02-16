@@ -139,7 +139,7 @@ class PairwiseAlignment(object):
 
     # we will compute ungapped lengths of the sequences on-demand
     self._s1_ungapped_len = None
-    self._s1_ungapped_len = None
+    self._s2_ungapped_len = None
 
   @property
   def s1_ungapped_len(self):
@@ -257,17 +257,17 @@ class PairwiseAlignment(object):
       s1_line_start_num = (s1_line_end_num - 1 if self.s1_is_reverse_comp()
                            else s1_line_end_num + 1)
       s1_line_end_num = (s1_line_start_num
-                         - ungapped_length(self.s1[i:i + column_width])
+                         - ungapped_length(self.s1[i:i + column_width]) + 1
                          if self.s1_is_reverse_comp()
                          else s1_line_start_num
-                         + ungapped_length(self.s1[i:i + column_width]))
+                         + ungapped_length(self.s1[i:i + column_width]) - 1)
       s2_line_start_num = (s2_line_end_num - 1 if self.s2_is_reverse_comp()
                            else s2_line_end_num + 1)
       s2_line_end_num = (s2_line_start_num
-                         - ungapped_length(self.s2[i:i + column_width])
+                         - ungapped_length(self.s2[i:i + column_width]) + 1
                          if self.s2_is_reverse_comp()
                          else s2_line_start_num
-                         + ungapped_length(self.s2[i:i + column_width]))
+                         + ungapped_length(self.s2[i:i + column_width]) - 1)
 
       # output sequence one
       res += (s1_comp + " " + s1_n + " ")

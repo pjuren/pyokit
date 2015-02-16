@@ -64,12 +64,15 @@ def _rm_is_alignment_line(parts, s1_name, s2_name):
   """
   returns true if the tokenized line is a repeatmasker alignment line
 
-  :param parts:   ...?
-  :param s1_name: ...?
-  :param s2_name: ...?
+  :param parts:   the line, already split into tokens around whitespace
+  :param s1_name: the name of the first sequence, as extracted from the header
+                  of the element this line is in
+  :param s2_name: the name of the second sequence, as extracted from the header
+                  of the element this line is in
   """
-  assert(len(parts) >= 2)
-  if parts[0] == s1_name:
+  if len(parts) < 2:
+    return False
+  if _rm_name_match(parts[0], s1_name):
     return True
   if (_rm_name_match(parts[0], s2_name) or
      (parts[0] == "C" and _rm_name_match(parts[1], s2_name))):
@@ -434,58 +437,91 @@ def repeat_masker_alignment_iterator(fn, index_friendly=True, verbose=False):
 
 class TestAlignmentIterators(unittest.TestCase):
 
+  def test_rm_iter_one_part_ann_line(self):
+    """
+    This test for the repeatmakser iterator has an annotation line with just a
+    single element in it; this exposes a bug that previously existed (now
+    fixed) where the lines are expected to have >= 2 elements.
+    """
+    debug = False
+
+    # set up test
+    alig_header = "10304 12.32 4.41 4.46 chrUn_gl000247 36396 36422 (0) " +\
+                  "MER57-int#LTR/ERV1 5219 5245 (1398) m_b1s701i6 4562661"
+    alig = "  chrUn_gl00024 36396 TTAATGTGAACAGCTTTTCCCAAGATC 36422\n" +\
+           "                        i                              \n" +\
+           "  MER57-int#LTR  5219 TTGATGTGAACAGCTTTTCCCAAGATC 5245"
+    test_in = alig_header + "\n\n" + alig
+
+    # run test and collect results
+    results = [r for r in
+               repeat_masker_alignment_iterator(StringIO.StringIO(test_in))]
+    self.failUnlessEqual(len(results), 1)
+    rm_str = results[0].to_repeat_masker_string(m_name_width=13)
+
+    # check results
+    alig_actual = [x for x in map(str.rstrip, test_in.split("\n"))
+                   if x.strip() != ""]
+    alig_result = [x for x in map(str.rstrip, rm_str.split("\n"))
+                   if x.strip() != ""]
+    if debug:
+      print ""
+      print "expected: " + str(alig_actual)
+      print "got:      " + str(alig_result)
+    self.failUnlessEqual(alig_actual, alig_result)
+
   def test_repeat_masker_alignment_iterator(self):
     """
     This is a roundtrip test. Three alignments.
     """
 
     debug = False
-    alig_1_header = "283 26.37 4.21 0.00 chr1 15 69 (266) C A#B (119) " +\
-                    "141 49 m_b1s601i0 5                              "
-    alig_1 = "  chr1  15 CCACTGTACA-ATGGGGAAACT--GGCCC 41     \n" +\
+    alig_1_header = "283 26.37 4.21 0.00 chr1 15 67 (266) C A#B (119) " +\
+                    "141 85 m_b1s601i0 5                              "
+    alig_1 = "  chr1  15 CCACTGTACA-ATGGGGAAACT--GGCCC 40     \n" +\
              "              i v    -   i       --   v         \n" +\
-             "C A#B  141 CCATTTTACAGATGAGGAAACTGAGGCAC 112    \n" +\
+             "C A#B  141 CCATTTTACAGATGAGGAAACTGAGGCAC 113    \n" +\
              "                                                \n" +\
-             "  chr1  42 AGAGCAAGGCAAAAGCAGCGCTGGG-TA 69      \n" +\
+             "  chr1  41 AGAGCAAGGCAAAAGCAGCGCTGGG-TA 67      \n" +\
              "           v   v  vv ivi    v  i    - v         \n" +\
-             "C A#B  111 CAGCTAGTAAGTGGCAGAGCCGGGATTC 83        "
+             "C A#B  112 CAGCTAGTAAGTGGCAGAGCCGGGATTC 85        "
     alig_1_m = "Matrix = 25p47g.matrix                       \n" +\
                "Kimura (with divCpGMod) = 29.95              \n" +\
                "Transitions / transversions = 1.40 (14/10)   \n" +\
                "Gap_init rate = 0.03 (3 / 90), avg. gap size = 1.33 (4 / 3)"
 
-    alig_2_header = "318 22.50 3.61 0.00 chr1 15266 15325 (249235276) C " +\
-                    "MIR3#SINE/MIR (65) 143 61 m_b1s601i1 5"
-    alig_2 = "  chr1          15266 GAAACT--GGCCCAGAGAGGTGAGGCAGCG 15294 \n" +\
+    alig_2_header = "318 22.50 3.61 0.00 chr1 15266 15323 (249235276) C " +\
+                    "MIR3#SINE/MIR (65) 143 84 m_b1s601i1 5"
+    alig_2 = "  chr1          15266 GAAACT--GGCCCAGAGAGGTGAGGCAGCG 15293 \n" +\
              "                            --               i iii         \n" +\
-             "C MIR3#SINE/MIR   143 GAAACTGAGGCCCAGAGAGGTGAAGTGACG 113   \n" +\
+             "C MIR3#SINE/MIR   143 GAAACTGAGGCCCAGAGAGGTGAAGTGACG 114   \n" +\
              "                                                           \n" +\
-             "  chr1          15295 GGTCACAGAGCAAGGCAAAAGCGCGCTGGG 15325 \n" +\
+             "  chr1          15294 GGTCACAGAGCAAGGCAAAAGCGCGCTGGG 15323 \n" +\
              "                             v   ?  vi ivi    v            \n" +\
-             "C MIR3#SINE/MIR   112 GGTCACACAGCKAGTTAGTGGCGAGCTGGG 82"
+             "C MIR3#SINE/MIR   113 GGTCACACAGCKAGTTAGTGGCGAGCTGGG 84"
     alig_2_m = "Matrix = 25p47g.matrix                                   \n" +\
                "Kimura (with divCpGMod) = 26.25                          \n" +\
                "Transitions / transversions = 2.40 (12/5)                \n" +\
                "Gap_init rate = 0.03 (2 / 79), avg. gap size = 1.50 (3 / 2)"
 
-    alig_3_header = "18 23.18 0.00 1.96 chr1 15798 15832 (249234772) " +\
+    alig_3_header = "18 23.18 0.00 1.96 chr1 15798 15830 (249234772) " +\
                     "(TGCTCC)n#Simple_repeat 1 32 (0) m_b1s252i0 6"
-    alig_3 = "  chr1          15798 GCTGCTTCTCCAGCTTTCGCTCCTTCATGCT 15829  \n" +\
+    alig_3 = "  chr1          15798 GCTGCTTCTCCAGCTTTCGCTCCTTCATGCT 15828  \n" +\
              "                         v  v    v   iii      v - v          \n" +\
-             "  (TGCTCC)n#Sim     1 GCTCCTGCTCCTGCTCCTGCTCCTGC-TCCT 31     \n" +\
+             "  (TGCTCC)n#Sim     1 GCTCCTGCTCCTGCTCCTGCTCCTGC-TCCT 30     \n" +\
              "                                                             \n" +\
-             "  chr1          15830 GC 15832                               \n" +\
+             "  chr1          15829 GC 15830                               \n" +\
              "                                                             \n" +\
-             "  (TGCTCC)n#Sim    32 GC 34                                    "
+             "  (TGCTCC)n#Sim    31 GC 32                                    "
     alig_3_m = "Matrix = Unknown                                   \n" +\
                "Transitions / transversions = 0.43 (3/7)           \n" +\
                "Gap_init rate = 0.02 (1 / 51), avg. gap size = 1.00 (1 / 1)"
 
-    alig_4_header = "487 20.75 0.93 0.93 chr1 158389 158411 (249092126) C " +\
-                    "Charlie29b#DNA/hAT-Charlie (532) 662 556 m_b3s502i21 231"
-    alig_4 = "  chr1          158389 TAGAATTTTTGTGGCAT-ATGA 158410    \n" +\
+    alig_4_header = "487 20.75 0.93 0.93 chr1 158389 158409 (249092126) C " +\
+                    "Charlie29b#DNA/hAT-Charlie (532) 662 641 m_b3s502i21 231"
+    alig_4 = "  chr1          158389 TAGAATTTTTGTGGCAT-ATGA 158409    \n" +\
              "                          i ii v ii     -  vi           \n" +\
-             "C Charlie29b#DN    662 TAAAGCTGGGCGTTATTGATGA 640       \n"
+             "C Charlie29b#DN    662 TAAAGCTGGGCGTTATTGATGA 641       \n"
     alig_4_m = ""
 
     records = [alig_1_header + "\n\n" + alig_1 + "\n\n" + alig_1_m,
