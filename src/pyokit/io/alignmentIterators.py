@@ -141,7 +141,7 @@ def _rm_compute_leading_space(space_s_pres_split):
 def _rm_parse_header_line(parts, meta_data):
   """
   parse a repeatmasker alignment header line and place the extracted meta-data
-  into the provided dictionary. An example header line is:
+  into the provided dictionary. An example header line is::
 
     239 29.42 1.92 0.97 chr1 11 17 (41) C XX#YY (74) 104 1 m_b1s502i1 4
 
@@ -149,9 +149,9 @@ def _rm_parse_header_line(parts, meta_data):
   reverse complement of the repeat consensus and it'll have 15. Fields as
   follows:
 
-  ===    ========    ==========================================================
+  =====  ========    ==========================================================
   Num    Value       description
-  ===    ========    ==========================================================
+  =====  ========    ==========================================================
   0      239         Smith-Waterman score of the match
   1      29.42       percent substitutions in match compared to the consensus
   2      1.92        percent bases opposite gap in query seq (deleted bp)
@@ -189,7 +189,7 @@ def _rm_parse_header_line(parts, meta_data):
   11/12  S2_END_NEG_STRAND_KEY (S2 + strand) / S2_END_KEY (S2 - strand)
   12/13  UNKNOWN_RM_HEADER_FIELD_KEY
   13/14  RM_ID_KEY
-  =====  ===
+  =====  =================================================================
 
   :param parts:     the header line, as a tokenized list.
   :param meta_data: dictionary; resultant key-value pairs placed into this.
@@ -298,7 +298,7 @@ def repeat_masker_alignment_iterator(fn, index_friendly=True, verbose=False):
   header format), followed by the alignment itself (example below) and finally
   a set of key-value meta-data pairs.
 
-  The actual alignment looks like this:
+  The actual alignment looks like this::
 
     chr1               11 CCCTGGAGATTCTTATT--AGTGATTTGGGCT 41
                              ii        v   -- v  i i    v
