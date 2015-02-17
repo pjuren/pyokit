@@ -1,12 +1,12 @@
 Pyokit: Python Bio Toolkit
 ==========================
+[![Build Status](https://travis-ci.org/pjuren/pyokit.svg?branch=master)](https://travis-ci.org/pjuren/pyokit)
+[![PyPI version](https://badge.fury.io/py/pyokit.svg)](http://badge.fury.io/py/pyokit)
+[![Code Health](https://landscape.io/github/pjuren/pyokit/master/landscape.svg?style=flat)](https://landscape.io/github/pjuren/pyokit/master)
+[![Coverage Status](https://coveralls.io/repos/pjuren/pyokit/badge.svg)](https://coveralls.io/r/pjuren/pyokit)
 
 Pyokit is a python library with a collection of tools to make the processing
 and analysis of high-throughput biological datasets in python easier.
-
-The project's current status is:  
-[![Build Status](https://travis-ci.org/pjuren/pyokit.svg?branch=master)](https://travis-ci.org/pjuren/pyokit)
-[![PyPI version](https://badge.fury.io/py/pyokit.svg)](http://badge.fury.io/py/pyokit)
 
 Dependencies
 ------------
