@@ -41,4 +41,5 @@ after_success:
   - git push --quiet https://${GH_TOKEN}@github.com/pjuren/pyokit gh-pages && echo "Pushed to updated documentation."
   -
   - # push test coverage results to coveralls
+  - coveralls debug
   - coveralls
