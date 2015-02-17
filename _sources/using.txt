@@ -9,5 +9,6 @@ Using Pyokit
    ui
    genomicIntervals
    sequences
+   sequence_alignments
    retrotransposons
    gene_ontology

@@ -339,11 +339,12 @@ will have only a sequence name and actual nucleotide sequence data.</p>
 Note that there is no check to make sure the
 sequence data is valid, that&#8217;s the responsibility
 of the caller.</li>
-<li><strong>useMutableString</strong> &#8211; Store the sequence data as a mutable string, rather
-than a regular python string. This should make
-editing operations must faster, but it comes at the
-expense of less flexibility (e.g. the object can
-not be used as a hash key because it is mutable.)</li>
+<li><strong>useMutableString</strong> &#8211; Store the sequence data as a mutable string,
+rather than a regular python string. This should
+make editing operations must faster, but it comes
+at the expense of less flexibility (e.g. the
+object can not be used as a hash key because it
+is mutable.)</li>
 </ul>
 </td>
 </tr>
@@ -352,16 +353,16 @@ not be used as a hash key because it is mutable.)</li>
 <dl class="method">
 <dt id="pyokit.datastruct.sequence.Sequence.clipAdaptor">
 <tt class="descname">clipAdaptor</tt><big>(</big><em>adaptor</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.clipAdaptor" title="Permalink to this definition">¶</a></dt>
-<dd><p>Clip an adaptor sequence from this sequence. We assume it&#8217;s in the 3&#8217; end.
-This is basically a convenience wrapper for clipThreePrime. It requires
-8 out of 10 of the first bases in the adaptor sequence to match for
-clipping to occur.</p>
+<dd><p>Clip an adaptor sequence from this sequence. We assume it&#8217;s in the 3&#8217;
+end. This is basically a convenience wrapper for clipThreePrime. It
+requires 8 out of 10 of the first bases in the adaptor sequence to match
+for clipping to occur.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>adaptor</strong> &#8211; sequence to look for. We only use the first 10 bases; must
-be a full Sequence object, not just a string.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>adaptor</strong> &#8211; sequence to look for. We only use the first 10 bases;
+must be a full Sequence object, not just a string.</td>
 </tr>
 </tbody>
 </table>
@@ -371,8 +372,8 @@ be a full Sequence object, not just a string.</td>
 <dt id="pyokit.datastruct.sequence.Sequence.clipThreePrime">
 <tt class="descname">clipThreePrime</tt><big>(</big><em>seq</em>, <em>mm_score</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.clipThreePrime" title="Permalink to this definition">¶</a></dt>
 <dd><p>Clip a sequence from the 3&#8217; end of the sequence &#8211; we assume the sequence
-to be clipped will always begin somewhere in this sequence, but may not be
-fully contained. If found, replaced with Ns.</p>
+to be clipped will always begin somewhere in this sequence, but may not
+be fully contained. If found, replaced with Ns.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -543,9 +544,9 @@ this sequence</td>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>region</strong> &#8211; iterable of regions to mask. Each region can be any object
-with .start and .end attributes. Co-ords are zero based and
-inclusive of both end points. Any other attributes (e.g.
-chrom.) are ignored.</li>
+with .start and .end attributes. Co-ords are zero based
+and inclusive of both end points. Any other attributes
+(e.g. chrom.) are ignored.</li>
 <li><strong>verbose</strong> &#8211; print status messages to stderr if True</li>
 </ul>
 </td>
@@ -574,8 +575,8 @@ chrom.) are ignored.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>nuc</strong> &#8211; the nucleotide to compute percentage composition for. There is
-no check to make sure this is a valid nucleotide.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>nuc</strong> &#8211; the nucleotide to compute percentage composition for. There
+is no check to make sure this is a valid nucleotide.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">the percentage of the sequence that is &lt;nuc&gt;</td>
 </tr>
@@ -625,8 +626,8 @@ length.</p>
 <dl class="method">
 <dt id="pyokit.datastruct.sequence.Sequence.split">
 <tt class="descname">split</tt><big>(</big><em>point=None</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.split" title="Permalink to this definition">¶</a></dt>
-<dd><p>Split this sequence into two halves and return them. The original sequence
-remains unmodified.</p>
+<dd><p>Split this sequence into two halves and return them. The original
+sequence remains unmodified.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -648,13 +649,15 @@ remains unmodified.</p>
 <dl class="method">
 <dt id="pyokit.datastruct.sequence.Sequence.toRNA">
 <tt class="descname">toRNA</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.toRNA" title="Permalink to this definition">¶</a></dt>
-<dd><p>Convert this sequence in-place to an RNA sequence by changing any Ts to Us</p>
+<dd><p>Convert this sequence in-place to an RNA sequence by changing any Ts
+to Us</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyokit.datastruct.sequence.Sequence.truncate">
 <tt class="descname">truncate</tt><big>(</big><em>newLength</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.truncate" title="Permalink to this definition">¶</a></dt>
-<dd><p>Truncate this sequence in-place so it&#8217;s only &lt;newLength&gt; nucleotides long.</p>
+<dd><p>Truncate this sequence in-place so it&#8217;s only &lt;newLength&gt; nucleotides
+long.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -729,11 +732,12 @@ sequence data is valid, that&#8217;s the responsibility
 of the caller.</li>
 <li><strong>seqQual</strong> &#8211; The quality string for this sequence &#8211; must be
 the same length as the nucleotide sequence.</li>
-<li><strong>useMutableString</strong> &#8211; Store the sequence data as a mutable string, rather
-than a regular python string. This should make
-editing operations must faster, but it comes at the
-expense of less flexibility (e.g. the object can
-not be used as a hash key because it is mutable.)</li>
+<li><strong>useMutableString</strong> &#8211; Store the sequence data as a mutable string,
+rather than a regular python string. This should
+make editing operations much faster, but it comes
+at the expense of less flexibility (e.g. the
+object can not be used as a hash key because it
+is mutable.)</li>
 </ul>
 </td>
 </tr>
@@ -757,8 +761,8 @@ the same sequence name. A new merged FastqSequence object is returned;
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>other</strong> &#8211; the other sequence to merge with self.</li>
-<li><strong>forceMerge</strong> &#8211; force the merge to occur, even if sequences names don&#8217;t
-match. In this case, &lt;self&gt; takes precedence.</li>
+<li><strong>forceMerge</strong> &#8211; force the merge to occur, even if sequences names
+don&#8217;t match. In this case, &lt;self&gt; takes precedence.</li>
 </ul>
 </td>
 </tr>
@@ -810,8 +814,8 @@ sequence.</td>
 <dl class="method">
 <dt id="pyokit.datastruct.sequence.FastqSequence.trimLeft">
 <tt class="descname">trimLeft</tt><big>(</big><em>amount</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.trimLeft" title="Permalink to this definition">¶</a></dt>
-<dd><p>Trim this fastqSequence in-place by removing &lt;amount&gt; nucleotides from the
-5&#8217; end (left end).</p>
+<dd><p>Trim this fastqSequence in-place by removing &lt;amount&gt; nucleotides from
+the 5&#8217; end (left end).</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -826,8 +830,8 @@ this sequence.</td>
 <dl class="method">
 <dt id="pyokit.datastruct.sequence.FastqSequence.trimRight">
 <tt class="descname">trimRight</tt><big>(</big><em>amount</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.trimRight" title="Permalink to this definition">¶</a></dt>
-<dd><p>Trim this fastqSequence in-place by removing &lt;amount&gt; nucleotides from the
-3&#8217; end (right end).</p>
+<dd><p>Trim this fastqSequence in-place by removing &lt;amount&gt; nucleotides from
+the 3&#8217; end (right end).</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -842,12 +846,112 @@ this sequence.</td>
 <dl class="method">
 <dt id="pyokit.datastruct.sequence.FastqSequence.truncate">
 <tt class="descname">truncate</tt><big>(</big><em>size</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.truncate" title="Permalink to this definition">¶</a></dt>
-<dd><p>truncate this fastqSequence in-place so it is only &lt;size&gt; nucleotides long</p>
+<dd><p>truncate this fastqSequence in-place so it is only &lt;size&gt; nucleotides
+long</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>size</strong> &#8211; the number of nucleotides to truncate to.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="sequence-alignments">
+<h2>Sequence Alignments<a class="headerlink" href="#sequence-alignments" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-pairwisealignment-class">
+<span id="pairwisealignmentclasssection"></span><h3>The PairwiseAlignment class<a class="headerlink" href="#the-pairwisealignment-class" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment">
+<em class="property">class </em><tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">PairwiseAlignment</tt><big>(</big><em>s1</em>, <em>s2</em>, <em>meta_data=None</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment" title="Permalink to this definition">¶</a></dt>
+<dd><p>An alignment of two sequences (DNA, RNA, protein...).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>s1</strong> &#8211; the first sequence, with gaps</li>
+<li><strong>s2</strong> &#8211; the second sequence, with gaps</li>
+<li><strong>meta_data</strong> &#8211; a dictionary with key-value pairs representing meta-data
+about this alignment.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.repeat_masker_header">
+<tt class="descname">repeat_masker_header</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.repeat_masker_header" title="Permalink to this definition">¶</a></dt>
+<dd><p>generate the header string of a repeatmasker formated representation of
+this pairwise alignment.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.s1_is_reverse_comp">
+<tt class="descname">s1_is_reverse_comp</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.s1_is_reverse_comp" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if the first sequence in this alignment is on the negative
+strand, False otherwise</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.s1_ungapped_len">
+<tt class="descname">s1_ungapped_len</tt><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.s1_ungapped_len" title="Permalink to this definition">¶</a></dt>
+<dd><p>The length of the first sequence in this alignment, not counting gaps</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.s2_is_reverse_comp">
+<tt class="descname">s2_is_reverse_comp</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.s2_is_reverse_comp" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if the second sequence in this alignment is on the negative
+strand, False otherwise</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.s2_ungapped_len">
+<tt class="descname">s2_ungapped_len</tt><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.s2_ungapped_len" title="Permalink to this definition">¶</a></dt>
+<dd><p>The length of the second sequence in this alignment, not counting gaps</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.size">
+<tt class="descname">size</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.size" title="Permalink to this definition">¶</a></dt>
+<dd><p>return the size of this alignment (defined as the number of columns in the
+alignemnt).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.to_repeat_masker_string">
+<tt class="descname">to_repeat_masker_string</tt><big>(</big><em>column_width=50</em>, <em>m_name_width=None</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.to_repeat_masker_string" title="Permalink to this definition">¶</a></dt>
+<dd><p>generate a repeatmasker formated representation of this pairwise alignment.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>column_width</strong> &#8211; number of characters to output per line of alignment</li>
+<li><strong>m_name_width</strong> &#8211; truncate names on alignment lines to this length
+(set to None for no truncation)</li>
+</ul>
+</td>
 </tr>
 </tbody>
 </table>
@@ -932,6 +1036,10 @@ e.g.: GOTERM_BP_FAT</li>
 <li><a class="reference internal" href="#the-sequence-class">The Sequence class</a></li>
 <li><a class="reference internal" href="#the-fastasequence-class">The FastaSequence class</a></li>
 <li><a class="reference internal" href="#the-fastqsequence-class">The FastqSequence class</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#sequence-alignments">Sequence Alignments</a><ul>
+<li><a class="reference internal" href="#the-pairwisealignment-class">The PairwiseAlignment class</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#gene-ontology">Gene Ontology</a></li>

@@ -37,6 +37,9 @@ The IntervalTree class
 .. autoclass:: pyokit.datastruct.intervalTree.IntervalTree
    :members:
 
+
+
+
 ---------
 Sequences
 ---------
@@ -79,6 +82,23 @@ The FastqSequence class
 
 .. autoclass:: pyokit.datastruct.sequence.FastqSequence
    :members:
+
+
+
+
+-------------------
+Sequence Alignments
+-------------------
+
+.. _pairwiseAlignmentClassSection:
+
+```````````````````````````
+The PairwiseAlignment class
+```````````````````````````
+
+.. autoclass:: pyokit.datastruct.multipleAlignment.PairwiseAlignment
+   :members:
+
 
 
 
