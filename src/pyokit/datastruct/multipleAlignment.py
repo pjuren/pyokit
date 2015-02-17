@@ -37,29 +37,84 @@ UNKOWN_SEQ_NAME = "UNKNOWN_SEQUENCE"
 DEFAULT_MAX_NAME_WIDTH = None
 DEFAULT_COL_WIDTH = 50
 
-# keys for meta-data dictionary; general
-ANNOTATION_KEY = "annotation"
+
+###############################################################################
+#                   KEYS FOR META-DATA DICTIONARY; GENERAL                    #
+###############################################################################
+
+#: name of the first sequence
 S1_NAME_KEY = "s1_name"
+
+#: name of the second sequence
 S2_NAME_KEY = "s2_name"
+
+#: start co-ordinate of the first sequence
 S1_START_KEY = "s1_start_coord"
+
+#: start co-ordinate of the second sequence
 S2_START_KEY = "s2_start_coord"
+
+#: end co-ordinate of the first sequence
 S1_END_KEY = "s1_end_coord"
+
+#: end co-ordinate of the second sequence
 S2_END_KEY = "s2_end_coord"
+
+#: start co-ordinate of the first sequenc in negative strand co-ordinates
 S1_START_NEG_STRAND_KEY = "s1_start_neg_coord"
+
+#: start co-ordinate of the second sequenc in negative strand co-ordinates
 S2_START_NEG_STRAND_KEY = "s2_start_neg_coord"
+
+#: end co-ordinate of the first sequenc in negative strand co-ordinates
 S1_END_NEG_STRAND_KEY = "s1_end_neg_coord"
+
+#: end co-ordinate of the second sequenc in negative strand co-ordinates
 S2_END_NEG_STRAND_KEY = "s2_end_neg_coord"
+
+#: boolean -- is the first sequence reverse complemented?
 S1_REVERSE_COMP_KEY = "s1_rev_comp"
+
+#: boolean -- is the second sequence reverse complemented?
 S2_REVERSE_COMP_KEY = "s2_rev_comp"
+
+#: score for the alignment; no requirement on how this is computed.
 ALIG_SCORE_KEY = "alig_score"
+
+#: annotation for each column of the alignment; no requirements on format.
+ANNOTATION_KEY = "annotation"
+
+#: percentage of substitutions (i.e. columns that have no gaps, not matches)
 PCENT_SUBS_KEY = "pcnt_subs"
+
+#: the percentage of the first sequence which is gaps. This is not computed
+#: from the sequence itself, so may not be accurate.
 PCENT_S1_INDELS_KEY = "pcnt_s1_indels"
+
+#: the percentage of the second sequence which is gaps. This is not computed
+#: from the sequence itself, so may not be accurate.
 PCENT_S2_INDELS_KEY = "pcnt_s2_indels"
-# keys for meta-data dictionary; repeat-masker specific
-UNKNOWN_RM_HEADER_FIELD_KEY = "unknown_rm_header_field"
-RM_ID_KEY = "rm_id"
-# keys for meta-data dictionary; special
+
+#:
 ROUNDTRIP_KEY = "roundtrip"
+
+###############################################################################
+#          KEYS FOR META-DATA DICTIONARY; SEPCIFIC TO REPEAT-MASKER           #
+###############################################################################
+
+#: If this is a repeat-masker alignment, this stores the value of the
+#: second-last token from the header of the alignment; its meaning is unknown.
+UNKNOWN_RM_HEADER_FIELD_KEY = "unknown_rm_header_field"
+
+#: If this is a repeat-masker alignment, this stores the unique ID assigned
+#: to it by repeat-masker
+RM_ID_KEY = "rm_id"
+
+###############################################################################
+#                               FULL KEY LIST                                 #
+###############################################################################
+
+#: The full set of meta-data keys that have special meaning
 KNOWN_KEYS = set([ANNOTATION_KEY, S1_NAME_KEY, S1_END_KEY, S2_END_KEY,
                   S1_START_NEG_STRAND_KEY, S2_START_NEG_STRAND_KEY,
                   S1_END_NEG_STRAND_KEY, S2_END_NEG_STRAND_KEY, S2_NAME_KEY,
