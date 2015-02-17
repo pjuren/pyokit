@@ -2,8 +2,9 @@ before_install:
   - sudo apt-get update
 install:
   - pip install sphinx
+  - pip install coveralls
 language: python
-script: python setup.py sdist; pip install --no-index dist/pyokit-?.?.?.tar.gz; python src/test.py
+script: python setup.py sdist; pip install --no-index dist/pyokit-?.?.?.tar.gz; coverage run --source=pyokit src/test.py
 env:
   global:
     - secure: "gCIVQ/G/+OiTl4VOy2BVkkG6At29F5xng7AyqJmxWqbQeWssydWtS2fJXP9pie3jW3fMSWyaB3mwv+WVKq5mJiN92ONX8Yy5E8Vx3vRybXoKNGfP+r51vkt3lxI7CZ3dRNyWSlO5TxXYSPsBaZgeYnNqDH44IWeORkjZWgzIuCc="
