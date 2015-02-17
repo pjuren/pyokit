@@ -39,3 +39,6 @@ after_success:
   - git add --all .
   - git commit -m "Auto-updating developer documentation"
   - git push --quiet https://${GH_TOKEN}@github.com/pjuren/pyokit gh-pages && echo "Pushed to updated documentation."
+  -
+  - # push test coverage results to coveralls
+  - coveralls
