@@ -271,6 +271,69 @@ class PairwiseAlignment(object):
     """
     return self.to_repeat_masker_string()
 
+  def sequence_to_alignment_coords(self, seq_num, start, end):
+    """
+    convert an interval in one of the sequences into an interval in the
+    alignment. Alignment intervals are inclusive of start, but not end. They
+    are zero-based. Hence the full alignment has coords [0, N), where N is the
+    length of the alignment (number of columns). Sequence coords follow the
+    same conventions: zero-based, inclusive of start but not end.
+
+    :param seq_num: which sequence are the start and end coords for? 1 or 2
+    :param start:   start of the interval in sequence co-ordinates
+    :param end:     end of the interval in sequence co-ordinates
+    """
+    assert(seq_num == 1 or seq_num == 2)
+    assert(end > start)
+    try:
+      s_start = (self.meta[S1_START_KEY] if seq_num == 1
+                 else self.meta[S2_START_KEY])
+      s_end = (self.meta[S1_END_KEY] if seq_num == 1
+               else self.meta[S2_END_KEY])
+      seq = self.s1 if seq_num == 1 else self.s2
+    except KeyError:
+      s_start = 0
+      s_end = self.s1_ungapped_length - 1
+    assert(s_start <= start < s_end)
+    assert(s_start < end <= s_end)
+
+    num_gaps = 0
+    num_non_gaps = 0
+    res = []
+    current_start = None
+    current_end = None
+    print seq
+    for i in range(0, end):
+      if seq[i] == GAP_CHAR:
+        num_gaps += 1
+      else:
+        num_non_gaps += 1
+
+      if (num_non_gaps > end - s_start):
+        # we're done, gone past the end of the ROI
+        break
+      if (num_non_gaps > start - s_start):
+        # within ROI
+        print "in ROI at position " + str(i) + " (" + seq[i] + ")"
+        if seq[i] != GAP_CHAR:
+          if current_start == None and current_end == None:
+            current_start = i
+            current_end = i + 1
+          else:
+            if seq[i - 1] == GAP_CHAR:
+              # is the start of a new non-gapped region...
+              print "\tstarts new non-gapped region"
+              print "\t\tadd (" + str(current_start) + "," + str(current_end) + ")"
+              res.append((current_start, current_end))
+              current_start = i
+              current_end = i + 1
+            if seq[i - 1] != GAP_CHAR:
+              # is continuation of non-gapped region
+              print "\tcontinue non-gapped region"
+              current_end += 1
+    res.append((current_start, current_end))
+    return res
+
   def to_repeat_masker_string(self, column_width=DEFAULT_COL_WIDTH,
                               m_name_width=DEFAULT_MAX_NAME_WIDTH):
     """
@@ -370,9 +433,29 @@ class PairwiseAlignment(object):
 ###############################################################################
 class TestAlignments(unittest.TestCase):
 
-  def test_pairwise_liftover(self):
+  def test_sequence_to_alig_coord(self):
     """
-    test lifting co-rodinates from one sequence in a pairwise alignment to
-    another.
+    test converting co-ordinates for an interval within a component sequence
+    of a pairwise alignment into co-ordinates within the alignment itself
     """
-    pass
+    meta = {}
+    meta[S1_START_KEY] = 100
+    meta[S2_START_KEY] = 1000
+    meta[S1_END_KEY] = 129
+    meta[S2_END_KEY] = 934
+    meta[S1_REVERSE_COMP_KEY] = False
+    meta[S2_REVERSE_COMP_KEY] = True
+
+    p = PairwiseAlignment("-TCGCGTAGC---CGC-TAGCTGATGCGAT-CTGA",
+                          "ATCGCGTAGCTAGCGCG-AGCTG---CGATGCT--", meta)
+
+    self.failUnlessEqual(p.sequence_to_alignment_coords(1, 103, 111),
+                         [(4, 10), (13, 15)])
+
+
+###############################################################################
+#              MAIN ENTRY POINT WHEN RUN AS STAND-ALONE MODULE                #
+###############################################################################
+
+if __name__ == "__main__":
+    unittest.main()
