@@ -25,26 +25,41 @@
 
 import unittest
 
-############################## I/O LIBRARIES ###################################
-from pyokit.io.bedIterators import *
-from pyokit.io.fastaIterators import *
-from pyokit.io.fastqIterators import *
+###############################################################################
+#                              I/O LIBRARIES                                  #
+###############################################################################
+
+from pyokit.io.bedIterators import BEDIteratorUnitTests
+from pyokit.io.fastqIterators import FastQUintTests
+from pyokit.io.fastaIterators import TestFastaIterators
+from pyokit.io.alignmentIterators import TestAlignmentIterators
+from pyokit.io.indexedFile import TestIndexedFile
 
 from pyokit.io.wigDir import *
 from pyokit.io.wigFile import *
 from pyokit.io.indexedWig import *
 from pyokit.io.wigIterators import *
 
-############################# DATA STRUCTURES ##################################
+###############################################################################
+#                              DATA STRUCTURES                                #
+###############################################################################
+from pyokit.datastruct.multipleAlignment import TestAlignments
 from pyokit.datastruct.intervalTree import *
 from pyokit.datastruct.genomicInterval import *
 from pyokit.datastruct.sequence import *
 from pyokit.datastruct.maf import *
 
-############################ TESTING AND UTILS #################################
+###############################################################################
+#                             TESTING AND UTILS                               #
+###############################################################################
 from pyokit.testing.dummyfiles import *
 from pyokit.util.progressIndicator import *
 
 
 if __name__ == "__main__":
+  sys.stderr.write("registered tests in " + str(TestAlignmentIterators) + "\n")
+  sys.stderr.write("registered tests in " + str(TestIndexedFile) + "\n")
+  sys.stderr.write("registered tests in " + str(BEDIteratorUnitTests) + "\n")
+  sys.stderr.write("registered tests in " + str(FastQUintTests) + "\n")
+  sys.stderr.write("registered tests in " + str(TestFastaIterators) + "\n")
   unittest.main()

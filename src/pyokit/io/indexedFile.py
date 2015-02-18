@@ -328,7 +328,7 @@ class IndexedFile(object):
 #                         UNIT TESTS FOR THIS MODULE                          #
 ###############################################################################
 
-class TestAlignmentIterators(unittest.TestCase):
+class TestIndexedFile(unittest.TestCase):
 
   def setUp(self):
     """
