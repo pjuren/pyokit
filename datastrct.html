@@ -932,6 +932,29 @@ strand, False otherwise</td>
 </dd></dl>
 
 <dl class="method">
+<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.sequence_to_alignment_coords">
+<tt class="descname">sequence_to_alignment_coords</tt><big>(</big><em>seq_num</em>, <em>start</em>, <em>end</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.sequence_to_alignment_coords" title="Permalink to this definition">¶</a></dt>
+<dd><p>convert an interval in one of the sequences into an interval in the
+alignment. Alignment intervals are inclusive of start, but not end. They
+are zero-based. Hence the full alignment has coords [0, N), where N is the
+length of the alignment (number of columns). Sequence coords follow the
+same conventions: zero-based, inclusive of start but not end.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>seq_num</strong> &#8211; which sequence are the start and end coords for? 1 or 2</li>
+<li><strong>start</strong> &#8211; start of the interval in sequence co-ordinates</li>
+<li><strong>end</strong> &#8211; end of the interval in sequence co-ordinates</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.size">
 <tt class="descname">size</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.size" title="Permalink to this definition">¶</a></dt>
 <dd><p>return the size of this alignment (defined as the number of columns in the
