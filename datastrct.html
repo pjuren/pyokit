@@ -297,7 +297,8 @@ with this end index (exclusive)</li>
 <dl class="method">
 <dt id="pyokit.datastruct.intervalTree.IntervalTree.intersectingPoint">
 <tt class="descname">intersectingPoint</tt><big>(</big><em>p</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.intervalTree.IntervalTree.intersectingPoint" title="Permalink to this definition">¶</a></dt>
-<dd><p>given a point, determine which set of intervals in the tree are intersected.</p>
+<dd><p>given a point, determine which set of intervals in the tree are
+intersected.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -884,6 +885,29 @@ about this alignment.</li>
 </tr>
 </tbody>
 </table>
+<dl class="method">
+<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.alignment_to_sequence_coords">
+<tt class="descname">alignment_to_sequence_coords</tt><big>(</big><em>seq_num</em>, <em>start</em>, <em>end</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.alignment_to_sequence_coords" title="Permalink to this definition">¶</a></dt>
+<dd><p>convert an interval in the alignmnet into co-ordinates in one of the
+sequences Alignment intervals are inclusive of start, but not end. They
+are zero-based. Hence the full alignment has coords [0, N), where N is the
+length of the alignment (number of columns). Sequence coords follow the
+same conventions: zero-based, inclusive of start but not end.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>seq_num</strong> &#8211; which sequence are the start and end coords for? 1 or 2</li>
+<li><strong>start</strong> &#8211; start of the interval in sequence co-ordinates</li>
+<li><strong>end</strong> &#8211; end of the interval in sequence co-ordinates</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 <dl class="method">
 <dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.repeat_masker_header">
 <tt class="descname">repeat_masker_header</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.repeat_masker_header" title="Permalink to this definition">¶</a></dt>
