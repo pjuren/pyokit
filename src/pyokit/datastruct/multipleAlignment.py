@@ -271,6 +271,38 @@ class PairwiseAlignment(object):
     """
     return self.to_repeat_masker_string()
 
+  def alignment_to_sequence_coords(self, seq_num, start, end):
+    """
+    convert an interval in the alignmnet into co-ordinates in one of the
+    sequences Alignment intervals are inclusive of start, but not end. They
+    are zero-based. Hence the full alignment has coords [0, N), where N is the
+    length of the alignment (number of columns). Sequence coords follow the
+    same conventions: zero-based, inclusive of start but not end.
+
+    :param seq_num: which sequence are the start and end coords for? 1 or 2
+    :param start:   start of the interval in sequence co-ordinates
+    :param end:     end of the interval in sequence co-ordinates
+    """
+    assert(seq_num == 1 or seq_num == 2)
+    assert(0 <= start < end < self.size())
+    seq = self.s1 if seq_num == 1 else self.s2
+    try:
+      s_start = (self.meta[S1_START_KEY] if seq_num == 1
+                 else self.meta[S2_START_KEY])
+    except KeyError:
+      s_start = 0
+
+    non_gaps = 0
+    r_start = None
+    r_end = None
+    for i in range(0, end):
+      if seq[i] != GAP_CHAR:
+        non_gaps += 1
+      if seq[i] != GAP_CHAR and r_start is None and i >= start:
+        r_start = non_gaps + s_start - 1
+    r_end = non_gaps + s_start
+    return (r_start, r_end)
+
   def sequence_to_alignment_coords(self, seq_num, start, end):
     """
     convert an interval in one of the sequences into an interval in the
@@ -285,12 +317,12 @@ class PairwiseAlignment(object):
     """
     assert(seq_num == 1 or seq_num == 2)
     assert(end > start)
+    seq = self.s1 if seq_num == 1 else self.s2
     try:
       s_start = (self.meta[S1_START_KEY] if seq_num == 1
                  else self.meta[S2_START_KEY])
       s_end = (self.meta[S1_END_KEY] if seq_num == 1
                else self.meta[S2_END_KEY])
-      seq = self.s1 if seq_num == 1 else self.s2
     except KeyError:
       s_start = 0
       s_end = self.s1_ungapped_length - 1
@@ -302,7 +334,7 @@ class PairwiseAlignment(object):
     res = []
     current_start = None
     current_end = None
-    print seq
+    # print seq
     for i in range(0, end):
       if seq[i] == GAP_CHAR:
         num_gaps += 1
@@ -314,7 +346,7 @@ class PairwiseAlignment(object):
         break
       if (num_non_gaps > start - s_start):
         # within ROI
-        print "in ROI at position " + str(i) + " (" + seq[i] + ")"
+        # print "in ROI at position " + str(i) + " (" + seq[i] + ")"
         if seq[i] != GAP_CHAR:
           if current_start == None and current_end == None:
             current_start = i
@@ -322,14 +354,14 @@ class PairwiseAlignment(object):
           else:
             if seq[i - 1] == GAP_CHAR:
               # is the start of a new non-gapped region...
-              print "\tstarts new non-gapped region"
-              print "\t\tadd (" + str(current_start) + "," + str(current_end) + ")"
+              # print "\tstarts new non-gapped region"
+              # print "\t\tadd (" + str(current_start) + "," + str(current_end) + ")"
               res.append((current_start, current_end))
               current_start = i
               current_end = i + 1
             if seq[i - 1] != GAP_CHAR:
               # is continuation of non-gapped region
-              print "\tcontinue non-gapped region"
+              # print "\tcontinue non-gapped region"
               current_end += 1
     res.append((current_start, current_end))
     return res
@@ -432,11 +464,9 @@ class PairwiseAlignment(object):
 #                         UNIT TESTS FOR THIS MODULE                          #
 ###############################################################################
 class TestAlignments(unittest.TestCase):
-
-  def test_sequence_to_alig_coord(self):
+  def setUp(self):
     """
-    test converting co-ordinates for an interval within a component sequence
-    of a pairwise alignment into co-ordinates within the alignment itself
+    Set up a few alignments to use in the tests
     """
     meta = {}
     meta[S1_START_KEY] = 100
@@ -446,11 +476,27 @@ class TestAlignments(unittest.TestCase):
     meta[S1_REVERSE_COMP_KEY] = False
     meta[S2_REVERSE_COMP_KEY] = True
 
-    p = PairwiseAlignment("-TCGCGTAGC---CGC-TAGCTGATGCGAT-CTGA",
-                          "ATCGCGTAGCTAGCGCG-AGCTG---CGATGCT--", meta)
+    self.pa1 = PairwiseAlignment("-TCGCGTAGC---CGC-TAGCTGATGCGAT-CTGA",
+                                 "ATCGCGTAGCTAGCGCG-AGCTG---CGATGCT--", meta)
 
-    self.failUnlessEqual(p.sequence_to_alignment_coords(1, 103, 111),
-                         [(4, 10), (13, 15)])
+  def test_sequence_to_alig_coord(self):
+    """
+    test converting co-ordinates for an interval within a component sequence
+    of a pairwise alignment into co-ordinates within the alignment itself
+    """
+    self.assertEqual(self.pa1.sequence_to_alignment_coords(1, 103, 111),
+                     [(4, 10), (13, 15)])
+
+  def test_alig_to_sequence_coords(self):
+    #  index 8 --> GC---CGC-T <-- index 17 (intervals are half closed)
+    self.assertEqual(self.pa1.alignment_to_sequence_coords(1, 8, 18),
+                     (107, 113))
+    #  index 11 --> --CGC <-- index 15 (intervals are half closed)
+    self.assertEqual(self.pa1.alignment_to_sequence_coords(1, 11, 16),
+                     (109, 112))
+    #  index 8 --> GC-- <-- index 11 (intervals are half closed)
+    self.assertEqual(self.pa1.alignment_to_sequence_coords(1, 8, 12),
+                     (107, 109))
 
 
 ###############################################################################
