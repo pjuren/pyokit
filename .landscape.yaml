@@ -1,3 +1,6 @@
 pylint:
   disable:
       - bad-indentation
+pep8:
+  disable:
+      - E114

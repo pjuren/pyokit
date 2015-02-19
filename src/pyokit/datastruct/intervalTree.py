@@ -24,7 +24,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import copy, random, unittest
+# standard python imports
+import copy
+import random
+import unittest
+
+
+###############################################################################
+#                            EXCEPTION CLASSES                                #
+###############################################################################
 
 class IntervalTreeError(Exception):
   """
@@ -32,11 +40,16 @@ class IntervalTreeError(Exception):
   """
   def __init__(self, value):
     self.value = value
+
   def __str__(self):
     return repr(self.value)
 
 
-class IntervalTreeNode :
+###############################################################################
+#                          INTERVAL-TREE CLASSES                              #
+###############################################################################
+
+class IntervalTreeNode(object):
   def __init__(self, intervals, mid):
     self.starts = copy.copy(intervals)  # shallow copies
     self.ends = copy.copy(intervals)
@@ -51,7 +64,7 @@ class IntervalTreeNode :
     return res
 
 
-class IntervalTree :
+class IntervalTree(object):
   """
     An interval tree is a binary tree that allows fast O(log(n)) lookup of
     intervals that intersect a given point or interval.
@@ -65,10 +78,10 @@ class IntervalTree :
     self.left = None
     self.right = None
 
-    ## can't build a tree with no intervals...
-    if intervals == None or len(intervals) <= 0:
-      raise IntervalTreeError("Interval tree constructor got empty " +\
-                              "or null set of intervals")
+    # can't build a tree with no intervals...
+    if intervals is None or len(intervals) <= 0:
+      raise IntervalTreeError("Interval tree constructor got empty "
+                              + "or null set of intervals")
 
     # sort the list by start index (this is arbitrary and just lets
     # us try to split it evenly)
@@ -95,17 +108,19 @@ class IntervalTree :
 
     if len(here) <= 0 :
       intStrs = ",".join(str(x.start) + " -- " + str(x.end) for x in intervals)
-      raise IntervalTreeError("picked mid point at " + str(mid) +\
-                              " but failed to intersect any of " + intStrs)
+      raise IntervalTreeError("picked mid point at " + str(mid)
+                              + " but failed to intersect any of " + intStrs)
 
-    if len(lt) > 0 : self.left = IntervalTree(lt, self.openEnded)
-    if len(rt) > 0 : self.right = IntervalTree(rt, self.openEnded)
+    if len(lt) > 0:
+      self.left = IntervalTree(lt, self.openEnded)
+    if len(rt) > 0:
+      self.right = IntervalTree(rt, self.openEnded)
     self.data = IntervalTreeNode(here, mid)
-
 
   def intersectingPoint(self, p):
     """
-    given a point, determine which set of intervals in the tree are intersected.
+    given a point, determine which set of intervals in the tree are
+    intersected.
 
     :param p: intersection point
     :return: the list of intersected intervals
@@ -120,9 +135,10 @@ class IntervalTree :
       # p, they would have not included mid) we just need to find those that
       # end after p
       endAfterP = [r for r in self.data.ends \
-                   if (r.end >= p and not self.openEnded) or \
+                   if (r.end >= p and not self.openEnded) or
                    (r.end > p and self.openEnded)]
-      if self.right != None : endAfterP.extend(self.right.intersectingPoint(p))
+      if self.right is not None:
+        endAfterP.extend(self.right.intersectingPoint(p))
       return endAfterP
 
     if p < self.data.mid :
@@ -130,9 +146,9 @@ class IntervalTree :
       # they would have not included mid) we just need to find those that start
       # before p
       startBeforeP = [r for r in self.data.starts if r.start <= p]
-      if self.left != None : startBeforeP.extend(self.left.intersectingPoint(p))
+      if self.left != None:
+        startBeforeP.extend(self.left.intersectingPoint(p))
       return startBeforeP
-
 
   def intersectingInterval(self, start, end):
     """
@@ -156,12 +172,12 @@ class IntervalTree :
 
     # process left subtree (if we have one) if the requested interval begins
     # before mid
-    if self.left != None and start <= self.data.mid:
+    if self.left is not None and start <= self.data.mid:
       l += self.left.intersectingInterval(start, end)
 
     # process right subtree (if we have one) if the requested interval ends
     # after mid
-    if self.right != None and end >= self.data.mid:
+    if self.right is not None and end >= self.data.mid:
       l += self.right.intersectingInterval(start, end)
 
     return l
@@ -178,7 +194,7 @@ class IntervalTree :
       :return: an iterator that will yield intersected intervals
     """
     items = self.intersectingInterval(start, end)
-    items.sort(key = lambda x: x.start)
+    items.sort(key=lambda x: x.start)
     for item in items :
       yield item
 
@@ -192,8 +208,10 @@ class TestIntervalTree(unittest.TestCase):
     def __init__(self, s, e):
       self.start = s
       self.end = e
+
     def str(self):
       return str(self.start) + " - " + str(self.end)
+
     def __repr__(self):
       return str(self.start) + " - " + str(self.end)
 
@@ -204,16 +222,16 @@ class TestIntervalTree(unittest.TestCase):
     self.MIN_INTERVAL = 0
     self.NUM_TESTS = 100
 
-    ## create some test intervals
-    for i in range (0, self.NUM_TEST_INTERVALS) :
+    # create some test intervals
+    for i in range(0, self.NUM_TEST_INTERVALS) :
       s = (random.random() * (self.MAX_INTERVAL - self.MIN_INTERVAL)) +\
           self.MIN_INTERVAL
       e = (random.random() * (self.MAX_INTERVAL - s)) + s
-      self.testIntervals.append(TestIntervalTree.TestInterval(s,e))
+      self.testIntervals.append(TestIntervalTree.TestInterval(s, e))
     self.tree = IntervalTree(self.testIntervals)
 
   def testEndPoints(self):
-    interval = TestIntervalTree.TestInterval(5,10)
+    interval = TestIntervalTree.TestInterval(5, 10)
     tree = IntervalTree([interval])
 
     self.assertTrue(len(tree.intersectingPoint(4)) == 0)
@@ -230,56 +248,55 @@ class TestIntervalTree(unittest.TestCase):
     self.assertRaises(IntervalTreeError, IntervalTree, [])
     self.assertRaises(IntervalTreeError, IntervalTree, None)
 
-
   def testIntersectingPoint(self):
-    for i in range(0,self.NUM_TESTS) :
-      point = random.random() * (self.MAX_INTERVAL - self.MIN_INTERVAL) +\
-              self.MIN_INTERVAL
+    for i in range(0, self.NUM_TESTS) :
+      point = (random.random() * (self.MAX_INTERVAL - self.MIN_INTERVAL)
+               + self.MIN_INTERVAL)
 
-      ## do it the slow way...
+      # do it the slow way...
       correctAnswer = []
       for interval in self.testIntervals :
         if point > interval.start and point < interval.end :
           correctAnswer.append(interval)
 
-      ## now use the interval tree...
+      # now use the interval tree...
       actualAnswer = self.tree.intersectingPoint(point)
 
-      ## compare...
-      correctAnswer.sort(key = lambda x: x.start)
-      actualAnswer.sort(key = lambda x: x.start)
+      # compare...
+      correctAnswer.sort(key=lambda x: x.start)
+      actualAnswer.sort(key=lambda x: x.start)
       self.assertEquals(correctAnswer, actualAnswer)
 
-
   def testIntersectingInterval(self):
-    for i in range(0,self.NUM_TESTS) :
+    for i in range(0, self.NUM_TESTS) :
       # create a random interval..
       s = (random.random() * (self.MAX_INTERVAL - self.MIN_INTERVAL)) +\
           self.MIN_INTERVAL
       e = (random.random() * (self.MAX_INTERVAL - s)) + s
 
-      ## work out the answer the slow way - look at every interval
+      # work out the answer the slow way - look at every interval
       correctAnswer = []
       for interval in self.testIntervals :
-        if (s > interval.start and s < interval.end) \
-        or (e > interval.start and e < interval.end) \
-        or (interval.start > s and interval.start < e) \
-        or (interval.end > s and interval.end < e) :
+        if ((s > interval.start and s < interval.end) or
+           (e > interval.start and e < interval.end) or
+           (interval.start > s and interval.start < e) or
+           (interval.end > s and interval.end < e)) :
           correctAnswer.append(interval)
 
-      ## now use the tree..
+      # now use the tree..
       actualAnswer = self.tree.intersectingInterval(s, e)
 
-      ## compare...
-      correctAnswer.sort(key = lambda x: x.start)
-      actualAnswer.sort(key = lambda x: x.start)
+      # compare...
+      correctAnswer.sort(key=lambda x: x.start)
+      actualAnswer.sort(key=lambda x: x.start)
       self.assertEquals(correctAnswer, actualAnswer)
 
   def testThree(self):
     class testInterval:
-      def __init__(self,s,e):
+      def __init__(self, s, e):
         self.start = s
         self.end = e
+
       def __eq__(self, other):
         return self.end == other.end and self.start == other.start
     dead1 = testInterval(215844, 545297)
@@ -294,8 +311,8 @@ class TestIntervalTree(unittest.TestCase):
     """
     one = TestIntervalTree.TestInterval(10,15)
     two = TestIntervalTree.TestInterval(15,20)
-    t = IntervalTree([one,two])
-    t2 = IntervalTree([one,two], openEnded=True)
+    t = IntervalTree([one, two])
+    t2 = IntervalTree([one, two], openEnded=True)
 
     self.assertTrue(len(t.intersectingPoint(15)) == 2)
     self.assertTrue(len(t2.intersectingPoint(15)) == 1)
