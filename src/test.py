@@ -38,7 +38,7 @@ from pyokit.io.indexedFile import TestIndexedFile
 from pyokit.io.wigDir import *
 from pyokit.io.wigFile import *
 from pyokit.io.indexedWig import *
-from pyokit.io.wigIterators import *
+from pyokit.io.wigIterators import WigIteratorUnitTests
 
 ###############################################################################
 #                              DATA STRUCTURES                                #
@@ -62,4 +62,5 @@ if __name__ == "__main__":
   sys.stderr.write("registered tests in " + str(BEDIteratorUnitTests) + "\n")
   sys.stderr.write("registered tests in " + str(FastQUintTests) + "\n")
   sys.stderr.write("registered tests in " + str(TestFastaIterators) + "\n")
+  sys.stderr.write("registered tests in " + str(WigIteratorUnitTests) + "\n")
   unittest.main()

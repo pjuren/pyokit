@@ -361,7 +361,7 @@ class WigIteratorUnitTests(unittest.TestCase):
     for e1, e2 in pairedWigIterator([DummyInputStream(wigIn1),
                                     DummyInputStream(wigIn2)],
                                     mirrorScore=-1, mirror=True,
-                                    debug=debug) :
+                                    debug=debug):
       out.append((str(e1), str(e2)))
 
     out.sort()
