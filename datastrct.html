@@ -897,10 +897,37 @@ same conventions: zero-based, inclusive of start but not end.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>seq_num</strong> &#8211; which sequence are the start and end coords for? 1 or 2</li>
 <li><strong>start</strong> &#8211; start of the interval in sequence co-ordinates</li>
 <li><strong>end</strong> &#8211; end of the interval in sequence co-ordinates</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">a tuple with the start and end sequence coords; None if the
+interval in the alignment defined by (start, end) contains only
+gaps in the specified sequence. Not inclusive of end. If sequence
+is reverse complement (negative strand) then coords are
+[end, start); in any case, start &lt; end.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.liftover">
+<tt class="descname">liftover</tt><big>(</big><em>origin</em>, <em>o_start</em>, <em>o_end</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.liftover" title="Permalink to this definition">¶</a></dt>
+<dd><p>liftover an interval in one sequence of this pairwise alignment to the
+other.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>origin</strong> &#8211; which sequence (1 or 2) are the input coordinates for?</li>
+<li><strong>o_start</strong> &#8211; start of the interval (in sequence co-ordinates) to lift.</li>
+<li><strong>o_end</strong> &#8211; end of the interval (in seq. coords) to lift.</li>
 </ul>
 </td>
 </tr>
