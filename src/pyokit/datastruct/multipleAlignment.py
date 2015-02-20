@@ -203,6 +203,10 @@ class PairwiseAlignment(object):
     """
     if self._s1_ungapped_len is None:
       self._s1_ungapped_len = ungapped_length(self.s1)
+      # take this oportunity for a little sanity check
+      if S1_START_KEY in self.meta and S1_END_KEY in self.meta:
+        assert(self._s1_ungapped_len ==
+               self.meta[S1_END_KEY] - self.meta[S1_START_KEY])
     return self._s1_ungapped_len
 
   @property
@@ -212,6 +216,16 @@ class PairwiseAlignment(object):
     """
     if self._s2_ungapped_len is None:
       self._s2_ungapped_len = ungapped_length(self.s2)
+      # take this oportunity for a little sanity check
+      if S2_START_KEY in self.meta and S2_END_KEY in self.meta:
+        if (self._s2_ungapped_len !=
+            self.meta[S2_END_KEY] - self.meta[S2_START_KEY]):
+           raise AlignmentError("ungapped length of sequence ("
+                               + str(self._s2_ungapped_len) + ") is not "
+                               + "consistent with start ("
+                               + str(self.meta[S2_START_KEY])
+                               + ") and end (" + str(self.meta[S2_END_KEY])
+                               + ") coordinates")
     return self._s2_ungapped_len
 
   def s1_is_reverse_comp(self):
@@ -282,6 +296,12 @@ class PairwiseAlignment(object):
     :param seq_num: which sequence are the start and end coords for? 1 or 2
     :param start:   start of the interval in sequence co-ordinates
     :param end:     end of the interval in sequence co-ordinates
+
+    :return: a tuple with the start and end sequence coords; None if the
+             interval in the alignment defined by (start, end) contains only
+             gaps in the specified sequence. Not inclusive of end. If sequence
+             is reverse complement (negative strand) then coords are
+             [end, start); in any case, start < end.
     """
     assert(seq_num == 1 or seq_num == 2)
     assert(0 <= start < end < self.size())
@@ -292,14 +312,27 @@ class PairwiseAlignment(object):
     except KeyError:
       s_start = 0
 
+    pos_strand = True
+    if ((seq_num == 1 and self.s1_is_reverse_comp()) or
+       (seq_num == 2 and self.s2_is_reverse_comp())):
+      pos_strand = False
+
     non_gaps = 0
     r_start = None
     r_end = None
-    for i in range(0, end):
+    l_start = 0 if pos_strand else self.size() - 1
+    l_end = end if pos_strand else start - 1
+    l_step = 1 if pos_strand else -1
+    for i in range(l_start, l_end, l_step):
       if seq[i] != GAP_CHAR:
         non_gaps += 1
-      if seq[i] != GAP_CHAR and r_start is None and i >= start:
-        r_start = non_gaps + s_start - 1
+      if seq[i] != GAP_CHAR:
+        if ((pos_strand and r_start is None and i >= start) or
+           (not pos_strand and r_start is None and i < end)):
+          r_start = non_gaps + s_start - 1
+    if r_start is None:
+      # we went through the whole region and didn't find a single non-gap char
+      return None
     r_end = non_gaps + s_start
     return (r_start, r_end)
 
@@ -316,7 +349,6 @@ class PairwiseAlignment(object):
     :param end:     end of the interval in sequence co-ordinates
     """
     assert(seq_num == 1 or seq_num == 2)
-    assert(end > start)
     seq = self.s1 if seq_num == 1 else self.s2
     try:
       s_start = (self.meta[S1_START_KEY] if seq_num == 1
@@ -325,45 +357,75 @@ class PairwiseAlignment(object):
                else self.meta[S2_END_KEY])
     except KeyError:
       s_start = 0
-      s_end = self.s1_ungapped_length - 1
+      s_end = self.s1_ungapped_len - 1
+    pos_strand = True
+    if ((seq_num == 1 and S1_REVERSE_COMP_KEY in self.meta and
+       self.meta[S1_REVERSE_COMP_KEY]) or
+       (seq_num == 2 and S2_REVERSE_COMP_KEY in self.meta and
+       self.meta[S2_REVERSE_COMP_KEY])):
+      pos_strand = False
+
     assert(s_start <= start < s_end)
     assert(s_start < end <= s_end)
+    assert(end > start)
 
     num_gaps = 0
     num_non_gaps = 0
     res = []
     current_start = None
     current_end = None
-    # print seq
-    for i in range(0, end):
+    l_start = 0 if pos_strand else self.size() - 1
+    l_end = self.size() if pos_strand else 0
+    l_step = 1 if pos_strand else -1
+    for i in range(l_start, l_end, l_step):
       if seq[i] == GAP_CHAR:
         num_gaps += 1
       else:
         num_non_gaps += 1
 
-      if (num_non_gaps > end - s_start):
+      if num_non_gaps > end - s_start:
         # we're done, gone past the end of the ROI
         break
-      if (num_non_gaps > start - s_start):
+      if num_non_gaps > start - s_start:
         # within ROI
-        # print "in ROI at position " + str(i) + " (" + seq[i] + ")"
         if seq[i] != GAP_CHAR:
           if current_start == None and current_end == None:
             current_start = i
             current_end = i + 1
           else:
-            if seq[i - 1] == GAP_CHAR:
+            if ((pos_strand and seq[i - 1] == GAP_CHAR) or
+                (not pos_strand and seq[i + 1] == GAP_CHAR)):
               # is the start of a new non-gapped region...
-              # print "\tstarts new non-gapped region"
-              # print "\t\tadd (" + str(current_start) + "," + str(current_end) + ")"
               res.append((current_start, current_end))
               current_start = i
               current_end = i + 1
-            if seq[i - 1] != GAP_CHAR:
+            if pos_strand and seq[i - 1] != GAP_CHAR:
               # is continuation of non-gapped region
-              # print "\tcontinue non-gapped region"
               current_end += 1
+            if not pos_strand and seq[i + 1] != GAP_CHAR:
+              # is continuation of non-gapped region
+              current_start -= 1
     res.append((current_start, current_end))
+    return res
+
+  def liftover(self, origin, o_start, o_end):
+    """
+    liftover an interval in one sequence of this pairwise alignment to the
+    other.
+
+    :param origin:  which sequence (1 or 2) are the input coordinates for?
+    :param o_start: start of the interval (in sequence co-ordinates) to lift.
+    :param o_end:   end of the interval (in seq. coords) to lift.
+    """
+    assert(origin == 1 or origin == 2)
+    dest = 1 if origin == 2 else 2
+    alig_cols = self.sequence_to_alignment_coords(origin, o_start, o_end)
+    res = []
+    for s, e in alig_cols:
+      t = self.alignment_to_sequence_coords(dest, s, e)
+      if t is None:
+        continue
+      res.append(t)
     return res
 
   def to_repeat_masker_string(self, column_width=DEFAULT_COL_WIDTH,
@@ -468,35 +530,91 @@ class TestAlignments(unittest.TestCase):
     """
     Set up a few alignments to use in the tests
     """
-    meta = {}
-    meta[S1_START_KEY] = 100
-    meta[S2_START_KEY] = 1000
-    meta[S1_END_KEY] = 129
-    meta[S2_END_KEY] = 934
-    meta[S1_REVERSE_COMP_KEY] = False
-    meta[S2_REVERSE_COMP_KEY] = True
+    meta1 = {}
+    meta1[S1_START_KEY] = 100     # genomic start coord of s1 (inclusive)
+    meta1[S1_END_KEY] = 129       # genomic end coord of s1 (exclusive)
+    meta1[S2_START_KEY] = 1000    # genomic start coord of s2 (inclusive)
+    meta1[S2_END_KEY] = 1029      # genomic end coord of s2 (exclusive)
+    meta1[S1_REVERSE_COMP_KEY] = False
+    meta1[S2_REVERSE_COMP_KEY] = False
+
+    meta2 = {}
+    meta2[S1_START_KEY] = 100     # genomic start coord of s1 (inclusive)
+    meta2[S1_END_KEY] = 129       # genomic end coord of s1 (exclusive)
+    meta2[S2_START_KEY] = 969     # genomic start coord of s2 (inclusive)
+    meta2[S2_END_KEY] = 998       # genomic end coord of s2 (exclusive)
+    meta2[S1_REVERSE_COMP_KEY] = False
+    meta2[S2_REVERSE_COMP_KEY] = True
 
     self.pa1 = PairwiseAlignment("-TCGCGTAGC---CGC-TAGCTGATGCGAT-CTGA",
-                                 "ATCGCGTAGCTAGCGCG-AGCTG---CGATGCT--", meta)
+                                 "ATCGCGTAGCTAGCGCG-AGCTG---CGATGCT--", meta1)
+    self.pa2 = PairwiseAlignment("-TCGCGTAGC---CGC-TAGCTGATGCGAT-CTGA",
+                                 "ATCGCGTAGCTAGCGCG-AGCTG---CGATGCT--", meta2)
+
+  def test_ungapped_length(self):
+    self.assertEqual(self.pa1.s1_ungapped_len,
+                     len("TCGCGTAGCCGCTAGCTGATGCGATCTGA"))
+    self.assertEqual(self.pa1.s2_ungapped_len,
+                     len("ATCGCGTAGCTAGCGCGAGCTGCGATGCT"))
+    self.assertEqual(self.pa2.s1_ungapped_len,
+                     len("TCGCGTAGCCGCTAGCTGATGCGATCTGA"))
+    self.assertEqual(self.pa2.s2_ungapped_len,
+                     len("ATCGCGTAGCTAGCGCGAGCTGCGATGCT"))
 
   def test_sequence_to_alig_coord(self):
     """
     test converting co-ordinates for an interval within a component sequence
     of a pairwise alignment into co-ordinates within the alignment itself
     """
+    # CGTAGC---CGC
+    # CGTAGCTAGCGC
     self.assertEqual(self.pa1.sequence_to_alignment_coords(1, 103, 111),
                      [(4, 10), (13, 15)])
+    # 977 --> G---CGAT <-- 972
+    self.assertEqual(self.pa2.sequence_to_alignment_coords(2, 972, 977),
+                     [(26, 30), (22, 23)])
 
   def test_alig_to_sequence_coords(self):
+    """
+    test converting co-ordinates within an alignment into co-ordinates within
+    one of the sequences.
+    """
     #  index 8 --> GC---CGC-T <-- index 17 (intervals are half closed)
+    #              GCTAGCGCG- <-- the G is index 981
     self.assertEqual(self.pa1.alignment_to_sequence_coords(1, 8, 18),
                      (107, 113))
+    self.assertEqual(self.pa2.alignment_to_sequence_coords(2, 8, 18),
+                     (981, 990))
     #  index 11 --> --CGC <-- index 15 (intervals are half closed)
     self.assertEqual(self.pa1.alignment_to_sequence_coords(1, 11, 16),
                      (109, 112))
+    self.assertEqual(self.pa2.alignment_to_sequence_coords(2, 11, 16),
+                     (982, 987))
     #  index 8 --> GC-- <-- index 11 (intervals are half closed)
     self.assertEqual(self.pa1.alignment_to_sequence_coords(1, 8, 12),
                      (107, 109))
+    self.assertEqual(self.pa2.alignment_to_sequence_coords(2, 8, 12),
+                     (986, 990))
+    #  index 23 --> --- <-- index 25 (intervals are half closed)
+    self.assertEqual(self.pa1.alignment_to_sequence_coords(2, 23, 26), None)
+    self.assertEqual(self.pa2.alignment_to_sequence_coords(2, 23, 26), None)
+    pass
+
+  def test_liftover_coords(self):
+    """
+    test converting cordinates of one sequence in a pairwise alignment into
+    coordinates in the other
+    """
+    #  103 --> CGTAGC---CGC-T   <-- 112
+    # 1014 --> CGTAGCTAGCGCG-   <-- 1016
+    #  993 -->                  <-- 981
+    self.assertEqual(self.pa1.liftover(1, 103, 113),
+                     [(1004, 1010), (1013, 1016)])
+    self.assertEqual(self.pa2.liftover(1, 103, 113),
+                     [(988, 994), (982, 985)])
+    self.assertEqual(self.pa1.liftover(2, 1010, 1013), [])
+    self.assertEqual(self.pa2.liftover(2, 985, 988), [])
+    pass
 
 
 ###############################################################################
