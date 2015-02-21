@@ -97,7 +97,7 @@ class IntervalTree(object):
     for i in intervals :
       # place all intervals that end before <mid> into the left subtree
       if (not self.openEnded and i.end < mid) or \
-         (self.openEnded and i.end <= mid) :
+         (self.openEnded and i.end <= mid):
         lt.append(i)
       # place all intervals that begin after <mid> into the right subtree
       elif i.start > mid :
@@ -146,7 +146,7 @@ class IntervalTree(object):
       # they would have not included mid) we just need to find those that start
       # before p
       startBeforeP = [r for r in self.data.starts if r.start <= p]
-      if self.left != None:
+      if self.left is not None:
         startBeforeP.extend(self.left.intersectingPoint(p))
       return startBeforeP
 
@@ -202,8 +202,12 @@ class IntervalTree(object):
     return str(self.left) + "," + str(self.data) + "," + str(self.right)
 
 
+###############################################################################
+#                         UNIT TESTS FOR THIS MODULE                          #
+###############################################################################
+
 class TestIntervalTree(unittest.TestCase):
-  class TestInterval :
+  class TestInterval(object):
     """ a small internal class used only for testing """
     def __init__(self, s, e):
       self.start = s
@@ -223,7 +227,7 @@ class TestIntervalTree(unittest.TestCase):
     self.NUM_TESTS = 100
 
     # create some test intervals
-    for i in range(0, self.NUM_TEST_INTERVALS) :
+    for dummy in range(0, self.NUM_TEST_INTERVALS) :
       s = (random.random() * (self.MAX_INTERVAL - self.MIN_INTERVAL)) +\
           self.MIN_INTERVAL
       e = (random.random() * (self.MAX_INTERVAL - s)) + s
@@ -249,7 +253,7 @@ class TestIntervalTree(unittest.TestCase):
     self.assertRaises(IntervalTreeError, IntervalTree, None)
 
   def testIntersectingPoint(self):
-    for i in range(0, self.NUM_TESTS) :
+    for dummy in range(0, self.NUM_TESTS) :
       point = (random.random() * (self.MAX_INTERVAL - self.MIN_INTERVAL)
                + self.MIN_INTERVAL)
 
@@ -268,7 +272,7 @@ class TestIntervalTree(unittest.TestCase):
       self.assertEquals(correctAnswer, actualAnswer)
 
   def testIntersectingInterval(self):
-    for i in range(0, self.NUM_TESTS) :
+    for dummy in range(0, self.NUM_TESTS) :
       # create a random interval..
       s = (random.random() * (self.MAX_INTERVAL - self.MIN_INTERVAL)) +\
           self.MIN_INTERVAL
@@ -292,7 +296,7 @@ class TestIntervalTree(unittest.TestCase):
       self.assertEquals(correctAnswer, actualAnswer)
 
   def testThree(self):
-    class testInterval:
+    class testInterval(object):
       def __init__(self, s, e):
         self.start = s
         self.end = e
@@ -316,6 +320,11 @@ class TestIntervalTree(unittest.TestCase):
 
     self.assertTrue(len(t.intersectingPoint(15)) == 2)
     self.assertTrue(len(t2.intersectingPoint(15)) == 1)
+
+
+###############################################################################
+#               ENTRY POINT WHEN RUN AS A STAND-ALONE MODULE                  #
+###############################################################################
 
 if __name__ == '__main__':
     unittest.main()
