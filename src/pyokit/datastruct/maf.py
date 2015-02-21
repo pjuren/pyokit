@@ -24,14 +24,26 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import sys, os, random
+# standard python imports
+import os
+
+# pyokit imports
 from pyokit.io.bedIterators import BEDIterator
 from pyokit.datastruct.intervalTree import IntervalTree
-from pyokit.interface.cli import CLI, Option
+
+
+###############################################################################
+#                             MODULE CONSTANTS                                #
+###############################################################################
 
 DEFAULT_VERBOSITY = False
 
-class MafLine :
+
+###############################################################################
+#                               MAF CLASSES                                   #
+###############################################################################
+
+class MafLine(object):
   def __init__(self, line):
     parts = line.split()
     self.organism = parts[1].split(".")[0]
@@ -42,13 +54,14 @@ class MafLine :
     self.val = parts[5]
     self.sequence = parts[6]
 
-class MafBlock :
+
+class MafBlock(object) :
   """
     @summary: A <MafBlock> is a collection of <MafLine>s with a score. See
               constructor for concrete syntax example
   """
 
-  def __init__(self, maflines, score, fh = None):
+  def __init__(self, maflines, score, fh=None):
     """
       @summary: MafBlock constructor. Can build from a list of MafLines with
                 a score, or can build by reading from a filehandle (or similar
@@ -57,16 +70,19 @@ class MafBlock :
     """
     self.maflines = []
     self.score = None
-    if fh != None :
+    if fh is not None :
       # ignore other things, load from stream
       line = None
       while True :
         line = fh.readline().strip()
-        if line == "" : break
+        if line == "":
+          break
         self.maflines.append(MafLine(line))
 
-      blockStarts_hg18 = [l.start for l in self.maflines if l.organism == "hg18"]
-      blockEnds_hg18 = [l.start + l.size for l in self.maflines if l.organism == "hg18"]
+      blockStarts_hg18 = [l.start for l in self.maflines
+                          if l.organism == "hg18"]
+      blockEnds_hg18 = [l.start + l.size for l in self.maflines
+                        if l.organism == "hg18"]
       chroms = [l.chrom for l in self.maflines if l.organism == "hg18"]
       assert(len(blockStarts_hg18) == 1)
       assert(len(blockEnds_hg18) == 1)
@@ -74,10 +90,11 @@ class MafBlock :
       self.start = blockStarts_hg18[0]
       self.end = blockEnds_hg18[0]
       self.chrom = chroms[0]
-      #sys.stderr.write("loaded block for " + self.chrom + " " + str(self.start) + " " + str(self.end) + "\n")
     else :
-      if score == None : raise ValueError("cannot make block with no score!")
-      if len(maflines) <= 0 : raise ValueError("cannot make maf block with no lines!")
+      if score is None:
+        raise ValueError("cannot make block with no score!")
+      if len(maflines) <= 0:
+        raise ValueError("cannot make maf block with no lines!")
       self.maflines = maflines
       self.score = score
 
@@ -87,7 +104,8 @@ class MafBlock :
                 named organism
     """
     for line in self.maflines :
-      if line.organism == organism : return line
+      if line.organism == organism:
+        return line
     raise ValueError("no line for organism: " + organism)
 
   def getColumn(self, genomicCoord):
@@ -101,9 +119,11 @@ class MafBlock :
     relativeGappedCoord = None
     nonGaps = 0
     for i in range(0, len(human.sequence)) :
-      if human.sequence[i] != "-" : nonGaps += 1
+      if human.sequence[i] != "-":
+        nonGaps += 1
       relativeGappedCoord = i
-      if nonGaps == relativeUngappedCoord + 1 : break
+      if nonGaps == relativeUngappedCoord + 1:
+        break
 
     return [l.sequence[relativeGappedCoord] for l in self.maflines]
 
@@ -117,31 +137,32 @@ class MafBlock :
     keys = [l.organism for l in self.maflines]
     return dict(zip(keys, nucs))
 
-
   def __str__(self):
-    organismColWidth = max([len(x.organism + "." + x.chrom) for x in self.maflines]) + 4
+    organismColWidth = max([len(x.organism + "." + x.chrom)
+                            for x in self.maflines]) + 4
     strandWidth = max([len(x.strand + " " + x.val) for x in self.maflines])
     startWidth = max([len(x.start) for x in self.maflines])
     sizeWidth = max([len(str(x.size)) for x in self.maflines])
 
     res = "a score=" + self.score + "\n"
     for line in self.maflines :
-      paddingAmount = organismColWidth - len(str(line.organism + "." + line.chrom))
+      paddingAmount = (organismColWidth -
+                       len(str(line.organism + "." + line.chrom)))
       padding = paddingAmount * " "
       strandPadAmount = strandWidth - len(line.strand + " " + line.val)
       strandPadding = strandPadAmount * " "
-      orgToStartPadding = 4 * " "
 
       startPadding = " " * (startWidth - len(str(line.start)))
       sizePadding = " " * (sizeWidth - len(str(line.size)))
 
-      #sys.stderr.write("before padding: " + line.organism + "." + line.chrom + str(line.start) + "\n")
-      #sys.stderr.write("after  padding: " + line.organism + "." + line.chrom + padding + str(line.start) + "\n")
-      #raw_input()
-      res += "s " + line.organism + "." + line.chrom + padding + startPadding + str(line.start) + " " + sizePadding + str(line.size) + " " + str(line.strand) + strandPadding + " " + str(line.val) + " " + line.sequence + "\n"
+      res += ("s " + line.organism + "." + line.chrom + padding
+              + startPadding + str(line.start) + " " + sizePadding
+              + str(line.size) + " " + str(line.strand) + strandPadding
+              + " " + str(line.val) + " " + line.sequence + "\n")
     return res
 
-class Maf :
+
+class Maf(object) :
   def __init__(self, fn):
     self.blocks = []
     self.loadMaf(fn)
@@ -164,18 +185,20 @@ class Maf :
           blockScore = None
         readingBlock = False
       else :
-        type = line.split()[0].strip()
+        l_type = line.split()[0].strip()
 
         # an 'a' mark the start of a new block
-        if type == "a" :
-          if readingBlock == True : raise ValueError("found 'a' in the middle of a block")
+        if l_type == "a" :
+          if readingBlock == True:
+            raise ValueError("found 'a' in the middle of a block")
           readingBlock = True
-          blockScore = line.split("=")[1]
 
         # an 's' marks the content of a block
-        if type == "s" : maflines.append(MafLine(line))
+        if l_type == "s":
+          maflines.append(MafLine(line))
 
-class MafIndex :
+
+class MafIndex(object):
   def __init__(self, maf_fn, mafind_fn):
     self.indexElements = []
     self.maf_fn = maf_fn
@@ -184,18 +207,22 @@ class MafIndex :
     self.blockCache = None
 
   def loadIndex(self, fn):
-    for e in BEDIterator(fn, scoreType = int) :
+    for e in BEDIterator(fn, scoreType=int):
       self.indexElements.append(e)
 
   def getColumn(self, chrom, genomicCoord):
     # first see if it's a reference to what we already have loaded
-    if self.blockCache == None or not (self.blockCache.chrom == chrom and genomicCoord >= self.blockCache.start and genomicCoord < self.blockCache.end) :
+    if (self.blockCache is None or
+        not (self.blockCache.chrom == chrom and
+             genomicCoord >= self.blockCache.start and
+             genomicCoord < self.blockCache.end)) :
       indexLoc = None
       for e in self.indexElements :
-        if genomicCoord >= e.start and genomicCoord <  e.end :
+        if genomicCoord >= e.start and genomicCoord < e.end :
           indexLoc = e
           break
-      if indexLoc == None : raise ValueError(str(genomicCoord) + " not in " + self.maf_fn)
+      if indexLoc is None:
+        raise ValueError(str(genomicCoord) + " not in " + self.maf_fn)
       fh = open(self.maf_fn)
       fh.seek(indexLoc.score)
       self.blockCache = MafBlock(None, None, fh)
@@ -203,19 +230,24 @@ class MafIndex :
 
   def getColumnAsDictionary(self, chrom, genomicCoord):
     # first see if it's a reference to what we already have loaded
-    if self.blockCache == None or not (self.blockCache.chrom == chrom and genomicCoord >= self.blockCache.start and genomicCoord < self.blockCache.end) :
+    if (self.blockCache is None or
+        not (self.blockCache.chrom == chrom and
+             genomicCoord >= self.blockCache.start and
+             genomicCoord < self.blockCache.end)):
       indexLoc = None
       for e in self.indexElements :
-        if genomicCoord >= e.start and genomicCoord <  e.end :
+        if genomicCoord >= e.start and genomicCoord < e.end:
           indexLoc = e
           break
-      if indexLoc == None : raise ValueError(str(genomicCoord) + " not in " + self.maf_fn)
+      if indexLoc is None:
+        raise ValueError(str(genomicCoord) + " not in " + self.maf_fn)
       fh = open(self.maf_fn)
       fh.seek(indexLoc.score)
       self.blockCache = MafBlock(None, None, fh)
     return self.blockCache.getColumnAsDictionary(genomicCoord)
 
-class MafFile :
+
+class MafFile(object) :
   def __init__(self, fn):
     self.fn = fn
     base, ext = os.path.splitext(os.path.split(fn)[-1])
@@ -223,16 +255,20 @@ class MafFile :
     self.start = int(base.split(":")[1].split("-")[0])
     self.end = int(base.split(":")[1].split("-")[1])
 
-class MafDir :
+
+class MafDir(object):
   def __init__(self, dir, mafext, indext):
-    maffiles = [os.path.join(dir,f) for f in os.listdir(dir) if os.path.splitext(f)[1] == "." + mafext]
-    indexfiles = [os.path.join(dir,f) for f in os.listdir(dir) if os.path.splitext(f)[1] == "." + indext]
+    maffiles = [os.path.join(dir, f) for f in os.listdir(dir)
+                if os.path.splitext(f)[1] == "." + mafext]
+    indexfiles = [os.path.join(dir, f) for f in os.listdir(dir)
+                  if os.path.splitext(f)[1] == "." + indext]
 
     self.mafFileTrees = {}
     mafFilesByChrom = {}
     for f in maffiles :
       mf = MafFile(f)
-      if not mf.chrom in mafFilesByChrom : mafFilesByChrom[mf.chrom] = []
+      if mf.chrom not in mafFilesByChrom:
+        mafFilesByChrom[mf.chrom] = []
       mafFilesByChrom[mf.chrom].append(mf)
     for chrom in mafFilesByChrom :
       self.mafFileTrees[chrom] = IntervalTree(mafFilesByChrom[chrom])
@@ -241,31 +277,39 @@ class MafDir :
     idxFilesByChrom = {}
     for f in indexfiles :
       idxf = MafFile(f)
-      if not idxf.chrom in idxFilesByChrom : idxFilesByChrom[idxf.chrom] = []
+      if idxf.chrom not in idxFilesByChrom:
+        idxFilesByChrom[idxf.chrom] = []
       idxFilesByChrom[idxf.chrom].append(idxf)
     for chrom in idxFilesByChrom :
       self.idxFileTrees[chrom] = IntervalTree(idxFilesByChrom[chrom])
 
     self.mafIndexCached = None
 
-
   def getFilesFor(self, chrom, genomicCoord):
-    if (not chrom in self.mafFileTrees) or (not chrom in self.idxFileTrees) : raise ValueError("Failed to find non-ambiguous files for " + chrom + " @ " + str(genomicCoord))
+    if (chrom not in self.mafFileTrees) or (chrom not in self.idxFileTrees):
+      raise ValueError("Failed to find non-ambiguous files for "
+                       + chrom + " @ " + str(genomicCoord))
     mafFiles = self.mafFileTrees[chrom].intersectingPoint(genomicCoord)
     idxFiles = self.idxFileTrees[chrom].intersectingPoint(genomicCoord)
-    if len(idxFiles) != 1 or len(mafFiles) != 1 : raise ValueError("Failed to find non-ambiguous files for " + chrom + " @ " + str(genomicCoord))
+    if len(idxFiles) != 1 or len(mafFiles) != 1:
+      raise ValueError("Failed to find non-ambiguous files for "
+                       + chrom + " @ " + str(genomicCoord))
     return mafFiles[0].fn, idxFiles[0].fn
 
   def getColumn(self, chrom, genomicCoord):
     maf, ind = self.getFilesFor(chrom, genomicCoord)
-    if self.mafIndexCached == None or not (self.mafIndexCached.maf_fn == maf and self.mafIndexCached.mafind_fn == ind) :
-      #print "loading " + maf + " and " + ind
+    if (self.mafIndexCached is None or
+        not (self.mafIndexCached.maf_fn == maf and
+             self.mafIndexCached.mafind_fn == ind)) :
+      # print "loading " + maf + " and " + ind
       self.mafIndexCached = MafIndex(maf, ind)
     return self.mafIndexCached.getColumn(chrom, genomicCoord)
 
   def getColumnAsDictionary(self, chrom, genomicCoord):
     maf, ind = self.getFilesFor(chrom, genomicCoord)
-    if self.mafIndexCached == None or not (self.mafIndexCached.maf_fn == maf and self.mafIndexCached.mafind_fn == ind) :
-      #print "loading " + maf + " and " + ind
+    if (self.mafIndexCached is None or
+        not (self.mafIndexCached.maf_fn == maf and
+             self.mafIndexCached.mafind_fn == ind)):
+      # print "loading " + maf + " and " + ind
       self.mafIndexCached = MafIndex(maf, ind)
     return self.mafIndexCached.getColumnAsDictionary(chrom, genomicCoord)
