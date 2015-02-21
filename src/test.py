@@ -44,6 +44,7 @@ from pyokit.io.wigIterators import WigIteratorUnitTests
 #                              DATA STRUCTURES                                #
 ###############################################################################
 from pyokit.datastruct.multipleAlignment import TestAlignments
+from pyokit.datastruct.retrotransposon import TestRetrotransposon
 from pyokit.datastruct.intervalTree import *
 from pyokit.datastruct.genomicInterval import *
 from pyokit.datastruct.sequence import *
@@ -63,4 +64,6 @@ if __name__ == "__main__":
   sys.stderr.write("registered tests in " + str(FastQUintTests) + "\n")
   sys.stderr.write("registered tests in " + str(TestFastaIterators) + "\n")
   sys.stderr.write("registered tests in " + str(WigIteratorUnitTests) + "\n")
+  sys.stderr.write("registered tests in " + str(TestRetrotransposon) + "\n")
+  sys.stderr.write("registered tests in " + str(TestAlignments) + "\n")
   unittest.main()
