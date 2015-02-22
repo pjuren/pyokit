@@ -23,16 +23,19 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-# Pyokit imports
-from pyokit.util.progressIndicator import ProgressIndicator
-from pyokit.datastruct.multipleAlignment import PairwiseAlignment
-from pyokit.datastruct import multipleAlignment
-
 # standard python imports
 import sys
 import StringIO
 import unittest
 import re
+
+# Pyokit imports
+from pyokit.util.progressIndicator import ProgressIndicator
+from pyokit.datastruct.multipleAlignment import PairwiseAlignment
+from pyokit.datastruct import multipleAlignment
+from pyokit.io.indexedFile import decorate_all_methods
+from pyokit.io.indexedFile import load_on_demand
+from pyokit.io.indexedFile import Indexed
 
 
 ###############################################################################
@@ -211,14 +214,14 @@ def _rm_parse_header_line(parts, meta_data):
     meta_data[multipleAlignment.S2_START_KEY] = int(parts[11])
     meta_data[multipleAlignment.S2_END_KEY] = int(parts[12])
     meta_data[multipleAlignment.UNKNOWN_RM_HEADER_FIELD_KEY] = parts[13]
-    meta_data[multipleAlignment.RM_ID_KEY] = parts[14]
+    meta_data[multipleAlignment.RM_ID_KEY] = int(parts[14])
   else:
     meta_data[multipleAlignment.S2_NAME_KEY] = parts[8]
     meta_data[multipleAlignment.S2_START_KEY] = int(parts[9])
     meta_data[multipleAlignment.S2_END_KEY] = int(parts[10])
     meta_data[multipleAlignment.S2_END_NEG_STRAND_KEY] = int(parts[11][1:-1])
     meta_data[multipleAlignment.UNKNOWN_RM_HEADER_FIELD_KEY] = parts[12]
-    meta_data[multipleAlignment.RM_ID_KEY] = parts[13]
+    meta_data[multipleAlignment.RM_ID_KEY] = int(parts[13])
 
 
 def _rm_name_match(s1, s2):
@@ -432,10 +435,75 @@ def repeat_masker_alignment_iterator(fn, index_friendly=True, verbose=False):
 
 
 ###############################################################################
+#     ON-DEMAND LOADING OF PAIRWISE ALIGNMENTS FROM REPEAT-MASKER FILES       #
+###############################################################################
+
+@decorate_all_methods(load_on_demand)
+class OnDemandRepeatmakerAlignment(Indexed, PairwiseAlignment):
+  pass
+
+
+###############################################################################
 #                         UNIT TESTS FOR THIS MODULE                          #
 ###############################################################################
 
 class TestAlignmentIterators(unittest.TestCase):
+
+  def setUp(self):
+    # set up a repeat-masker file...
+    alig_1_header = "283 26.37 4.21 0.00 chr1 15 67 (266) C A#B (119) " +\
+                    "141 85 m_b1s601i0 5                              "
+    alig_1 = "  chr1  15 CCACTGTACA-ATGGGGAAACT--GGCCC 40     \n" +\
+             "              i v    -   i       --   v         \n" +\
+             "C A#B  141 CCATTTTACAGATGAGGAAACTGAGGCAC 113    \n" +\
+             "                                                \n" +\
+             "  chr1  41 AGAGCAAGGCAAAAGCAGCGCTGGG-TA 67      \n" +\
+             "           v   v  vv ivi    v  i    - v         \n" +\
+             "C A#B  112 CAGCTAGTAAGTGGCAGAGCCGGGATTC 85        "
+    alig_1_m = "Matrix = 25p47g.matrix                       \n" +\
+               "Kimura (with divCpGMod) = 29.95              \n" +\
+               "Transitions / transversions = 1.40 (14/10)   \n" +\
+               "Gap_init rate = 0.03 (3 / 90), avg. gap size = 1.33 (4 / 3)"
+
+    alig_2_header = "318 22.50 3.61 0.00 chr1 15266 15323 (249235276) C " +\
+                    "MIR3#SINE/MIR (65) 143 84 m_b1s601i1 10"
+    alig_2 = "  chr1          15266 GAAACT--GGCCCAGAGAGGTGAGGCAGCG 15293 \n" +\
+             "                            --               i iii         \n" +\
+             "C MIR3#SINE/MIR   143 GAAACTGAGGCCCAGAGAGGTGAAGTGACG 114   \n" +\
+             "                                                           \n" +\
+             "  chr1          15294 GGTCACAGAGCAAGGCAAAAGCGCGCTGGG 15323 \n" +\
+             "                             v   ?  vi ivi    v            \n" +\
+             "C MIR3#SINE/MIR   113 GGTCACACAGCKAGTTAGTGGCGAGCTGGG 84"
+    alig_2_m = "Matrix = 25p47g.matrix                                   \n" +\
+               "Kimura (with divCpGMod) = 26.25                          \n" +\
+               "Transitions / transversions = 2.40 (12/5)                \n" +\
+               "Gap_init rate = 0.03 (2 / 79), avg. gap size = 1.50 (3 / 2)"
+
+    alig_3_header = "18 23.18 0.00 1.96 chr1 15798 15830 (249234772) " +\
+                    "(TGCTCC)n#Simple_repeat 1 32 (0) m_b1s252i0 15"
+    alig_3 = "  chr1          15798 GCTGCTTCTCCAGCTTTCGCTCCTTCATGCT 15828  \n" +\
+             "                         v  v    v   iii      v - v          \n" +\
+             "  (TGCTCC)n#Sim     1 GCTCCTGCTCCTGCTCCTGCTCCTGC-TCCT 30     \n" +\
+             "                                                             \n" +\
+             "  chr1          15829 GC 15830                               \n" +\
+             "                                                             \n" +\
+             "  (TGCTCC)n#Sim    31 GC 32                                    "
+    alig_3_m = "Matrix = Unknown                                   \n" +\
+               "Transitions / transversions = 0.43 (3/7)           \n" +\
+               "Gap_init rate = 0.02 (1 / 51), avg. gap size = 1.00 (1 / 1)"
+
+    alig_4_header = "487 20.75 0.93 0.93 chr1 158389 158409 (249092126) C " +\
+                    "Charlie29b#DNA/hAT-Charlie (532) 662 641 m_b3s502i21 231"
+    alig_4 = "  chr1          158389 TAGAATTTTTGTGGCAT-ATGA 158409    \n" +\
+             "                          i ii v ii     -  vi           \n" +\
+             "C Charlie29b#DN    662 TAAAGCTGGGCGTTATTGATGA 641       \n"
+    alig_4_m = ""
+
+    self.rm_tc1_records = [alig_1_header + "\n\n" + alig_1 + "\n\n" + alig_1_m,
+                           alig_2_header + "\n\n" + alig_2 + "\n\n" + alig_2_m,
+                           alig_3_header + "\n\n" + alig_3 + "\n\n" + alig_3_m,
+                           alig_4_header + "\n\n" + alig_4 + "\n\n" + alig_4_m]
+    self.rm_rc_1_input = "\n\n".join(self.rm_tc1_records)
 
   def test_rm_iter_one_part_ann_line(self):
     """
@@ -472,66 +540,14 @@ class TestAlignmentIterators(unittest.TestCase):
 
   def test_repeat_masker_alignment_iterator(self):
     """
-    This is a roundtrip test. Three alignments.
+    This is a roundtrip test.
     """
 
     debug = False
-    alig_1_header = "283 26.37 4.21 0.00 chr1 15 67 (266) C A#B (119) " +\
-                    "141 85 m_b1s601i0 5                              "
-    alig_1 = "  chr1  15 CCACTGTACA-ATGGGGAAACT--GGCCC 40     \n" +\
-             "              i v    -   i       --   v         \n" +\
-             "C A#B  141 CCATTTTACAGATGAGGAAACTGAGGCAC 113    \n" +\
-             "                                                \n" +\
-             "  chr1  41 AGAGCAAGGCAAAAGCAGCGCTGGG-TA 67      \n" +\
-             "           v   v  vv ivi    v  i    - v         \n" +\
-             "C A#B  112 CAGCTAGTAAGTGGCAGAGCCGGGATTC 85        "
-    alig_1_m = "Matrix = 25p47g.matrix                       \n" +\
-               "Kimura (with divCpGMod) = 29.95              \n" +\
-               "Transitions / transversions = 1.40 (14/10)   \n" +\
-               "Gap_init rate = 0.03 (3 / 90), avg. gap size = 1.33 (4 / 3)"
-
-    alig_2_header = "318 22.50 3.61 0.00 chr1 15266 15323 (249235276) C " +\
-                    "MIR3#SINE/MIR (65) 143 84 m_b1s601i1 5"
-    alig_2 = "  chr1          15266 GAAACT--GGCCCAGAGAGGTGAGGCAGCG 15293 \n" +\
-             "                            --               i iii         \n" +\
-             "C MIR3#SINE/MIR   143 GAAACTGAGGCCCAGAGAGGTGAAGTGACG 114   \n" +\
-             "                                                           \n" +\
-             "  chr1          15294 GGTCACAGAGCAAGGCAAAAGCGCGCTGGG 15323 \n" +\
-             "                             v   ?  vi ivi    v            \n" +\
-             "C MIR3#SINE/MIR   113 GGTCACACAGCKAGTTAGTGGCGAGCTGGG 84"
-    alig_2_m = "Matrix = 25p47g.matrix                                   \n" +\
-               "Kimura (with divCpGMod) = 26.25                          \n" +\
-               "Transitions / transversions = 2.40 (12/5)                \n" +\
-               "Gap_init rate = 0.03 (2 / 79), avg. gap size = 1.50 (3 / 2)"
-
-    alig_3_header = "18 23.18 0.00 1.96 chr1 15798 15830 (249234772) " +\
-                    "(TGCTCC)n#Simple_repeat 1 32 (0) m_b1s252i0 6"
-    alig_3 = "  chr1          15798 GCTGCTTCTCCAGCTTTCGCTCCTTCATGCT 15828  \n" +\
-             "                         v  v    v   iii      v - v          \n" +\
-             "  (TGCTCC)n#Sim     1 GCTCCTGCTCCTGCTCCTGCTCCTGC-TCCT 30     \n" +\
-             "                                                             \n" +\
-             "  chr1          15829 GC 15830                               \n" +\
-             "                                                             \n" +\
-             "  (TGCTCC)n#Sim    31 GC 32                                    "
-    alig_3_m = "Matrix = Unknown                                   \n" +\
-               "Transitions / transversions = 0.43 (3/7)           \n" +\
-               "Gap_init rate = 0.02 (1 / 51), avg. gap size = 1.00 (1 / 1)"
-
-    alig_4_header = "487 20.75 0.93 0.93 chr1 158389 158409 (249092126) C " +\
-                    "Charlie29b#DNA/hAT-Charlie (532) 662 641 m_b3s502i21 231"
-    alig_4 = "  chr1          158389 TAGAATTTTTGTGGCAT-ATGA 158409    \n" +\
-             "                          i ii v ii     -  vi           \n" +\
-             "C Charlie29b#DN    662 TAAAGCTGGGCGTTATTGATGA 641       \n"
-    alig_4_m = ""
-
-    records = [alig_1_header + "\n\n" + alig_1 + "\n\n" + alig_1_m,
-               alig_2_header + "\n\n" + alig_2 + "\n\n" + alig_2_m,
-               alig_3_header + "\n\n" + alig_3 + "\n\n" + alig_3_m,
-               alig_4_header + "\n\n" + alig_4 + "\n\n" + alig_4_m]
-    input_d = "\n\n".join(records)
-    results = [r for r in
-               repeat_masker_alignment_iterator(StringIO.StringIO(input_d))]
-    self.failUnlessEqual(len(results), len(records))
+    s_io = StringIO.StringIO(self.rm_rc_1_input)
+    alig_iter = repeat_masker_alignment_iterator(s_io)
+    results = [r for r in alig_iter]
+    self.failUnlessEqual(len(results), len(self.rm_tc1_records))
     for i, trail_meta_size, c_width, m_width in [(0, 4, 29, None),
                                                  (1, 4, 30, None),
                                                  (2, 3, 31, 13),
@@ -542,15 +558,16 @@ class TestAlignmentIterators(unittest.TestCase):
         sys.stderr.write("===============================\n")
         sys.stderr.write(rm_str + "\n")
         sys.stderr.write("*******************************\n")
-        sys.stderr.write(records[i] + "\n")
+        sys.stderr.write(self.rm_tc1_records[i] + "\n")
         sys.stderr.write("===============================\n")
 
       # strip out the last few lines; these should all be their, but order
       # isn't important.
       alig_actual = [x for x in map(str.rstrip,
-                                    records[i].split("\n")[:-trail_meta_size])
+                     self.rm_tc1_records[i].split("\n")[:-trail_meta_size])
                      if x.strip() != ""]
-      meta_actual = map(str.rstrip, records[i].split("\n")[-trail_meta_size:])
+      meta_actual = map(str.rstrip,
+                        self.rm_tc1_records[i].split("\n")[-trail_meta_size:])
       alig_result = [x for x in map(str.rstrip,
                                     rm_str.split("\n")[:-trail_meta_size])
                      if x.strip() != ""]
@@ -562,6 +579,47 @@ class TestAlignmentIterators(unittest.TestCase):
       self.failUnlessEqual(alig_actual, alig_result)
       self.failUnlessEqual(set(meta_actual), set(meta_result))
 
+  def test_repeat_masker_on_demand_load(self):
+    """
+    Tests wrapping the alignment iterator in an index and using this index
+    to build RM alignment objects that are loaded on-demand from the indexed
+    stream.
+    """
+    from pyokit.io.indexedFile import IndexedFile
+
+    def extract_UID(rm_alignment):
+      return rm_alignment.meta[multipleAlignment.RM_ID_KEY]
+
+    s_io = StringIO.StringIO(self.rm_rc_1_input)
+    index = IndexedFile(s_io, repeat_masker_alignment_iterator, extract_UID)
+
+    for i, trail_meta_size, c_width, m_width, rm_id in [(0, 4, 29, None, 5),
+                                                        (1, 4, 30, None, 10),
+                                                        (2, 3, 31, 13, 15),
+                                                        (3, 0, 22, 13, 231)]:
+      on_d_alig = OnDemandRepeatmakerAlignment(index, rm_id)
+      on_d_str = on_d_alig.to_repeat_masker_string(column_width=c_width,
+                                                   m_name_width=m_width)
+
+      # strip out the last few lines; these should all be their, but order
+      # isn't important.
+      alig_actual = [x for x in map(str.rstrip,
+                     self.rm_tc1_records[i].split("\n")[:-trail_meta_size])
+                     if x.strip() != ""]
+      meta_actual = map(str.rstrip,
+                        self.rm_tc1_records[i].split("\n")[-trail_meta_size:])
+      alig_result = [x for x in map(str.rstrip,
+                                    on_d_str.split("\n")[:-trail_meta_size])
+                     if x.strip() != ""]
+      meta_result = map(str.rstrip, on_d_str.split("\n")[-trail_meta_size:])
+
+      self.failUnlessEqual(alig_actual, alig_result)
+      self.failUnlessEqual(set(meta_actual), set(meta_result))
+
+
+###############################################################################
+#               ENTRY POINT WHEN RUN AS A STAND-ALONE MODULE                  #
+###############################################################################
 
 if __name__ == '__main__':
     unittest.main()
