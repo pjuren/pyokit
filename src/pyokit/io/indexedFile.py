@@ -169,8 +169,9 @@ class IndexedFile(object):
     # not at the moment)
     if hash_value not in self._index:
       fn = (" (" + str(self._indexed_filename) + ") "
-            if self._indexed_filename is None else "")
-      raise IndexError("Unable to retrieve record from indexed file" + fn
+            if self._indexed_filename is not None else "")
+      raise IndexError("Unable to retrieve record (" + str(hash_value)
+                       + ") from indexed file" + fn
                        + "; reason: no such record found")
 
     # we got a match to the hash_value, attempt to seek to this location and
