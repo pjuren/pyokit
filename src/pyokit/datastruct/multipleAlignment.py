@@ -221,11 +221,11 @@ class PairwiseAlignment(object):
         if (self._s2_ungapped_len !=
             self.meta[S2_END_KEY] - self.meta[S2_START_KEY]):
            raise AlignmentError("ungapped length of sequence ("
-                               + str(self._s2_ungapped_len) + ") is not "
-                               + "consistent with start ("
-                               + str(self.meta[S2_START_KEY])
-                               + ") and end (" + str(self.meta[S2_END_KEY])
-                               + ") coordinates")
+                                + str(self._s2_ungapped_len) + ") is not "
+                                + "consistent with start ("
+                                + str(self.meta[S2_START_KEY])
+                                + ") and end (" + str(self.meta[S2_END_KEY])
+                                + ") coordinates")
     return self._s2_ungapped_len
 
   def s1_is_reverse_comp(self):
@@ -276,7 +276,7 @@ class PairwiseAlignment(object):
     res += (str(self.meta[S2_END_KEY]) if self.s2_is_reverse_comp()
             else "(" + str(self.meta[S2_END_NEG_STRAND_KEY]) + ")") + " "
     res += self.meta[UNKNOWN_RM_HEADER_FIELD_KEY] + " "
-    res += self.meta[RM_ID_KEY]
+    res += str(self.meta[RM_ID_KEY])
     return res
 
   def __str__(self):
