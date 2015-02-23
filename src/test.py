@@ -26,9 +26,13 @@
 import unittest
 
 ###############################################################################
+#                           STATISTICS LIBRARIES                              #
+###############################################################################
+from pyokit.statistics.probability import ProbabilityTests
+
+###############################################################################
 #                              I/O LIBRARIES                                  #
 ###############################################################################
-
 from pyokit.io.bedIterators import BEDIteratorUnitTests
 from pyokit.io.fastqIterators import FastQUintTests
 from pyokit.io.fastaIterators import TestFastaIterators
@@ -66,4 +70,5 @@ if __name__ == "__main__":
   sys.stderr.write("registered tests in " + str(WigIteratorUnitTests) + "\n")
   sys.stderr.write("registered tests in " + str(TestRetrotransposon) + "\n")
   sys.stderr.write("registered tests in " + str(TestAlignments) + "\n")
+  sys.stderr.write("registered tests in " + str(ProbabilityTests) + "\n")
   unittest.main()
