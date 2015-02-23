@@ -27,20 +27,28 @@
 # standard python imports
 import sys
 import unittest
+import inspect
 
-# rpy2 imports
-from rpy2.robjects import r
+# rpy2 imports -- needed for this module, but we won't demand that the user
+# have it -- just disable this module if it cannot be imported
+module_disabled = False
+try:
+  from rpy2.robjects import r
+except ImportError:
+  sys.stderr.write("Failed to import rpy2; disabling "
+                   + inspect.getmodule(inspect.stack()[1][0]).__name__)
+  module_disabled = True
 
-
-def fisherExactTest(a, b, c, d, alternative="two.sided"):
-  """
-    @summary: ...
-    @return: a tuple -- the p-value and odds ratio from Fisher's exact test
-  """
-  r("m=matrix(c(" + str(a) + "," + str(b) + "," + str(c) + "," + str(d)
-    + "), nrow=2)")
-  r("res=fisher.test(m, alternative=\"" + alternative + "\")")
-  return r("res$p.value")[0], r("res$estimate")[0]
+if not module_disabled:
+  def fisherExactTest(a, b, c, d, alternative="two.sided"):
+    """
+      @summary: ...
+      @return: a tuple -- the p-value and odds ratio from Fisher's exact test
+    """
+    r("m=matrix(c(" + str(a) + "," + str(b) + "," + str(c) + "," + str(d)
+      + "), nrow=2)")
+    r("res=fisher.test(m, alternative=\"" + alternative + "\")")
+    return r("res$p.value")[0], r("res$estimate")[0]
 
 
 ###############################################################################
@@ -53,7 +61,13 @@ class FisherTests(unittest.TestCase) :
   """
 
   def testFisherExact(self):
-    pval, ratio = fisherExactTest(857,   310487,
+    # if the module is disabled, we can't test it... just quietly pass the
+    # unit tests
+    if module_disabled:
+      sys.stderr.write(inspect.getmodule(inspect.stack()[1][0]).__name__
+                       + " is disabled, could not import Rpy2; Skipped "
+                       + "unit tests.")
+    pval, ratio = fisherExactTest(857, 310487,
                                   43058, 28058896,
                                   alternative="greater")
     self.assertAlmostEqual(pval, 1.2056e-54)

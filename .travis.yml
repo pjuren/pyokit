@@ -1,6 +1,7 @@
 before_install:
   - sudo apt-get update
 install:
+  - sudo apt-get install python-rpy2
   - pip install sphinx
   - pip install coveralls
 language: python
@@ -44,4 +45,3 @@ after_success:
   - git commit -m "Auto-updating developer documentation"
   - git push --quiet https://${GH_TOKEN}@github.com/pjuren/pyokit gh-pages && echo "Pushed to updated documentation."
   -
-    
