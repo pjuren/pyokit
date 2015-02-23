@@ -67,11 +67,12 @@ class FisherTests(unittest.TestCase) :
       sys.stderr.write(inspect.getmodule(inspect.stack()[1][0]).__name__
                        + " is disabled, could not import Rpy2; Skipped "
                        + "unit tests.")
-    pval, ratio = fisherExactTest(857, 310487,
-                                  43058, 28058896,
-                                  alternative="greater")
-    self.assertAlmostEqual(pval, 1.2056e-54)
-    self.assertAlmostEqual(ratio, 1.79862, 5)
+    else:
+      pval, ratio = fisherExactTest(857, 310487,
+                                    43058, 28058896,
+                                    alternative="greater")
+      self.assertAlmostEqual(pval, 1.2056e-54)
+      self.assertAlmostEqual(ratio, 1.79862, 5)
 
 
 ###############################################################################
