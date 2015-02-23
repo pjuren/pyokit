@@ -29,6 +29,7 @@ import unittest
 #                           STATISTICS LIBRARIES                              #
 ###############################################################################
 from pyokit.statistics.probability import ProbabilityTests
+from pyokit.statistics.fisher import FisherTests
 
 ###############################################################################
 #                              I/O LIBRARIES                                  #
@@ -71,4 +72,5 @@ if __name__ == "__main__":
   sys.stderr.write("registered tests in " + str(TestRetrotransposon) + "\n")
   sys.stderr.write("registered tests in " + str(TestAlignments) + "\n")
   sys.stderr.write("registered tests in " + str(ProbabilityTests) + "\n")
+  sys.stderr.write("registered tests in " + str(FisherTests) + "\n")
   unittest.main()

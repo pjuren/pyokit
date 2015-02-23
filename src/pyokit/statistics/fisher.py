@@ -24,22 +24,28 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import sys, os, unittest, copy
+# standard python imports
+import sys
+import unittest
 
-from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
-from pyokit.util.progressIndicator import ProgressIndicator
-from pyokit.util.fileUtils import linesInFile
+# rpy2 imports
 from rpy2.robjects import r
+
 
 def fisherExactTest(a, b, c, d, alternative="two.sided"):
   """
     @summary: ...
     @return: a tuple -- the p-value and odds ratio from Fisher's exact test
   """
-  r("m=matrix(c("+str(a)+","+str(b)+","+str(c)+","+str(d)+"), nrow=2)")
-  r("res=fisher.test(m, alternative=\"" + alternative +"\")")
+  r("m=matrix(c(" + str(a) + "," + str(b) + "," + str(c) + "," + str(d)
+    + "), nrow=2)")
+  r("res=fisher.test(m, alternative=\"" + alternative + "\")")
   return r("res$p.value")[0], r("res$estimate")[0]
 
+
+###############################################################################
+#                         UNIT TESTS FOR THIS MODULE                          #
+###############################################################################
 
 class FisherTests(unittest.TestCase) :
   """
@@ -54,5 +60,9 @@ class FisherTests(unittest.TestCase) :
     self.assertAlmostEqual(ratio, 1.79862, 5)
 
 
+###############################################################################
+#               ENTRY POINT WHEN RUN AS A STAND-ALONE MODULE                  #
+###############################################################################
+
 if __name__ == "__main__":
-    unittest.main(argv = [sys.argv[0]])
+    unittest.main(argv=[sys.argv[0]])
