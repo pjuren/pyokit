@@ -24,10 +24,32 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import random, unittest, sys
-from datastruct.intervalTree import IntervalTree
+# standard python imports
+import random
+import unittest
+import sys
 
-class WeightedRandom:
+# pyokit imports
+from pyokit.datastruct.intervalTree import IntervalTree
+
+
+###############################################################################
+#                             EXCEPTION CLASSES                               #
+###############################################################################
+
+class ProbabilityError(Exception):
+  def __init__(self, msg):
+    self.value = msg
+
+  def __str__(self):
+    return repr(self.value)
+
+
+###############################################################################
+#                            PROBABILITY FUNCTIONS                            #
+###############################################################################
+
+class WeightedRandom(object):
   """
     @summary Given a list of objects and a weight for each object, this class
              allows the random choice of an object (with replacement) such that
@@ -35,18 +57,19 @@ class WeightedRandom:
              relative to the other objects.
   """
 
-  class Interval :
+  class Interval(object):
     def __init__(self, start, end, obj):
       self.start = start
       self.end = end
       self.obj = obj
+
     def __str__(self):
       return str(self.start) + " to " + str(self.end) + " = " + str(self.obj)
 
   def __init__(self, candidates, weights):
     if len(candidates) != len(weights) :
-      raise ProbabilityError("number of weights doesn't equal number of " +\
-                             "objects")
+      raise ProbabilityError("number of weights doesn't equal number of "
+                             + "objects")
     self._intervalTree = self._buildTree(weights, candidates)
     self._maxVal = sum(weights)
 
@@ -80,7 +103,7 @@ def generateProbabilities(num):
               0 <= x <= 1 and sum(xs) = 1
     @param num: the number of probabilities to generate (int)
   """
-  rnds = [random.random() for i in range(0,num)]
+  rnds = [random.random() for i in range(0, num)]
   rnds.sort()
   vals = []
   p = 0
@@ -91,9 +114,13 @@ def generateProbabilities(num):
   return vals
 
 
+###############################################################################
+#                          UNIT TESTS FOR THIS MODULE                         #
+###############################################################################
+
 class ProbabilityTests(unittest.TestCase):
   """
-    @summary: Unit tests for probability
+  Unit tests for probability module
   """
 
   def setUp(self):
@@ -103,11 +130,11 @@ class ProbabilityTests(unittest.TestCase):
     numIter = 100000
     precision = 2
 
-    items = ["a","b","c"]
+    items = ["a", "b", "c"]
     weights = [0.1, 0.3, 0.6]
     counts = {"a":0, "b":0, "c":0}
     r = WeightedRandom(items, weights)
-    for i in range(numIter) :
+    for dummy in range(numIter) :
       counts[r.choose()] += 1
 
     self.assertAlmostEqual(counts["a"] / float(numIter), 0.1, precision)
@@ -117,7 +144,7 @@ class ProbabilityTests(unittest.TestCase):
   def testGenerateProbabilities(self):
     numIter = 1000
     maxProbs = 100
-    for i in range(0, numIter) :
+    for dummy in range(0, numIter) :
       numProbs = int(random.random() * maxProbs)
       probs = generateProbabilities(numProbs)
       self.assertTrue(sum(probs) == 1)
@@ -126,5 +153,9 @@ class ProbabilityTests(unittest.TestCase):
         self.assertTrue(prob <= 1)
 
 
+###############################################################################
+#               ENTRY POINT WHEN RUN AS A STAND-ALONE MODULE                  #
+###############################################################################
+
 if __name__ == "__main__":
-    unittest.main(argv = [sys.argv[0]])
+    unittest.main(argv=[sys.argv[0]])
