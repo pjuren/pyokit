@@ -109,7 +109,7 @@ class MutableString(object) :
 #                               SEQUENCE CLASS                                #
 ###############################################################################
 
-class Sequence:
+class Sequence(object):
   """
     This is the base class for all sequences in Pyokit. Objects from this class
     will have only a sequence name and actual nucleotide sequence data.
@@ -189,7 +189,7 @@ class Sequence:
                     DNA. If None (default), inspect the sequence and make a
                     guess as to whether it is RNA or DNA.
     """
-    isRNA_l = self.isRNA() if isRNA == None else isRNA
+    isRNA_l = self.isRNA() if isRNA is None else isRNA
 
     tmp = ""
     for n in self.sequenceData :
@@ -221,7 +221,7 @@ class Sequence:
       :param seq: the other sequence to compare against.
       :return: true if this sequence is equal to passed parameter, else false.
     """
-    if seq == None:
+    if seq is None:
       return False
     return (self.sequenceData == seq.sequenceData and
             self.sequenceName == seq.sequenceName)
@@ -234,7 +234,7 @@ class Sequence:
       :param seq: the other sequence to compare against.
       :return: true if this sequence is not equal to passed param., else false.
     """
-    if read == None:
+    if read is None:
       return True
     return (self.sequenceData != read.sequenceData or
             self.sequenceName != read.sequenceName)
@@ -342,7 +342,7 @@ class Sequence:
       :param point: defines the split point, if None then the centre is used
       :return: two Sequence objects -- one for each side
     """
-    if point == None :
+    if point is None :
       point = len(self) / 2
 
     r1 = FastqSequence(self.sequenceName + ".1",
@@ -359,7 +359,7 @@ class Sequence:
 
       :param newLength: the length to truncate this sequence to.
     """
-    return Sequence(self.sequenceName, self.sequenceData[:10])
+    return Sequence(self.sequenceName, self.sequenceData[:newLength])
 
   def clipThreePrime(self, seq, mm_score):
     """
@@ -497,7 +497,7 @@ class FastaSequence(Sequence):
       specifified when the object was created, it is respected. Otherwise, all
       sequence data is printed to a single line.
     """
-    if self.lineWidth == None :
+    if self.lineWidth is None :
       return ">" + self.sequenceName + "\n" + str(self.sequenceData)
     else :
       return self.formattedString()
@@ -509,7 +509,7 @@ class FastaSequence(Sequence):
 
       :raise: SequenceError if this object has no line width specified.
     """
-    if self.lineWidth == None :
+    if self.lineWidth is None :
       raise SequenceError("No line width for fasta formatted read specified")
 
     res = ">" + self.sequenceName + "\n"
@@ -656,7 +656,7 @@ class FastqSequence(Sequence):
       :return: two FastqSequence objects which correspond to the split of this
                sequence.
     """
-    if point == None :
+    if point is None :
       point = len(self) / 2
 
     r1 = FastqSequence(self.sequenceName + ".1",
@@ -713,32 +713,31 @@ class SequenceUnitTests(unittest.TestCase):
   """
 
   def testClipadaptor(self):
-    pass
-    input = Sequence("name", "ACTGCTAGCGATCGACT")
+    input_seq = Sequence("name", "ACTGCTAGCGATCGACT")
     adaptor = Sequence("adap", "AGCGATAGACT")
     expect = Sequence("name", "ACTGCTNNNNNNNNNNN")
-    input.clipAdaptor(adaptor)
-    got = input
+    input_seq.clipAdaptor(adaptor)
+    got = input_seq
     self.assertTrue(expect == got)
 
   def testNsLeft(self):
-    input = Sequence("name", "ACTGCTAGCGATCGACT")
+    input_seq = Sequence("name", "ACTGCTAGCGATCGACT")
     expect = Sequence("name", "NNNNNTAGCGATCGACT")
-    input.nsLeft(5)
-    got = input
+    input_seq.nsLeft(5)
+    got = input_seq
     self.assertTrue(expect == got)
 
   def testNsRight(self):
-    input = Sequence("name", "ACTGCTAGCGATCGACT")
+    input_seq = Sequence("name", "ACTGCTAGCGATCGACT")
     expect = Sequence("name", "ACTGCTAGCGATNNNNN")
-    input.nsRight(5)
-    got = input
+    input_seq.nsRight(5)
+    got = input_seq
     self.assertTrue(expect == got)
 
   def testLengths(self):
-    input = Sequence("name", "ACTNCTANCGATNNACT")
-    self.assertTrue(len(input) == 17)
-    self.assertTrue(input.effectiveLength() == 13)
+    input_seq = Sequence("name", "ACTNCTANCGATNNACT")
+    self.assertTrue(len(input_seq) == 17)
+    self.assertTrue(input_seq.effectiveLength() == 13)
 
   def testMaskRegion(self):
     class TestRegion:
@@ -746,9 +745,9 @@ class SequenceUnitTests(unittest.TestCase):
         self.start = s
         self.end = e
 
-    input = Sequence("name", "ACTNCTANCGATNNACT")
+    input_seq = Sequence("name", "ACTNCTANCGATNNACT")
     expect = Sequence("name", "ANNNNTANCGATNNACT")
-    out = input.copy()
+    out = input_seq.copy()
     out.maskRegion(TestRegion(1, 4))
     self.assertTrue(expect == out)
 
@@ -760,10 +759,10 @@ class SequenceUnitTests(unittest.TestCase):
     self.assertTrue(one != two)
 
   def testReverseComplement(self):
-    input = Sequence("name", "ACTGCTAGCATGCGNN")
+    input_seq = Sequence("name", "ACTGCTAGCATGCGNN")
     expect = Sequence("name", "NNCGCATGCTAGCAGT")
-    input.reverseComplement()
-    self.assertTrue(input == expect)
+    input_seq.reverseComplement()
+    self.assertTrue(input_seq == expect)
 
   def testFormattedString(self):
     """
