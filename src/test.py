@@ -39,6 +39,7 @@ from pyokit.io.fastqIterators import FastQUintTests
 from pyokit.io.fastaIterators import TestFastaIterators
 from pyokit.io.alignmentIterators import TestAlignmentIterators
 from pyokit.io.indexedFile import TestIndexedFile
+from pyokit.io.repeatMaskerIterators import TestRepMaskerIterators
 
 from pyokit.io.wigDir import *
 from pyokit.io.wigFile import *
@@ -73,4 +74,5 @@ if __name__ == "__main__":
   sys.stderr.write("registered tests in " + str(TestAlignments) + "\n")
   sys.stderr.write("registered tests in " + str(ProbabilityTests) + "\n")
   sys.stderr.write("registered tests in " + str(FisherTests) + "\n")
+  sys.stderr.write("registered tests in " + str(TestRepMaskerIterators) + "\n")
   unittest.main()
