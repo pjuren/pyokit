@@ -60,58 +60,84 @@ def from_repeat_masker_string(s):
   Parse a RepeatMasker string. This format is white-space separated and has
   15 columns. The first 11 are invariably as follows:
 
-  alignment score      --  int (?) -- e.g.: 463
-  percent divergence   --  float   -- e.g.: 1.3
-  percent deletions    --  float   -- e.g.: 0.6
-  percent insertions   --  float   -- e.g.: 1.7
-  query seq. name      --  string  -- e.g.: chr1
-  query seq. start     --  int     -- e.g.: 10001  -- always pos. strand coords
-  query seq. end       --  int     -- e.g.: 10468  -- always pos. strand
-  query seq. remaining --  (int)   -- e.g.: (105)  -- always in parenthesis,
-                                                      always negative strand
-                                                      coords. Bases left in
-                                                      query sequence before end
-                                                      (alt. can be interpreted
-                                                      as negative strand coord
-                                                      of genomic end coord).
-  strand               --  char    -- e.g.: +      -- either + or C
-                                                      (complement); this refers
-                                                      to whether the match is
-                                                      to the consensus or the
-                                                      rev. comp. of it.
-  repeat name          --  string  -- e.g. AluJo
-  repeat family        --  string  -- e.g. SINE/Alu
+  +----------------------+---------+-----------+----------------------------+
+  |     Description      |  Type   |  Example  | Notes                      |
+  +======================+=========+===========+============================+
+  | alignment score      | int (?) |  463      |                            |
+  +----------------------+---------+-----------+----------------------------+
+  | percent divergence   | float   | 1.3       |                            |
+  +----------------------+---------+-----------+----------------------------+
+  | percent deletions    | float   | 0.6       |                            |
+  +----------------------+---------+-----------+----------------------------+
+  | percent insertions   | float   | 1.7       |                            |
+  +----------------------+---------+-----------+----------------------------+
+  | query seq. name      | string  | chr1      |                            |
+  +----------------------+---------+-----------+----------------------------+
+  | query seq. start     | int     | 10001     | always pos. strand coords  |
+  +----------------------+---------+-----------+----------------------------+
+  | query seq. end       | int     | 10468     | always pos. strand         |
+  +----------------------+---------+-----------+----------------------------+
+  | query seq. remaining | int     | (105)     | always in parenthesis,     |
+  |                      |         |           | always negative strand     |
+  |                      |         |           | coords. Bases left in      |
+  |                      |         |           | query sequence before end  |
+  |                      |         |           | (alt. can be interpreted   |
+  |                      |         |           | as negative strand coord   |
+  |                      |         |           | of genomic end coord).     |
+  +----------------------+---------+-----------+----------------------------+
+  | strand               | char    | C         | either + or C              |
+  |                      |         |           | (complement); this refers  |
+  |                      |         |           | to whether the match is    |
+  |                      |         |           | to the consensus or the    |
+  |                      |         |           | rev. comp. of it.          |
+  +----------------------+---------+-----------+----------------------------+
+  | repeat name          | string  | AluJo     |                            |
+  +----------------------+---------+-----------+----------------------------+
+  | repeat family        | string  | SINE/Alu  |                            |
+  +----------------------+---------+-----------+----------------------------+
 
   The next three depend on whether the genomic sequence was a match to the
   consensus sequence, or to the reverse complement of the consensus sequence.
   In the former case, they are as follows:
 
-  consensus match start  -- int   -- e.g.: 45   -- awlays pos strand;
-  consensus match end    -- int   -- e.g.: 60   -- always pos strand;
-                                                   end >= start
-  consensus match remain -- (int) -- e.g.: (40) -- for '+' match, always
-                                                   negative strand coords. Num
-                                                   of bases after match before
-                                                   end of consensus. (Alt. can
-                                                   be considered the negative
-                                                   strand coords of the match
-                                                   end in consensus seq.)
+  +------------------------+-------+-----------+-----------------------------+
+  |     Description        | Type  |  Example  | Notes                       |
+  +========================+=======+===========+=============================+
+  | consensus match start  | int   |   45      | awlays pos strand           |
+  +------------------------+-------+-----------+-----------------------------+
+  | consensus match end    | int   |   60      | always pos strand;          |
+  |                        |       |           | end >= start                |
+  +------------------------+-------+-----------+-----------------------------+
+  | consensus match remain | (int) |  (40)     | for '+' match, always       |
+  |                        |       |           | negative strand coords. Num |
+  |                        |       |           | of bases after match before |
+  |                        |       |           | end of consensus. (Alt. can |
+  |                        |       |           | be considered the negative  |
+  |                        |       |           | strand coords of the match  |
+  |                        |       |           | end in consensus seq.)      |
+  +------------------------+-------+-----------+-----------------------------+
 
   In the latter case, they have this interpretation:
 
-  consensus match before -- (int) -- e.g.: (10) -- always neg. strand (always
-                                                   parens); number of bases
-                                                   before start of match on
-                                                   negative strand (alt. can
-                                                   be interpreted as the
-                                                   negative strand coordinates
-                                                   of the match start)
-  consensus match start  -- int   -- e.g.: 345  -- start of match in pos.
-                                                   strand coords.
-  consensus match end    -- int   -- e.g.: 143  -- end of match in pos. strand
-                                                   coords. Because match is on
-                                                   neg. strand, 'start' is
-                                                   always >= end.
+  +------------------------+-------+-----------+-----------------------------+
+  |     Description        | Type  |  Example  | Notes                       |
+  +========================+=======+===========+=============================+
+  | consensus match before | (int) | (10)      | always neg. strand (always  |
+  |                        |       |           | parens); number of bases    |
+  |                        |       |           | before start of match on    |
+  |                        |       |           | negative strand (alt. can   |
+  |                        |       |           | be interpreted as the       |
+  |                        |       |           | negative strand coordinates |
+  |                        |       |           | of the match start)         |
+  +------------------------+-------+-----------+-----------------------------+
+  | consensus match start  | int   | 345       | start of match in pos.      |
+  |                        |       |           | strand coords.              |
+  +------------------------+-------+-----------+-----------------------------+
+  | consensus match end    | int   | 143       | end of match in pos. strand |
+  |                        |       |           | coords. Because match is on |
+  |                        |       |           | neg. strand, 'start' is     |
+  |                        |       |           | always >= end.              |
+  +------------------------+-------+-----------+-----------------------------+
 
   The final column should be an ID, but I have noticed this is sometimes
   missing. We don't use all of the above fields, and we convert everything into
@@ -184,18 +210,18 @@ class RetrotransposonOccurrence(GenomicInterval):
   """
   Represents the occurrence of a retrotransposon in a genome.
 
-  :param genomic_start:
-  :param genomic_end:
+  :param chrom:                  name of the sequence the occurrence is on
+  :param genomic_start:          location in the sequence the occurrence starts
+  :param genomic_end:            location in the sequence the occurrence ends
   :param consensus_match_strand: the strand of the consensus this occurrence
                                  is a match to ('+', or '-', where - means a
-                                 match to the rec-comp of the consensus)
+                                 match to the rev-comp of the consensus)
   :param consensus_start:
   :param consensus_end:
+  :param concensus_len:
   :param retrotransposon:        the retrotransposon this is an occurrence of
-  :param name:
-  :param family_name:
-  :param pairwise_alignment: the full pairwise alignment between this
-                             occurrence and the consensus sequence
+  :param pairwise_alignment:     the full pairwise alignment between this
+                                 occurrence and the consensus sequence
   """
 
   def __init__(self, chrom, genomic_start, genomic_end, consensus_match_strand,
