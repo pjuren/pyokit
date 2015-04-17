@@ -12,3 +12,4 @@ Using Pyokit
    sequence_alignments
    retrotransposons
    gene_ontology
+   file_indexes

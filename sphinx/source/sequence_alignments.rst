@@ -73,6 +73,9 @@ Finally, there is a set containing all of the values
 Other meta-data can be stored in the dictionary as needed, but won't be
 used by the class.
 
+
+.. _readWriteAlignmentsSection:
+
 ```````````````````````````````````````
 Reading and writing pairwise alignments
 ```````````````````````````````````````
