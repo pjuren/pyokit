@@ -8,7 +8,7 @@
     
     <title>Sequence Alignments &mdash; Pyokit 0.2.0 documentation</title>
     
-    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
@@ -23,14 +23,14 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="Pyokit 0.2.0 documentation" href="index.html" />
     <link rel="up" title="Using Pyokit" href="using.html" />
     <link rel="next" title="Retrotransposons" href="retrotransposons.html" />
     <link rel="prev" title="Biological Sequences" href="sequences.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -42,15 +42,15 @@
         <li class="right" >
           <a href="sequences.html" title="Biological Sequences"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
-          <li><a href="using.html" accesskey="U">Using Pyokit</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="using.html" accesskey="U">Using Pyokit</a> &raquo;</li> 
       </ul>
     </div>  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <div class="section" id="sequence-alignments">
 <h1>Sequence Alignments<a class="headerlink" href="#sequence-alignments" title="Permalink to this headline">¶</a></h1>
@@ -59,13 +59,13 @@ alignment support is coming soon.</p>
 <div class="section" id="pairwise-alignments">
 <h2>Pairwise alignments<a class="headerlink" href="#pairwise-alignments" title="Permalink to this headline">¶</a></h2>
 <p>Pairwise alignments are represented by the PairwiseAlignment class; the full
-documentation for this class is given in <a class="reference internal" href="datastrct.html#pairwisealignmentclasssection"><em>The PairwiseAlignment class</em></a>.
+documentation for this class is given in <a class="reference internal" href="datastrct.html#pairwisealignmentclasssection"><span>The PairwiseAlignment class</span></a>.
 Briefly, objects of this class store the actual sequence data of the two
 component sequences, as well as a range of meta-data stored as key-value pairs.
 Construction is fairly straighforward</p>
 <dl class="class">
 <dt>
-<em class="property">class </em><tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">PairwiseAlignment</tt><big>(</big><em>s1</em>, <em>s2</em>, <em>meta_data=None</em><big>)</big></dt>
+<em class="property">class </em><code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">PairwiseAlignment</code><span class="sig-paren">(</span><em>s1</em>, <em>s2</em>, <em>meta_data=None</em><span class="sig-paren">)</span></dt>
 <dd><p>An alignment of two sequences (DNA, RNA, protein...).</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -95,87 +95,87 @@ groups. Firstly, there are those that store the names and co-ordinates of the
 two sequences.</p>
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.S1_NAME_KEY">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">S1_NAME_KEY</tt><em class="property"> = 's1_name'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S1_NAME_KEY" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">S1_NAME_KEY</code><em class="property"> = 's1_name'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S1_NAME_KEY" title="Permalink to this definition">¶</a></dt>
 <dd><p>name of the first sequence</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.S2_NAME_KEY">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">S2_NAME_KEY</tt><em class="property"> = 's2_name'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S2_NAME_KEY" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">S2_NAME_KEY</code><em class="property"> = 's2_name'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S2_NAME_KEY" title="Permalink to this definition">¶</a></dt>
 <dd><p>name of the second sequence</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.S1_START_KEY">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">S1_START_KEY</tt><em class="property"> = 's1_start_coord'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S1_START_KEY" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">S1_START_KEY</code><em class="property"> = 's1_start_coord'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S1_START_KEY" title="Permalink to this definition">¶</a></dt>
 <dd><p>start co-ordinate of the first sequence</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.S2_START_KEY">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">S2_START_KEY</tt><em class="property"> = 's2_start_coord'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S2_START_KEY" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">S2_START_KEY</code><em class="property"> = 's2_start_coord'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S2_START_KEY" title="Permalink to this definition">¶</a></dt>
 <dd><p>start co-ordinate of the second sequence</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.S1_END_KEY">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">S1_END_KEY</tt><em class="property"> = 's1_end_coord'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S1_END_KEY" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">S1_END_KEY</code><em class="property"> = 's1_end_coord'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S1_END_KEY" title="Permalink to this definition">¶</a></dt>
 <dd><p>end co-ordinate of the first sequence</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.S2_END_KEY">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">S2_END_KEY</tt><em class="property"> = 's2_end_coord'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S2_END_KEY" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">S2_END_KEY</code><em class="property"> = 's2_end_coord'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S2_END_KEY" title="Permalink to this definition">¶</a></dt>
 <dd><p>end co-ordinate of the second sequence</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.S1_START_NEG_STRAND_KEY">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">S1_START_NEG_STRAND_KEY</tt><em class="property"> = 's1_start_neg_coord'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S1_START_NEG_STRAND_KEY" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">S1_START_NEG_STRAND_KEY</code><em class="property"> = 's1_start_neg_coord'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S1_START_NEG_STRAND_KEY" title="Permalink to this definition">¶</a></dt>
 <dd><p>start co-ordinate of the first sequenc in negative strand co-ordinates</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.S2_START_NEG_STRAND_KEY">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">S2_START_NEG_STRAND_KEY</tt><em class="property"> = 's2_start_neg_coord'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S2_START_NEG_STRAND_KEY" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">S2_START_NEG_STRAND_KEY</code><em class="property"> = 's2_start_neg_coord'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S2_START_NEG_STRAND_KEY" title="Permalink to this definition">¶</a></dt>
 <dd><p>start co-ordinate of the second sequenc in negative strand co-ordinates</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.S1_END_NEG_STRAND_KEY">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">S1_END_NEG_STRAND_KEY</tt><em class="property"> = 's1_end_neg_coord'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S1_END_NEG_STRAND_KEY" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">S1_END_NEG_STRAND_KEY</code><em class="property"> = 's1_end_neg_coord'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S1_END_NEG_STRAND_KEY" title="Permalink to this definition">¶</a></dt>
 <dd><p>end co-ordinate of the first sequenc in negative strand co-ordinates</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.S2_END_NEG_STRAND_KEY">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">S2_END_NEG_STRAND_KEY</tt><em class="property"> = 's2_end_neg_coord'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S2_END_NEG_STRAND_KEY" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">S2_END_NEG_STRAND_KEY</code><em class="property"> = 's2_end_neg_coord'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.S2_END_NEG_STRAND_KEY" title="Permalink to this definition">¶</a></dt>
 <dd><p>end co-ordinate of the second sequenc in negative strand co-ordinates</p>
 </dd></dl>
 
 <p>Then there are keys that index data about the alignment itself</p>
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.ALIG_SCORE_KEY">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">ALIG_SCORE_KEY</tt><em class="property"> = 'alig_score'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.ALIG_SCORE_KEY" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">ALIG_SCORE_KEY</code><em class="property"> = 'alig_score'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.ALIG_SCORE_KEY" title="Permalink to this definition">¶</a></dt>
 <dd><p>score for the alignment; no requirement on how this is computed.</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.ANNOTATION_KEY">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">ANNOTATION_KEY</tt><em class="property"> = 'annotation'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.ANNOTATION_KEY" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">ANNOTATION_KEY</code><em class="property"> = 'annotation'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.ANNOTATION_KEY" title="Permalink to this definition">¶</a></dt>
 <dd><p>annotation for each column of the alignment; no requirements on format.</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.PCENT_S1_INDELS_KEY">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">PCENT_S1_INDELS_KEY</tt><em class="property"> = 'pcnt_s1_indels'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PCENT_S1_INDELS_KEY" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">PCENT_S1_INDELS_KEY</code><em class="property"> = 'pcnt_s1_indels'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PCENT_S1_INDELS_KEY" title="Permalink to this definition">¶</a></dt>
 <dd><p>the percentage of the first sequence which is gaps. This is not computed
 from the sequence itself, so may not be accurate.</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.PCENT_S2_INDELS_KEY">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">PCENT_S2_INDELS_KEY</tt><em class="property"> = 'pcnt_s2_indels'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PCENT_S2_INDELS_KEY" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">PCENT_S2_INDELS_KEY</code><em class="property"> = 'pcnt_s2_indels'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PCENT_S2_INDELS_KEY" title="Permalink to this definition">¶</a></dt>
 <dd><p>the percentage of the second sequence which is gaps. This is not computed
 from the sequence itself, so may not be accurate.</p>
 </dd></dl>
@@ -183,14 +183,14 @@ from the sequence itself, so may not be accurate.</p>
 <p>Some are specific to pairwise alignments generated by repeat-masker</p>
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.UNKNOWN_RM_HEADER_FIELD_KEY">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">UNKNOWN_RM_HEADER_FIELD_KEY</tt><em class="property"> = 'unknown_rm_header_field'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.UNKNOWN_RM_HEADER_FIELD_KEY" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">UNKNOWN_RM_HEADER_FIELD_KEY</code><em class="property"> = 'unknown_rm_header_field'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.UNKNOWN_RM_HEADER_FIELD_KEY" title="Permalink to this definition">¶</a></dt>
 <dd><p>If this is a repeat-masker alignment, this stores the value of the
 second-last token from the header of the alignment; its meaning is unknown.</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.RM_ID_KEY">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">RM_ID_KEY</tt><em class="property"> = 'rm_id'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.RM_ID_KEY" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">RM_ID_KEY</code><em class="property"> = 'rm_id'</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.RM_ID_KEY" title="Permalink to this definition">¶</a></dt>
 <dd><p>If this is a repeat-masker alignment, this stores the unique ID assigned
 to it by repeat-masker</p>
 </dd></dl>
@@ -198,7 +198,7 @@ to it by repeat-masker</p>
 <p>Finally, there is a set containing all of the values</p>
 <dl class="data">
 <dt id="pyokit.datastruct.multipleAlignment.KNOWN_KEYS">
-<tt class="descclassname">pyokit.datastruct.multipleAlignment.</tt><tt class="descname">KNOWN_KEYS</tt><em class="property"> = set(['s1_end_coord', 's2_start_neg_coord', 's2_rev_comp', 'pcnt_s2_indels', 's1_start_coord', 's2_end_neg_coord', 'rm_id', 'pcnt_subs', 's1_start_neg_coord', 's2_name', 's2_end_coord', 'unknown_rm_header_field', 's1_name', 's1_rev_comp', 'alig_score', 's2_start_coord', 's1_end_neg_coord', 'annotation', 'pcnt_s1_indels'])</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.KNOWN_KEYS" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.multipleAlignment.</code><code class="descname">KNOWN_KEYS</code><em class="property"> = set(['s1_end_coord', 's2_start_neg_coord', 's2_rev_comp', 'pcnt_s2_indels', 's1_start_coord', 's2_end_neg_coord', 'rm_id', 'pcnt_subs', 's1_start_neg_coord', 's2_name', 's2_end_coord', 'unknown_rm_header_field', 's1_name', 's1_rev_comp', 'alig_score', 's2_start_coord', 's1_end_neg_coord', 'annotation', 'pcnt_s1_indels'])</em><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.KNOWN_KEYS" title="Permalink to this definition">¶</a></dt>
 <dd><p>The full set of meta-data keys that have special meaning</p>
 </dd></dl>
 
@@ -206,7 +206,7 @@ to it by repeat-masker</p>
 used by the class.</p>
 </div>
 <div class="section" id="reading-and-writing-pairwise-alignments">
-<h3>Reading and writing pairwise alignments<a class="headerlink" href="#reading-and-writing-pairwise-alignments" title="Permalink to this headline">¶</a></h3>
+<span id="readwritealignmentssection"></span><h3>Reading and writing pairwise alignments<a class="headerlink" href="#reading-and-writing-pairwise-alignments" title="Permalink to this headline">¶</a></h3>
 <p>At present, there is only one iterator for reading pariwise alignments: one
 for repeat-masker alignments. This is the documentation for the iterator,
 which describes the format, and the header-parsing function, which describes
@@ -214,7 +214,7 @@ the header format and mapping between the header columns and the above
 meta-data keys.</p>
 <dl class="function">
 <dt id="pyokit.io.alignmentIterators.repeat_masker_alignment_iterator">
-<tt class="descclassname">pyokit.io.alignmentIterators.</tt><tt class="descname">repeat_masker_alignment_iterator</tt><big>(</big><em>fn</em>, <em>index_friendly=True</em>, <em>verbose=False</em><big>)</big><a class="headerlink" href="#pyokit.io.alignmentIterators.repeat_masker_alignment_iterator" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.io.alignmentIterators.</code><code class="descname">repeat_masker_alignment_iterator</code><span class="sig-paren">(</span><em>fn</em>, <em>index_friendly=True</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.alignmentIterators.repeat_masker_alignment_iterator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Iterate over a file/stream of full repeat alignments in the repeatmasker
 format. Briefly, this format is as follows: each record (alignment) begins
 with a header line (see _rm_parse_header_line documentation for details of
@@ -258,7 +258,7 @@ so a performance hit will be incurred.</li>
 
 <dl class="function">
 <dt id="pyokit.io.alignmentIterators._rm_parse_header_line">
-<tt class="descclassname">pyokit.io.alignmentIterators.</tt><tt class="descname">_rm_parse_header_line</tt><big>(</big><em>parts</em>, <em>meta_data</em><big>)</big><a class="headerlink" href="#pyokit.io.alignmentIterators._rm_parse_header_line" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.io.alignmentIterators.</code><code class="descname">_rm_parse_header_line</code><span class="sig-paren">(</span><em>parts</em>, <em>meta_data</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.alignmentIterators._rm_parse_header_line" title="Permalink to this definition">¶</a></dt>
 <dd><p>parse a repeatmasker alignment header line and place the extracted meta-data
 into the provided dictionary. An example header line is:</p>
 <div class="highlight-python"><div class="highlight"><pre>239 29.42 1.92 0.97 chr1 11 17 (41) C XX#YY (74) 104 1 m_b1s502i1 4
@@ -465,7 +465,7 @@ in a repeat-masker alignment file</p>
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
@@ -485,12 +485,14 @@ in a repeat-masker alignment file</p>
   <h4>Next topic</h4>
   <p class="topless"><a href="retrotransposons.html"
                         title="next chapter">Retrotransposons</a></p>
-  <h3>This Page</h3>
-  <ul class="this-page-menu">
-    <li><a href="_sources/sequence_alignments.txt"
-           rel="nofollow">Show Source</a></li>
-  </ul>
-<div id="searchbox" style="display: none">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/sequence_alignments.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
@@ -507,7 +509,7 @@ in a repeat-masker alignment file</p>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -519,13 +521,13 @@ in a repeat-masker alignment file</p>
         <li class="right" >
           <a href="sequences.html" title="Biological Sequences"
              >previous</a> |</li>
-        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
-          <li><a href="using.html" >Using Pyokit</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="using.html" >Using Pyokit</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
+    <div class="footer" role="contentinfo">
         &copy; Copyright 2014, Philip J. Uren.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
   </body>
 </html>

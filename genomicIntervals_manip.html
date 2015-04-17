@@ -8,7 +8,7 @@
     
     <title>Manipulating Genomic Intervals &mdash; Pyokit 0.2.0 documentation</title>
     
-    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
@@ -23,14 +23,14 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="Pyokit 0.2.0 documentation" href="index.html" />
     <link rel="up" title="Genomic Intervals" href="genomicIntervals.html" />
     <link rel="next" title="Biological Sequences" href="sequences.html" />
     <link rel="prev" title="Processing BED files" href="bed.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -42,16 +42,16 @@
         <li class="right" >
           <a href="bed.html" title="Processing BED files"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
-          <li><a href="using.html" >Using Pyokit</a> &raquo;</li>
-          <li><a href="genomicIntervals.html" accesskey="U">Genomic Intervals</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="using.html" >Using Pyokit</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="genomicIntervals.html" accesskey="U">Genomic Intervals</a> &raquo;</li> 
       </ul>
     </div>  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <div class="section" id="manipulating-genomic-intervals">
 <h1>Manipulating Genomic Intervals<a class="headerlink" href="#manipulating-genomic-intervals" title="Permalink to this headline">¶</a></h1>
@@ -61,7 +61,7 @@ associated functions for manipulating collections of genomic intervals.</p>
 <h2>Collapsing interval sets<a class="headerlink" href="#collapsing-interval-sets" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="pyokit.datastruct.genomicInterval.collapseRegions">
-<tt class="descclassname">pyokit.datastruct.genomicInterval.</tt><tt class="descname">collapseRegions</tt><big>(</big><em>s</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.genomicInterval.collapseRegions" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.genomicInterval.</code><code class="descname">collapseRegions</code><span class="sig-paren">(</span><em>s</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.genomicInterval.collapseRegions" title="Permalink to this definition">¶</a></dt>
 <dd><p>given a list of genomic intervals with chromosome, start and end field,
 collapse into a set of non-overlapping intervals. Intervals must be sorted by
 chromosome and then start coordinate.</p>
@@ -91,7 +91,7 @@ and score 0</td>
 <h2>Intersecting interval sets<a class="headerlink" href="#intersecting-interval-sets" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="pyokit.datastruct.genomicInterval.regionsIntersection">
-<tt class="descclassname">pyokit.datastruct.genomicInterval.</tt><tt class="descname">regionsIntersection</tt><big>(</big><em>s1</em>, <em>s2</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.genomicInterval.regionsIntersection" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.genomicInterval.</code><code class="descname">regionsIntersection</code><span class="sig-paren">(</span><em>s1</em>, <em>s2</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.genomicInterval.regionsIntersection" title="Permalink to this definition">¶</a></dt>
 <dd><p>given two lists of genomic regions with chromosome, start and end coordinates,
 return a new list of regions which is the intersection of those two sets.
 Lists must be sorted by chromosome and start index</p>
@@ -138,8 +138,8 @@ need to make one pass of the intervals. Here&#8217;s an example:</p>
 </pre></div>
 </div>
 <p>More often though, you&#8217;ll want to make multiple passes. For example, you might
-want to count how many intervals in <tt class="docutils literal"><span class="pre">two.bed</span></tt> intersect each interval in
-<tt class="docutils literal"><span class="pre">one.bed</span></tt>. The naive approach is to use nested iterators, but it has
+want to count how many intervals in <code class="docutils literal"><span class="pre">two.bed</span></code> intersect each interval in
+<code class="docutils literal"><span class="pre">one.bed</span></code>. The naive approach is to use nested iterators, but it has
 worst case complexity of O(n^2). This occurs sufficiently often that Pyokit has
 an iterator for dealing with exactly this situation: the bucket iterator &#8211;
 which will iterate over one set of genomic intervals (the buckets), and for each
@@ -148,7 +148,7 @@ it. You can provide it with regular BEDIterators, or lists, or any iterable
 object that contains genomic intervals. Here&#8217;s the signature of the iterator:</p>
 <dl class="function">
 <dt id="pyokit.datastruct.genomicInterval.bucketIterator">
-<tt class="descclassname">pyokit.datastruct.genomicInterval.</tt><tt class="descname">bucketIterator</tt><big>(</big><em>elements</em>, <em>buckets</em><big>)</big><a class="headerlink" href="#pyokit.datastruct.genomicInterval.bucketIterator" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.genomicInterval.</code><code class="descname">bucketIterator</code><span class="sig-paren">(</span><em>elements</em>, <em>buckets</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.genomicInterval.bucketIterator" title="Permalink to this definition">¶</a></dt>
 <dd><p>iterate over the genomic regions in buckets and, for each one, yeild the
 bucket region and a list of regions from elements that intersect the bucket.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -234,7 +234,7 @@ function to perform the same operation:</p>
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
@@ -252,12 +252,14 @@ function to perform the same operation:</p>
   <h4>Next topic</h4>
   <p class="topless"><a href="sequences.html"
                         title="next chapter">Biological Sequences</a></p>
-  <h3>This Page</h3>
-  <ul class="this-page-menu">
-    <li><a href="_sources/genomicIntervals_manip.txt"
-           rel="nofollow">Show Source</a></li>
-  </ul>
-<div id="searchbox" style="display: none">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/genomicIntervals_manip.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
@@ -274,7 +276,7 @@ function to perform the same operation:</p>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -286,14 +288,14 @@ function to perform the same operation:</p>
         <li class="right" >
           <a href="bed.html" title="Processing BED files"
              >previous</a> |</li>
-        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
-          <li><a href="using.html" >Using Pyokit</a> &raquo;</li>
-          <li><a href="genomicIntervals.html" >Genomic Intervals</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="using.html" >Using Pyokit</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="genomicIntervals.html" >Genomic Intervals</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
+    <div class="footer" role="contentinfo">
         &copy; Copyright 2014, Philip J. Uren.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
   </body>
 </html>

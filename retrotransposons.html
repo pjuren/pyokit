@@ -8,7 +8,7 @@
     
     <title>Retrotransposons &mdash; Pyokit 0.2.0 documentation</title>
     
-    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
@@ -23,14 +23,14 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="Pyokit 0.2.0 documentation" href="index.html" />
     <link rel="up" title="Using Pyokit" href="using.html" />
     <link rel="next" title="Gene Ontology" href="gene_ontology.html" />
     <link rel="prev" title="Sequence Alignments" href="sequence_alignments.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -42,39 +42,405 @@
         <li class="right" >
           <a href="sequence_alignments.html" title="Sequence Alignments"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
-          <li><a href="using.html" accesskey="U">Using Pyokit</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="using.html" accesskey="U">Using Pyokit</a> &raquo;</li> 
       </ul>
     </div>  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <div class="section" id="retrotransposons">
 <h1>Retrotransposons<a class="headerlink" href="#retrotransposons" title="Permalink to this headline">¶</a></h1>
-<p>Under construction...</p>
+<p>Pyokit has two data structures for representing retro-transposons:
+Retrotransposon and RetrotransposonOccurrence. The first of these contains
+information about retro-transposons that is general to all occurrences, such
+as the name, family name and concensus sequence. The second describes one
+particular occurrence of a retrotransposon, including details about where
+it occurs and the name of the sequence it occurrs in (usually a chromosome).
+An occurrence objsect also stores the start and end co-ordinates into the
+concensus sequence (becuase sometimes it is truncated at the 3&#8217; or 5&#8217; end),
+and whether the match is to the concensus or the reverse compliment of the
+concensus. RetrotransposonOccurrence objects contain references to
+Retrotransposon objects in a one-to-many fashion. Optionally, the full
+alignment between the consensus and the occurrence might also be stored
+by the object, which allows more accurate liftover between the two.</p>
+<div class="section" id="loading-annotations">
+<h2>Loading annotations<a class="headerlink" href="#loading-annotations" title="Permalink to this headline">¶</a></h2>
+<p>At the moment, the only annotations that are supported are those of
+RepeatMasker. The coordinate annoation (which describes the locations of the
+repeat occurrences), as well the full alignments can be loaded seperately,
+or at the same time.</p>
+<div class="section" id="repeatmasker-coordinate-annotation">
+<h3>Repeatmasker coordinate annotation<a class="headerlink" href="#repeatmasker-coordinate-annotation" title="Permalink to this headline">¶</a></h3>
+<p>Repeatmasker coordinate annotations are loaded using the following function
+from the IO module. alignment_index should be left as None (default) when
+loading only annotations (more details about this below).</p>
+<dl class="function">
+<dt id="pyokit.io.repeatMaskerIterators.repeat_masker_iterator">
+<code class="descclassname">pyokit.io.repeatMaskerIterators.</code><code class="descname">repeat_masker_iterator</code><span class="sig-paren">(</span><em>fh</em>, <em>header=True</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.repeatMaskerIterators.repeat_masker_iterator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterator for repeatmasker coordinate annotation files. These files describe
+the location of repeat occurrences. There is (optionally) a two-line header
+with the names of the fields (ignored by the iterator, if present). Each line
+is a record of an occurrence. The description of fields for each line is
+given in from_repeat_masker_string.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fh</strong> &#8211; stream-like object, or string filename, to load the
+annotations from</li>
+<li><strong>alignment_index</strong> &#8211; an IndexedFile for full alignments; keys should be
+repeat-masker IDs</li>
+<li><strong>header</strong> &#8211; if True, expect and discard the two-line header;
+otherwise we will expect there is no header</li>
+<li><strong>verbose</strong> &#8211; if True, output additional status messages about
+progress to stderr.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<p>The description of what each field means is given below</p>
+<dl class="function">
+<dt id="pyokit.datastruct.retrotransposon.from_repeat_masker_string">
+<code class="descclassname">pyokit.datastruct.retrotransposon.</code><code class="descname">from_repeat_masker_string</code><span class="sig-paren">(</span><em>s</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.retrotransposon.from_repeat_masker_string" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse a RepeatMasker string. This format is white-space separated and has
+15 columns. The first 11 are invariably as follows:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="31%" />
+<col width="13%" />
+<col width="16%" />
+<col width="40%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Description</th>
+<th class="head">Type</th>
+<th class="head">Example</th>
+<th class="head">Notes</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>alignment score</td>
+<td>int (?)</td>
+<td>463</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>percent divergence</td>
+<td>float</td>
+<td>1.3</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>percent deletions</td>
+<td>float</td>
+<td>0.6</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>percent insertions</td>
+<td>float</td>
+<td>1.7</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>query seq. name</td>
+<td>string</td>
+<td>chr1</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>query seq. start</td>
+<td>int</td>
+<td>10001</td>
+<td>always pos. strand coords</td>
+</tr>
+<tr class="row-even"><td>query seq. end</td>
+<td>int</td>
+<td>10468</td>
+<td>always pos. strand</td>
+</tr>
+<tr class="row-odd"><td>query seq. remaining</td>
+<td>int</td>
+<td><ol class="first last arabic simple" start="105">
+<li></li>
+</ol>
+</td>
+<td>always in parenthesis,
+always negative strand
+coords. Bases left in
+query sequence before end
+(alt. can be interpreted
+as negative strand coord
+of genomic end coord).</td>
+</tr>
+<tr class="row-even"><td>strand</td>
+<td>char</td>
+<td>C</td>
+<td>either + or C
+(complement); this refers
+to whether the match is
+to the consensus or the
+rev. comp. of it.</td>
+</tr>
+<tr class="row-odd"><td>repeat name</td>
+<td>string</td>
+<td>AluJo</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>repeat family</td>
+<td>string</td>
+<td>SINE/Alu</td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+<p>The next three depend on whether the genomic sequence was a match to the
+consensus sequence, or to the reverse complement of the consensus sequence.
+In the former case, they are as follows:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="34%" />
+<col width="10%" />
+<col width="15%" />
+<col width="41%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Description</th>
+<th class="head">Type</th>
+<th class="head">Example</th>
+<th class="head">Notes</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>consensus match start</td>
+<td>int</td>
+<td>45</td>
+<td>awlays pos strand</td>
+</tr>
+<tr class="row-odd"><td>consensus match end</td>
+<td>int</td>
+<td>60</td>
+<td>always pos strand;
+end &gt;= start</td>
+</tr>
+<tr class="row-even"><td>consensus match remain</td>
+<td>(int)</td>
+<td><ol class="first last arabic simple" start="40">
+<li></li>
+</ol>
+</td>
+<td>for &#8216;+&#8217; match, always
+negative strand coords. Num
+of bases after match before
+end of consensus. (Alt. can
+be considered the negative
+strand coords of the match
+end in consensus seq.)</td>
+</tr>
+</tbody>
+</table>
+<p>In the latter case, they have this interpretation:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="34%" />
+<col width="10%" />
+<col width="15%" />
+<col width="41%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Description</th>
+<th class="head">Type</th>
+<th class="head">Example</th>
+<th class="head">Notes</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>consensus match before</td>
+<td>(int)</td>
+<td><ol class="first last arabic simple" start="10">
+<li></li>
+</ol>
+</td>
+<td>always neg. strand (always
+parens); number of bases
+before start of match on
+negative strand (alt. can
+be interpreted as the
+negative strand coordinates
+of the match start)</td>
+</tr>
+<tr class="row-odd"><td>consensus match start</td>
+<td>int</td>
+<td>345</td>
+<td>start of match in pos.
+strand coords.</td>
+</tr>
+<tr class="row-even"><td>consensus match end</td>
+<td>int</td>
+<td>143</td>
+<td>end of match in pos. strand
+coords. Because match is on
+neg. strand, &#8216;start&#8217; is
+always &gt;= end.</td>
+</tr>
+</tbody>
+</table>
+<p>The final column should be an ID, but I have noticed this is sometimes
+missing. We don&#8217;t use all of the above fields, and we convert everything into
+positive strand coords where start &lt; end always.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>s</strong> &#8211; string representation of a retrotransposon occurrence in
+RepeatMasker format.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Retrotransposon object corresponding to the string s.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="repeatmasker-full-alignments">
+<h3>Repeatmasker full alignments<a class="headerlink" href="#repeatmasker-full-alignments" title="Permalink to this headline">¶</a></h3>
+<p>There is an iterator in the io.alignmentIterators module for iterating over
+repeatmasker alignments; you can read about how it works in
+<a class="reference internal" href="sequence_alignments.html#readwritealignmentssection"><span>Reading and writing pairwise alignments</span></a>.</p>
+<p>This should be sufficient for any sequential access you need to do. If you
+need random access to the alignments you could use this to load them into into
+whatever data-structure you like, but the large size of these files generally
+makes it impractical to load the full thing. Instead, it&#8217;s easier to build an
+index of the file and then load the alignments you need on-demand. Building
+the index is fairly straighforward and simply requires an index friendly
+iterator (one which doesn&#8217;t buffer the stream, and supports seeking; see the
+above link on reading and writing alignments), and a hash function to
+hash each element the iterator yields to a unique ID (easily done, since the
+repeat-masker format contains a unique ID for each alignment):</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyokit.io.indexedFile</span> <span class="kn">import</span> <span class="n">IndexedFile</span>
+<span class="kn">from</span> <span class="nn">pyokit.io.alignmentIterators</span> <span class="kn">import</span> <span class="n">repeat_masker_alignment_iterator</span>
+
+<span class="k">def</span> <span class="nf">extract_UID</span><span class="p">(</span><span class="n">rm_alignment</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">rm_alignment</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="n">multipleAlignment</span><span class="o">.</span><span class="n">RM_ID_KEY</span><span class="p">]</span>
+
+<span class="n">index</span> <span class="o">=</span> <span class="n">IndexedFile</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">repeat_masker_alignment_iterator</span><span class="p">,</span> <span class="n">extract_UID</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can then use index to extract any alignment you want in O(1), as long as
+you know the ID for it, using the subscript operator:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">index</span><span class="p">[</span><span class="mi">5158</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>You can read more about how indexing works in pyokit by taking a look at
+<a class="reference internal" href="file_indexes.html#fileindexessection"><span>File indexes</span></a>.</p>
+<p>This may not be all that useful on its own, since you need to know the IDs to
+get the alignment you want, but it is very helpful when paired with the
+repeatmasker coordinate annotations, as described in the next section.</p>
+</div>
+<div class="section" id="repeatmasker-annotations-with-on-demand-full-alignments">
+<h3>Repeatmasker annotations with on-demand full alignments<a class="headerlink" href="#repeatmasker-annotations-with-on-demand-full-alignments" title="Permalink to this headline">¶</a></h3>
+<p>The iterator for repeatmasker coordinate annotations accepts an alignment
+index as a parameter. If this is provided, each RetrotransposonOccurrence
+yielded by the iterator will have access to its full alignment by using the
+index. This is loaded on-demand when it is needed using the index without
+the application programmer needing to do anything.</p>
+</div>
+</div>
+<div class="section" id="liftover">
+<h2>Liftover<a class="headerlink" href="#liftover" title="Permalink to this headline">¶</a></h2>
+<p>One operation that I often want to perform is to lift a genomic region that
+overlaps a retrotransposon occurrence to the consensus sequence &#8211; to convert
+the coordinates of the region so they&#8217;re relative to the consensus sequence
+start. Although this is conceptually straighfoward, there are a couple of
+details that complicate matters.</p>
+<p>The first wrinkle is insertions and deletions. A retrotransposon occurrence
+might have been inserted a long time ago, in which case other insertions and
+deletions can occur inside of it. So although you know the start and end
+coordinates of the occurrence, these may define a region that is longer or
+shorter than the consensus because of insertions and deletions. Without
+knowing exactly where these indels are located, your lift over will be
+inaccurate. If you have the full alignment, then these can be corrected for,
+but that leads to the second wrinkle: the full alignments are large; loading
+them whole is generally not practical.</p>
+<div class="section" id="coordinate-only-liftover">
+<h3>Coordinate-only liftover<a class="headerlink" href="#coordinate-only-liftover" title="Permalink to this headline">¶</a></h3>
+<p>The folloing program demonstrates how to compute the frequency with which
+BED regions in a given file overlap each region of the consensus sequence of
+retrotransposons if only the annotations are avaialable (i.e. no full
+alignments):</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">pyokit.datastruct.genomicInterval</span> <span class="kn">import</span> <span class="n">intervalTreesFromList</span>
+<span class="kn">from</span> <span class="nn">pyokit.io.bedIterators</span> <span class="kn">import</span> <span class="n">BEDIterator</span>
+<span class="kn">from</span> <span class="nn">pyokit.io.repeatMaskerIterators</span> <span class="kn">import</span> <span class="n">repeat_masker_iterator</span>
+
+<span class="k">def</span> <span class="nf">build_profiles</span><span class="p">(</span><span class="n">repeat_masker_fn</span><span class="p">,</span> <span class="n">peaks_fn</span><span class="p">):</span>
+  <span class="n">l</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">repeat_masker_iterator</span><span class="p">(</span><span class="n">repeat_masker_fn</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="bp">False</span><span class="p">)]</span>
+  <span class="n">transposon_trees</span> <span class="o">=</span> <span class="n">intervalTreesFromList</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">peak</span> <span class="ow">in</span> <span class="n">BEDIterator</span><span class="p">(</span><span class="n">peaks_fn</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">peak</span><span class="o">.</span><span class="n">chrom</span> <span class="ow">in</span> <span class="n">transposon_trees</span> <span class="p">:</span> <span class="k">continue</span>
+    <span class="n">hits</span> <span class="o">=</span> <span class="n">transposon_trees</span><span class="p">[</span><span class="n">peak</span><span class="o">.</span><span class="n">chrom</span><span class="p">]</span><span class="o">.</span><span class="n">intersectingInterval</span><span class="p">(</span><span class="n">peak</span><span class="o">.</span><span class="n">start</span><span class="p">,</span>
+                                                             <span class="n">peak</span><span class="o">.</span><span class="n">end</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">hit</span> <span class="ow">in</span> <span class="n">hits</span> <span class="p">:</span>
+      <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;found hit for peak &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">peak</span><span class="p">)</span> <span class="o">+</span>\
+                       <span class="s">&quot; in transposon &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">hit</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+      <span class="n">lifted_peak</span> <span class="o">=</span> <span class="n">hit</span><span class="o">.</span><span class="n">liftover</span><span class="p">(</span><span class="n">peak</span><span class="p">)</span>
+      <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\t</span><span class="s">converted peak to &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">lifted_peak</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+      <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">lifted_peak</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">lifted_peak</span><span class="o">.</span><span class="n">end</span><span class="p">):</span>
+        <span class="k">print</span> <span class="n">hit</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\t</span><span class="s">&quot;</span> <span class="o">+</span> <span class="n">hit</span><span class="o">.</span><span class="n">family_name</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\t</span><span class="s">&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+<span class="n">repeat_masker_fn</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">peaks_fn</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+<span class="n">build_profiles</span><span class="p">(</span><span class="n">repeat_masker_fn</span><span class="p">,</span> <span class="n">peaks_fn</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="full-alignment-liftover">
+<h3>Full-alignment liftover<a class="headerlink" href="#full-alignment-liftover" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
 </div>
 
 
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Retrotransposons</a><ul>
+<li><a class="reference internal" href="#loading-annotations">Loading annotations</a><ul>
+<li><a class="reference internal" href="#repeatmasker-coordinate-annotation">Repeatmasker coordinate annotation</a></li>
+<li><a class="reference internal" href="#repeatmasker-full-alignments">Repeatmasker full alignments</a></li>
+<li><a class="reference internal" href="#repeatmasker-annotations-with-on-demand-full-alignments">Repeatmasker annotations with on-demand full alignments</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#liftover">Liftover</a><ul>
+<li><a class="reference internal" href="#coordinate-only-liftover">Coordinate-only liftover</a></li>
+<li><a class="reference internal" href="#full-alignment-liftover">Full-alignment liftover</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
   <h4>Previous topic</h4>
   <p class="topless"><a href="sequence_alignments.html"
                         title="previous chapter">Sequence Alignments</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="gene_ontology.html"
                         title="next chapter">Gene Ontology</a></p>
-  <h3>This Page</h3>
-  <ul class="this-page-menu">
-    <li><a href="_sources/retrotransposons.txt"
-           rel="nofollow">Show Source</a></li>
-  </ul>
-<div id="searchbox" style="display: none">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/retrotransposons.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
@@ -91,7 +457,7 @@
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -103,13 +469,13 @@
         <li class="right" >
           <a href="sequence_alignments.html" title="Sequence Alignments"
              >previous</a> |</li>
-        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
-          <li><a href="using.html" >Using Pyokit</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="using.html" >Using Pyokit</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
+    <div class="footer" role="contentinfo">
         &copy; Copyright 2014, Philip J. Uren.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
   </body>
 </html>

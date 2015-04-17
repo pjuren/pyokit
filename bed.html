@@ -8,7 +8,7 @@
     
     <title>Processing BED files &mdash; Pyokit 0.2.0 documentation</title>
     
-    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
@@ -23,14 +23,14 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="Pyokit 0.2.0 documentation" href="index.html" />
     <link rel="up" title="Genomic Intervals" href="genomicIntervals.html" />
     <link rel="next" title="Manipulating Genomic Intervals" href="genomicIntervals_manip.html" />
     <link rel="prev" title="Genomic Intervals" href="genomicIntervals.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -42,16 +42,16 @@
         <li class="right" >
           <a href="genomicIntervals.html" title="Genomic Intervals"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
-          <li><a href="using.html" >Using Pyokit</a> &raquo;</li>
-          <li><a href="genomicIntervals.html" accesskey="U">Genomic Intervals</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="using.html" >Using Pyokit</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="genomicIntervals.html" accesskey="U">Genomic Intervals</a> &raquo;</li> 
       </ul>
     </div>  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <div class="section" id="processing-bed-files">
 <h1>Processing BED files<a class="headerlink" href="#processing-bed-files" title="Permalink to this headline">¶</a></h1>
@@ -83,7 +83,7 @@ usual idiom would be:</p>
 <p>Here&#8217;s the signature of the basic BED iterator function:</p>
 <dl class="function">
 <dt id="pyokit.io.bedIterators.BEDIterator">
-<tt class="descclassname">pyokit.io.bedIterators.</tt><tt class="descname">BEDIterator</tt><big>(</big><em>filehandle</em>, <em>sortedby=None</em>, <em>verbose=False</em>, <em>scoreType=&lt;type 'int'&gt;</em>, <em>dropAfter=None</em><big>)</big><a class="headerlink" href="#pyokit.io.bedIterators.BEDIterator" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.io.bedIterators.</code><code class="descname">BEDIterator</code><span class="sig-paren">(</span><em>filehandle</em>, <em>sortedby=None</em>, <em>verbose=False</em>, <em>scoreType=&lt;type 'int'&gt;</em>, <em>dropAfter=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.bedIterators.BEDIterator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get an iterator for a BED file</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -150,7 +150,7 @@ using the iterator to find all the matching intervals in a set of BED files.</p>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="nb">str</span><span class="p">(</span><span class="n">end</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot; has name &quot;</span> <span class="o">+</span> <span class="n">msgs</span>
 </pre></div>
 </div>
-<p>Given the following contents of <tt class="docutils literal"><span class="pre">one.bed</span></tt>, <tt class="docutils literal"><span class="pre">two.bed</span></tt> and <tt class="docutils literal"><span class="pre">three.bed</span></tt>:</p>
+<p>Given the following contents of <code class="docutils literal"><span class="pre">one.bed</span></code>, <code class="docutils literal"><span class="pre">two.bed</span></code> and <code class="docutils literal"><span class="pre">three.bed</span></code>:</p>
 <div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>cat one.bed
 chr1  <span class="m">10</span>      <span class="m">20</span>      reg1    <span class="m">1</span>       +
 chr1  <span class="m">40</span>      <span class="m">50</span>      reg2    <span class="m">2</span>       -
@@ -174,7 +174,7 @@ region at chr1 <span class="m">40</span> <span class="m">50</span> has name reg2
 <p>Here&#8217;s the signature of the paired BED iterator function:</p>
 <dl class="function">
 <dt id="pyokit.io.bedIterators.pairedBEDIterator">
-<tt class="descclassname">pyokit.io.bedIterators.</tt><tt class="descname">pairedBEDIterator</tt><big>(</big><em>inputStreams</em>, <em>mirror=False</em>, <em>mirrorScore=None</em>, <em>ignoreStrand=False</em>, <em>ignoreScore=True</em>, <em>ignoreName=True</em>, <em>sortedby=2</em>, <em>scoreType=&lt;type 'float'&gt;</em>, <em>verbose=False</em><big>)</big><a class="headerlink" href="#pyokit.io.bedIterators.pairedBEDIterator" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.io.bedIterators.</code><code class="descname">pairedBEDIterator</code><span class="sig-paren">(</span><em>inputStreams</em>, <em>mirror=False</em>, <em>mirrorScore=None</em>, <em>ignoreStrand=False</em>, <em>ignoreScore=True</em>, <em>ignoreName=True</em>, <em>sortedby=2</em>, <em>scoreType=&lt;type 'float'&gt;</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.bedIterators.pairedBEDIterator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Iterate over multiple BED format files simultaneously and yield lists of
 genomic intervals for each matching set of intervals found. By default,
 regions which are not found in all files will be skipped (mirror = false).
@@ -234,10 +234,10 @@ list, for example:</p>
 <p>the <cite>intervalTrees</cite> function will load a BED file and return a dictionary of
 interval trees. The keys to the dictionary are chromosome names, and each
 entry is an interval tree for that chromosome. For details about the interval
-tree objects, see <a class="reference internal" href="datastrct.html#intervaltreessection"><em>Interval Trees</em></a>.</p>
+tree objects, see <a class="reference internal" href="datastrct.html#intervaltreessection"><span>Interval Trees</span></a>.</p>
 <dl class="function">
 <dt id="pyokit.io.bedIterators.intervalTrees">
-<tt class="descclassname">pyokit.io.bedIterators.</tt><tt class="descname">intervalTrees</tt><big>(</big><em>reffh</em>, <em>scoreType=&lt;type 'int'&gt;</em>, <em>verbose=False</em><big>)</big><a class="headerlink" href="#pyokit.io.bedIterators.intervalTrees" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.io.bedIterators.</code><code class="descname">intervalTrees</code><span class="sig-paren">(</span><em>reffh</em>, <em>scoreType=&lt;type 'int'&gt;</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.bedIterators.intervalTrees" title="Permalink to this definition">¶</a></dt>
 <dd><p>Build a dictionary of interval trees indexed by chrom from a BED stream or
 file</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -265,7 +265,7 @@ file/stream must be BED.</li>
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
@@ -290,12 +290,14 @@ file/stream must be BED.</li>
   <h4>Next topic</h4>
   <p class="topless"><a href="genomicIntervals_manip.html"
                         title="next chapter">Manipulating Genomic Intervals</a></p>
-  <h3>This Page</h3>
-  <ul class="this-page-menu">
-    <li><a href="_sources/bed.txt"
-           rel="nofollow">Show Source</a></li>
-  </ul>
-<div id="searchbox" style="display: none">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/bed.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
@@ -312,7 +314,7 @@ file/stream must be BED.</li>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -324,14 +326,14 @@ file/stream must be BED.</li>
         <li class="right" >
           <a href="genomicIntervals.html" title="Genomic Intervals"
              >previous</a> |</li>
-        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
-          <li><a href="using.html" >Using Pyokit</a> &raquo;</li>
-          <li><a href="genomicIntervals.html" >Genomic Intervals</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="using.html" >Using Pyokit</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="genomicIntervals.html" >Genomic Intervals</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
+    <div class="footer" role="contentinfo">
         &copy; Copyright 2014, Philip J. Uren.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
   </body>
 </html>

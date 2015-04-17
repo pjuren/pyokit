@@ -8,7 +8,7 @@
     
     <title>Gene Ontology &mdash; Pyokit 0.2.0 documentation</title>
     
-    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
@@ -23,39 +23,39 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="Pyokit 0.2.0 documentation" href="index.html" />
     <link rel="up" title="Using Pyokit" href="using.html" />
-    <link rel="next" title="Pyokit data-structures" href="datastrct.html" />
+    <link rel="next" title="File indexes" href="file_indexes.html" />
     <link rel="prev" title="Retrotransposons" href="retrotransposons.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="datastrct.html" title="Pyokit data-structures"
+          <a href="file_indexes.html" title="File indexes"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="retrotransposons.html" title="Retrotransposons"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
-          <li><a href="using.html" accesskey="U">Using Pyokit</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="using.html" accesskey="U">Using Pyokit</a> &raquo;</li> 
       </ul>
     </div>  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <div class="section" id="gene-ontology">
 <h1>Gene Ontology<a class="headerlink" href="#gene-ontology" title="Permalink to this headline">¶</a></h1>
 <p>Gene ontology data is represented by two data types; you can find details
-of these in <a class="reference internal" href="datastrct.html#ontologyclasssection"><em>Gene Ontology</em></a>. At present, the only input
+of these in <a class="reference internal" href="datastrct.html#ontologyclasssection"><span>Gene Ontology</span></a>. At present, the only input
 format supported is that produced by DAVID. Here&#8217;s an example of loading
 several DAVID output files and producing a new data frame containing the
 GO terms, catagories, and significance (p-value) from each enrichment analysis
@@ -85,7 +85,7 @@ for those terms where at least one of the analyses was significant:</p>
 details of that function:</p>
 <dl class="function">
 <dt id="pyokit.io.david.david_results_iterator">
-<tt class="descclassname">pyokit.io.david.</tt><tt class="descname">david_results_iterator</tt><big>(</big><em>fn</em>, <em>verbose=False</em><big>)</big><a class="headerlink" href="#pyokit.io.david.david_results_iterator" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.io.david.</code><code class="descname">david_results_iterator</code><span class="sig-paren">(</span><em>fn</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.david.david_results_iterator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Iterate over a DAVID result set and yeild GeneOntologyTerm objects
 representing each of the terms reported. The expected format for a DAVID
 result file is tab-seperated format. The following fields should be present:</p>
@@ -196,20 +196,22 @@ ID by splitting on tilde, but if we can&#8217;t then this is set to None.</p>
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h4>Previous topic</h4>
   <p class="topless"><a href="retrotransposons.html"
                         title="previous chapter">Retrotransposons</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="datastrct.html"
-                        title="next chapter">Pyokit data-structures</a></p>
-  <h3>This Page</h3>
-  <ul class="this-page-menu">
-    <li><a href="_sources/gene_ontology.txt"
-           rel="nofollow">Show Source</a></li>
-  </ul>
-<div id="searchbox" style="display: none">
+  <p class="topless"><a href="file_indexes.html"
+                        title="next chapter">File indexes</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/gene_ontology.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
@@ -226,25 +228,25 @@ ID by splitting on tilde, but if we can&#8217;t then this is set to None.</p>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="datastrct.html" title="Pyokit data-structures"
+          <a href="file_indexes.html" title="File indexes"
              >next</a> |</li>
         <li class="right" >
           <a href="retrotransposons.html" title="Retrotransposons"
              >previous</a> |</li>
-        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
-          <li><a href="using.html" >Using Pyokit</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="using.html" >Using Pyokit</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
+    <div class="footer" role="contentinfo">
         &copy; Copyright 2014, Philip J. Uren.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
   </body>
 </html>

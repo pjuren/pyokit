@@ -8,7 +8,7 @@
     
     <title>Biological Sequences &mdash; Pyokit 0.2.0 documentation</title>
     
-    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
@@ -23,14 +23,14 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="Pyokit 0.2.0 documentation" href="index.html" />
     <link rel="up" title="Using Pyokit" href="using.html" />
     <link rel="next" title="Sequence Alignments" href="sequence_alignments.html" />
     <link rel="prev" title="Manipulating Genomic Intervals" href="genomicIntervals_manip.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -42,15 +42,15 @@
         <li class="right" >
           <a href="genomicIntervals_manip.html" title="Manipulating Genomic Intervals"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
-          <li><a href="using.html" accesskey="U">Using Pyokit</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="using.html" accesskey="U">Using Pyokit</a> &raquo;</li> 
       </ul>
     </div>  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <div class="section" id="biological-sequences">
 <span id="sequencessection"></span><h1>Biological Sequences<a class="headerlink" href="#biological-sequences" title="Permalink to this headline">¶</a></h1>
@@ -58,8 +58,8 @@
 name and the actual sequence data, and provides a lot of the basic functionality
 for manipulating sequences. Further specializations provide extra functionality
 for fasta-format and fastq-format reads. For the class descriptions, see
-<a class="reference internal" href="datastrct.html#sequenceclasssection"><em>The Sequence class</em></a>, <a class="reference internal" href="datastrct.html#fastasequenceclasssection"><em>The FastaSequence class</em></a>, and
-<a class="reference internal" href="datastrct.html#fastqsequenceclasssection"><em>The FastqSequence class</em></a></p>
+<a class="reference internal" href="datastrct.html#sequenceclasssection"><span>The Sequence class</span></a>, <a class="reference internal" href="datastrct.html#fastasequenceclasssection"><span>The FastaSequence class</span></a>, and
+<a class="reference internal" href="datastrct.html#fastqsequenceclasssection"><span>The FastqSequence class</span></a></p>
 <div class="section" id="processing-fasta-files">
 <h2>Processing Fasta files<a class="headerlink" href="#processing-fasta-files" title="Permalink to this headline">¶</a></h2>
 <p>Pyokit contains an iterator for fasta files. Here&#8217;s an example of the usual
@@ -100,7 +100,7 @@ it takes the length of the first line for that sequence).</p>
 <p>Here&#8217;s the signature for the iterator:</p>
 <dl class="function">
 <dt id="pyokit.io.fastaIterators.fastaIterator">
-<tt class="descclassname">pyokit.io.fastaIterators.</tt><tt class="descname">fastaIterator</tt><big>(</big><em>fn</em>, <em>useMutableString=False</em>, <em>verbose=False</em><big>)</big><a class="headerlink" href="#pyokit.io.fastaIterators.fastaIterator" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.io.fastaIterators.</code><code class="descname">fastaIterator</code><span class="sig-paren">(</span><em>fn</em>, <em>useMutableString=False</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.fastaIterators.fastaIterator" title="Permalink to this definition">¶</a></dt>
 <dd><p>A generator function which yields fastaSequence objects from a fasta-format
 file or stream.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -178,7 +178,7 @@ TTTTTGCCCCGGCTCGAAA
 <p>Here&#8217;s the signature for the general fastQ iterator:</p>
 <dl class="function">
 <dt id="pyokit.io.fastqIterators.fastqIterator">
-<tt class="descclassname">pyokit.io.fastqIterators.</tt><tt class="descname">fastqIterator</tt><big>(</big><em>fn</em>, <em>useMutableString=False</em>, <em>verbose=False</em>, <em>debug=False</em>, <em>sanger=False</em>, <em>allowNameMissmatch=False</em><big>)</big><a class="headerlink" href="#pyokit.io.fastqIterators.fastqIterator" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.io.fastqIterators.</code><code class="descname">fastqIterator</code><span class="sig-paren">(</span><em>fn</em>, <em>useMutableString=False</em>, <em>verbose=False</em>, <em>debug=False</em>, <em>sanger=False</em>, <em>allowNameMissmatch=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.fastqIterators.fastqIterator" title="Permalink to this definition">¶</a></dt>
 <dd><p>A generator function which yields FastqSequence objects read from a file or
 stream. This is a general function which wraps fastqIteratorSimple. In
 future releases, we may allow dynamic switching of which base iterator is
@@ -215,7 +215,7 @@ probably to save space.</li>
 <p>Here&#8217;s the signature for the simple iterator:</p>
 <dl class="function">
 <dt id="pyokit.io.fastqIterators.fastqIteratorSimple">
-<tt class="descclassname">pyokit.io.fastqIterators.</tt><tt class="descname">fastqIteratorSimple</tt><big>(</big><em>fn</em>, <em>verbose=False</em>, <em>allowNameMissmatch=False</em><big>)</big><a class="headerlink" href="#pyokit.io.fastqIterators.fastqIteratorSimple" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.io.fastqIterators.</code><code class="descname">fastqIteratorSimple</code><span class="sig-paren">(</span><em>fn</em>, <em>verbose=False</em>, <em>allowNameMissmatch=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.fastqIterators.fastqIteratorSimple" title="Permalink to this definition">¶</a></dt>
 <dd><p>A generator function that yields FastqSequence objects read from a
 fastq-format stream or filename. This is iterator requires that all
 sequence and quality data is provided on a single line &#8211; put another way,
@@ -245,7 +245,7 @@ progress.</li>
 sequence data:</p>
 <dl class="function">
 <dt id="pyokit.io.fastqIterators.fastqIteratorComplex">
-<tt class="descclassname">pyokit.io.fastqIterators.</tt><tt class="descname">fastqIteratorComplex</tt><big>(</big><em>fn</em>, <em>useMutableString=False</em>, <em>verbose=False</em>, <em>debug=False</em>, <em>sanger=False</em><big>)</big><a class="headerlink" href="#pyokit.io.fastqIterators.fastqIteratorComplex" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.io.fastqIterators.</code><code class="descname">fastqIteratorComplex</code><span class="sig-paren">(</span><em>fn</em>, <em>useMutableString=False</em>, <em>verbose=False</em>, <em>debug=False</em>, <em>sanger=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.fastqIterators.fastqIteratorComplex" title="Permalink to this definition">¶</a></dt>
 <dd><p>A generator function which yields FastqSequence objects read from a file or
 stream. This iterator can handle fastq files that have their sequence
 and/or their quality data split across multiple lines (i.e. there are
@@ -279,8 +279,8 @@ format.</li>
 <div class="section" id="manipulating-sequences">
 <h2>Manipulating sequences<a class="headerlink" href="#manipulating-sequences" title="Permalink to this headline">¶</a></h2>
 <p>Pretty much everything you need should be covered in the class descriptions for
-the sequence classes: see <a class="reference internal" href="datastrct.html#sequenceclasssection"><em>The Sequence class</em></a>,
-<a class="reference internal" href="datastrct.html#fastasequenceclasssection"><em>The FastaSequence class</em></a>, and <a class="reference internal" href="datastrct.html#fastqsequenceclasssection"><em>The FastqSequence class</em></a></p>
+the sequence classes: see <a class="reference internal" href="datastrct.html#sequenceclasssection"><span>The Sequence class</span></a>,
+<a class="reference internal" href="datastrct.html#fastasequenceclasssection"><span>The FastaSequence class</span></a>, and <a class="reference internal" href="datastrct.html#fastqsequenceclasssection"><span>The FastqSequence class</span></a></p>
 </div>
 </div>
 
@@ -288,7 +288,7 @@ the sequence classes: see <a class="reference internal" href="datastrct.html#seq
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
@@ -306,12 +306,14 @@ the sequence classes: see <a class="reference internal" href="datastrct.html#seq
   <h4>Next topic</h4>
   <p class="topless"><a href="sequence_alignments.html"
                         title="next chapter">Sequence Alignments</a></p>
-  <h3>This Page</h3>
-  <ul class="this-page-menu">
-    <li><a href="_sources/sequences.txt"
-           rel="nofollow">Show Source</a></li>
-  </ul>
-<div id="searchbox" style="display: none">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/sequences.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
@@ -328,7 +330,7 @@ the sequence classes: see <a class="reference internal" href="datastrct.html#seq
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -340,13 +342,13 @@ the sequence classes: see <a class="reference internal" href="datastrct.html#seq
         <li class="right" >
           <a href="genomicIntervals_manip.html" title="Manipulating Genomic Intervals"
              >previous</a> |</li>
-        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
-          <li><a href="using.html" >Using Pyokit</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="using.html" >Using Pyokit</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
+    <div class="footer" role="contentinfo">
         &copy; Copyright 2014, Philip J. Uren.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
   </body>
 </html>

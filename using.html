@@ -8,7 +8,7 @@
     
     <title>Using Pyokit &mdash; Pyokit 0.2.0 documentation</title>
     
-    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
@@ -23,13 +23,13 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="Pyokit 0.2.0 documentation" href="index.html" />
     <link rel="next" title="Importing Pyokit modules" href="import.html" />
     <link rel="prev" title="Installing Pyokit" href="install.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -41,14 +41,14 @@
         <li class="right" >
           <a href="install.html" title="Installing Pyokit"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <div class="section" id="using-pyokit">
 <h1>Using Pyokit<a class="headerlink" href="#using-pyokit" title="Permalink to this headline">¶</a></h1>
@@ -96,8 +96,22 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="retrotransposons.html">Retrotransposons</a></li>
+<li class="toctree-l1"><a class="reference internal" href="retrotransposons.html">Retrotransposons</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="retrotransposons.html#loading-annotations">Loading annotations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="retrotransposons.html#repeatmasker-coordinate-annotation">Repeatmasker coordinate annotation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="retrotransposons.html#repeatmasker-full-alignments">Repeatmasker full alignments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="retrotransposons.html#repeatmasker-annotations-with-on-demand-full-alignments">Repeatmasker annotations with on-demand full alignments</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="retrotransposons.html#liftover">Liftover</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="retrotransposons.html#coordinate-only-liftover">Coordinate-only liftover</a></li>
+<li class="toctree-l3"><a class="reference internal" href="retrotransposons.html#full-alignment-liftover">Full-alignment liftover</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="gene_ontology.html">Gene Ontology</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_indexes.html">File indexes</a></li>
 </ul>
 </div>
 </div>
@@ -106,7 +120,7 @@
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h4>Previous topic</h4>
   <p class="topless"><a href="install.html"
@@ -114,12 +128,14 @@
   <h4>Next topic</h4>
   <p class="topless"><a href="import.html"
                         title="next chapter">Importing Pyokit modules</a></p>
-  <h3>This Page</h3>
-  <ul class="this-page-menu">
-    <li><a href="_sources/using.txt"
-           rel="nofollow">Show Source</a></li>
-  </ul>
-<div id="searchbox" style="display: none">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/using.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
@@ -136,7 +152,7 @@
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -148,12 +164,12 @@
         <li class="right" >
           <a href="install.html" title="Installing Pyokit"
              >previous</a> |</li>
-        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
+    <div class="footer" role="contentinfo">
         &copy; Copyright 2014, Philip J. Uren.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
   </body>
 </html>

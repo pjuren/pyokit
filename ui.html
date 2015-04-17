@@ -8,7 +8,7 @@
     
     <title>Building user interfaces with Pyokit &mdash; Pyokit 0.2.0 documentation</title>
     
-    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
@@ -23,14 +23,14 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="Pyokit 0.2.0 documentation" href="index.html" />
     <link rel="up" title="Using Pyokit" href="using.html" />
     <link rel="next" title="Genomic Intervals" href="genomicIntervals.html" />
     <link rel="prev" title="Importing Pyokit modules" href="import.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -42,15 +42,15 @@
         <li class="right" >
           <a href="import.html" title="Importing Pyokit modules"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
-          <li><a href="using.html" accesskey="U">Using Pyokit</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="using.html" accesskey="U">Using Pyokit</a> &raquo;</li> 
       </ul>
     </div>  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <div class="section" id="building-user-interfaces-with-pyokit">
 <h1>Building user interfaces with Pyokit<a class="headerlink" href="#building-user-interfaces-with-pyokit" title="Permalink to this headline">¶</a></h1>
@@ -110,7 +110,7 @@ classes are described below.</p>
 <h2>The CLI class<a class="headerlink" href="#the-cli-class" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="pyokit.interface.cli.CLI">
-<em class="property">class </em><tt class="descclassname">pyokit.interface.cli.</tt><tt class="descname">CLI</tt><big>(</big><em>progName</em>, <em>shortDesc</em>, <em>longDesc</em><big>)</big><a class="headerlink" href="#pyokit.interface.cli.CLI" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pyokit.interface.cli.</code><code class="descname">CLI</code><span class="sig-paren">(</span><em>progName</em>, <em>shortDesc</em>, <em>longDesc</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI" title="Permalink to this definition">¶</a></dt>
 <dd><p>Represents a command line interface for a program, including the number
 of arguemnts and the options the program accepts. Provides methods for parsing
 a command line for the string and interogating the provided arguments and
@@ -130,7 +130,7 @@ options.</p>
 </table>
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.addOption">
-<tt class="descname">addOption</tt><big>(</big><em>o</em><big>)</big><a class="headerlink" href="#pyokit.interface.cli.CLI.addOption" title="Permalink to this definition">¶</a></dt>
+<code class="descname">addOption</code><span class="sig-paren">(</span><em>o</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.addOption" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a new Option to this CLI</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -147,14 +147,14 @@ options.</p>
 
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.getAllArguments">
-<tt class="descname">getAllArguments</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.interface.cli.CLI.getAllArguments" title="Permalink to this definition">¶</a></dt>
+<code class="descname">getAllArguments</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.getAllArguments" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get a list of all the arguments.
 :return: a list of all the arguments, each as a string.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.getArgument">
-<tt class="descname">getArgument</tt><big>(</big><em>num</em><big>)</big><a class="headerlink" href="#pyokit.interface.cli.CLI.getArgument" title="Permalink to this definition">¶</a></dt>
+<code class="descname">getArgument</code><span class="sig-paren">(</span><em>num</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.getArgument" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the num^th argument.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -174,7 +174,7 @@ will be a string.</td>
 
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.getOption">
-<tt class="descname">getOption</tt><big>(</big><em>name</em><big>)</big><a class="headerlink" href="#pyokit.interface.cli.CLI.getOption" title="Permalink to this definition">¶</a></dt>
+<code class="descname">getOption</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.getOption" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the the Option object associated with the given name</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -191,7 +191,7 @@ will be a string.</td>
 
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.getValue">
-<tt class="descname">getValue</tt><big>(</big><em>name</em><big>)</big><a class="headerlink" href="#pyokit.interface.cli.CLI.getValue" title="Permalink to this definition">¶</a></dt>
+<code class="descname">getValue</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.getValue" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the value of the option matching the name given</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -208,7 +208,7 @@ will be a string.</td>
 
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.hasArgument">
-<tt class="descname">hasArgument</tt><big>(</big><em>num</em><big>)</big><a class="headerlink" href="#pyokit.interface.cli.CLI.hasArgument" title="Permalink to this definition">¶</a></dt>
+<code class="descname">hasArgument</code><span class="sig-paren">(</span><em>num</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.hasArgument" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check whether the user supplied a particular number of arguments.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -226,7 +226,7 @@ so asking for the 0th arg will check to see if the user supplied
 
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.hasOption">
-<tt class="descname">hasOption</tt><big>(</big><em>name</em><big>)</big><a class="headerlink" href="#pyokit.interface.cli.CLI.hasOption" title="Permalink to this definition">¶</a></dt>
+<code class="descname">hasOption</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.hasOption" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check whether this CLI has an option with a given name</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -242,7 +242,7 @@ so asking for the 0th arg will check to see if the user supplied
 
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.optionIsSet">
-<tt class="descname">optionIsSet</tt><big>(</big><em>name</em><big>)</big><a class="headerlink" href="#pyokit.interface.cli.CLI.optionIsSet" title="Permalink to this definition">¶</a></dt>
+<code class="descname">optionIsSet</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.optionIsSet" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check whether an option with a given name exists and has been set</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -259,7 +259,7 @@ it&#8217;s value set by the user</td>
 
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.parseCommandLine">
-<tt class="descname">parseCommandLine</tt><big>(</big><em>line</em><big>)</big><a class="headerlink" href="#pyokit.interface.cli.CLI.parseCommandLine" title="Permalink to this definition">¶</a></dt>
+<code class="descname">parseCommandLine</code><span class="sig-paren">(</span><em>line</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.parseCommandLine" title="Permalink to this definition">¶</a></dt>
 <dd><p>Parse the given command line and populate this CLI object with the values
 found. If the command line doesn&#8217;t conform to the specification defined
 by this CLI object, this function prints a message to stdout indicating what
@@ -277,7 +277,7 @@ name removed - generally one would do this: sys.argv[1:]</td>
 
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.usage">
-<tt class="descname">usage</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.interface.cli.CLI.usage" title="Permalink to this definition">¶</a></dt>
+<code class="descname">usage</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.usage" title="Permalink to this definition">¶</a></dt>
 <dd><p>Print the usage description for this program. Output goes to standard out.</p>
 </dd></dl>
 
@@ -288,7 +288,7 @@ name removed - generally one would do this: sys.argv[1:]</td>
 <h2>The Option class<a class="headerlink" href="#the-option-class" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="pyokit.interface.cli.Option">
-<em class="property">class </em><tt class="descclassname">pyokit.interface.cli.</tt><tt class="descname">Option</tt><big>(</big><em>short</em>, <em>long</em>, <em>description</em>, <em>argName=None</em>, <em>default=None</em>, <em>required=False</em>, <em>type=&lt;type 'str'&gt;</em>, <em>special=False</em><big>)</big><a class="headerlink" href="#pyokit.interface.cli.Option" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pyokit.interface.cli.</code><code class="descname">Option</code><span class="sig-paren">(</span><em>short</em>, <em>long</em>, <em>description</em>, <em>argName=None</em>, <em>default=None</em>, <em>required=False</em>, <em>type=&lt;type 'str'&gt;</em>, <em>special=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.Option" title="Permalink to this definition">¶</a></dt>
 <dd><p>Represents an option for a command line interface.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -311,7 +311,7 @@ this option is set. Useful for things like help options.</li>
 </table>
 <dl class="method">
 <dt id="pyokit.interface.cli.Option.isRequired">
-<tt class="descname">isRequired</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.interface.cli.Option.isRequired" title="Permalink to this definition">¶</a></dt>
+<code class="descname">isRequired</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.Option.isRequired" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check whether this is a required option (i.e. whether parsing a command
 line should fail when it is missing).
 :return: True if this option is required, else false.</p>
@@ -319,7 +319,7 @@ line should fail when it is missing).
 
 <dl class="method">
 <dt id="pyokit.interface.cli.Option.isSet">
-<tt class="descname">isSet</tt><big>(</big><big>)</big><a class="headerlink" href="#pyokit.interface.cli.Option.isSet" title="Permalink to this definition">¶</a></dt>
+<code class="descname">isSet</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.Option.isSet" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check whether this option has been set by the user or not.
 :return: True if this option has been set by the user, else false.</p>
 </dd></dl>
@@ -333,7 +333,7 @@ line should fail when it is missing).
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
@@ -350,12 +350,14 @@ line should fail when it is missing).
   <h4>Next topic</h4>
   <p class="topless"><a href="genomicIntervals.html"
                         title="next chapter">Genomic Intervals</a></p>
-  <h3>This Page</h3>
-  <ul class="this-page-menu">
-    <li><a href="_sources/ui.txt"
-           rel="nofollow">Show Source</a></li>
-  </ul>
-<div id="searchbox" style="display: none">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/ui.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
@@ -372,7 +374,7 @@ line should fail when it is missing).
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -384,13 +386,13 @@ line should fail when it is missing).
         <li class="right" >
           <a href="import.html" title="Importing Pyokit modules"
              >previous</a> |</li>
-        <li><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
-          <li><a href="using.html" >Using Pyokit</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">Pyokit 0.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="using.html" >Using Pyokit</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
+    <div class="footer" role="contentinfo">
         &copy; Copyright 2014, Philip J. Uren.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
   </body>
 </html>
