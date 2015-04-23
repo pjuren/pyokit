@@ -33,9 +33,7 @@ import re
 from pyokit.util.progressIndicator import ProgressIndicator
 from pyokit.datastruct.multipleAlignment import PairwiseAlignment
 from pyokit.datastruct import multipleAlignment
-from pyokit.io.indexedFile import decorate_all_methods
-from pyokit.io.indexedFile import load_on_demand
-from pyokit.io.indexedFile import Indexed
+from pyokit.datastruct.multipleAlignment import JustInTimePairwiseAlignment
 
 
 ###############################################################################
@@ -435,15 +433,6 @@ def repeat_masker_alignment_iterator(fn, index_friendly=True, verbose=False):
 
 
 ###############################################################################
-#     ON-DEMAND LOADING OF PAIRWISE ALIGNMENTS FROM REPEAT-MASKER FILES       #
-###############################################################################
-
-@decorate_all_methods(load_on_demand)
-class OnDemandRepeatmakerAlignment(Indexed, PairwiseAlignment):
-  pass
-
-
-###############################################################################
 #                         UNIT TESTS FOR THIS MODULE                          #
 ###############################################################################
 
@@ -597,7 +586,7 @@ class TestAlignmentIterators(unittest.TestCase):
                                                         (1, 4, 30, None, 10),
                                                         (2, 3, 31, 13, 15),
                                                         (3, 0, 22, 13, 231)]:
-      on_d_alig = OnDemandRepeatmakerAlignment(index, rm_id)
+      on_d_alig = JustInTimePairwiseAlignment(index, rm_id)
       on_d_str = on_d_alig.to_repeat_masker_string(column_width=c_width,
                                                    m_name_width=m_width)
 

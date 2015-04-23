@@ -29,7 +29,6 @@
 # standard python imports
 import StringIO
 import unittest
-import inspect
 
 
 ###############################################################################
@@ -94,8 +93,8 @@ class IndexedFile(object):
         # try treating this as a file handle
         self.indexed_file = (None, indexed_file)
       except TypeError:
-        raise IndexError("failed to create index for " + str(indexed_file)
-                         + "; reason: expected filename or stream-like "
+        raise IndexError("failed to create index for " + str(indexed_file) +
+                         "; reason: expected filename or stream-like "
                          "object, got " + str(type(indexed_file)))
 
   @property
@@ -327,55 +326,6 @@ class IndexedFile(object):
 
 
 ###############################################################################
-#         META-PROGRAMMING UTILITY FUNCTIONS AND CLASSES FOR INDEXING         #
-###############################################################################
-
-def decorate_all_methods(decorator):
-  """
-  This is a class decorator function that will apply the passed decorator to
-  all of the methods in the decorated class, except the __init__ method. Its
-  not specifically related to file indexing, but since that is the only place
-  where I've used it and I have no better place to keep it at the moment...
-  """
-  def decorate_class(cls):
-    for name, m in inspect.getmembers(cls, inspect.ismethod):
-      if name != "__init__":
-        setattr(cls, name, decorator(m))
-    return cls
-  return decorate_class
-
-
-def load_on_demand(func):
-  """
-  This is a dcorator for methods; the point is to redirect calls to the
-  decorated method to the equivalent method in a member called 'item'. It has a
-  pretty specific use-case: class B extends class A; B keeps an instance of
-  class A as a member, which is set to None when B is created. B also keeps an
-  index and a key that it can use to populate 'item' on-demand. B defines no
-  other methods except __init__(); all inherited methods are wrapped with this
-  wrapper to load the instance of A on demand and redirect all methods to that
-  instance.
-  """
-  def wrapper(self, *args, **kwargs):
-    if self.item is None:
-      self.item = self.index[self.key]
-    return getattr(self.item, func.__name__)(*args, **kwargs)
-  return wrapper
-
-
-class Indexed(object):
-  """
-  This is a class that can be extended to turn a child-class into a class that
-  loads its data on-demand from an index of some kind (probably an indexed
-  file).
-  """
-  def __init__(self, index, key):
-    self.index = index
-    self.key = key
-    self.item = None
-
-
-###############################################################################
 #                         UNIT TESTS FOR THIS MODULE                          #
 ###############################################################################
 
@@ -482,52 +432,6 @@ class TestIndexedFile(unittest.TestCase):
     # compare...
     self.assertEqual(index[5], index_2[5])
     self.assertEqual(index, index_2)
-
-  def test_on_demand_loading(self):
-    """
-    Test using on-demand wrapper to wrap a class and provide on-demand loading
-    from an index.
-    """
-
-    class Record(object):
-      def __init__(self, id, letters):
-        self.id = id
-        self.letters = letters
-
-      def do_stuff(self, a):
-        """
-        :param a: an integer..
-        """
-        return a + len(self.letters)
-
-      def __str__(self):
-        return str(self.id) + " " + ",".join(self.letters)
-
-    def dummy_iter_2(strm):
-      for line in strm:
-        line = line.strip()
-        if line == "":
-          continue
-        parts = line.split()
-        yield Record(int(parts[0]), parts[1:])
-
-    def dummy_hash_2(item):
-      return item.id
-
-    @decorate_all_methods(load_on_demand)
-    class B(Indexed, Record):
-      pass
-
-    index = IndexedFile(StringIO.StringIO(self.test_case_0), dummy_iter_2,
-                        dummy_hash_2)
-
-    b1 = B(index, 5)
-    b2 = B(index, 1)
-
-    self.assertEqual(b1.do_stuff(12), 17)
-    self.assertEqual(b2.do_stuff(12), 17)
-    self.assertEqual(str(b1), "5 U,V,W,X,Y")  # U V W X Y
-    self.assertEqual(str(b2), "1 A,B,C,D,E")  # A B C D E
 
 
 ###############################################################################

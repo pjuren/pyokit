@@ -26,6 +26,11 @@
 # standard python imports
 import unittest
 
+# pyokit imports
+from pyokit.util.meta import decorate_all_methods
+from pyokit.util.meta import just_in_time
+
+
 ###############################################################################
 #                                 CONSTANTS                                   #
 ###############################################################################
@@ -520,6 +525,28 @@ class PairwiseAlignment(object):
     # remove any trailing whitespace
     res = res.strip()
     return res
+
+
+###############################################################################
+#         ON-DEMAND LOADING OF PAIRWISE ALIGNMENTS FROM INDEXED FILE          #
+###############################################################################
+
+@decorate_all_methods(just_in_time)
+class JustInTimePairwiseAlignment(PairwiseAlignment):
+  """
+  A pairwise alignment that is loaded just-in-time from some factory object; a
+  common pattern would be to provide an IndexedFile as the factory object
+
+  :param factory: any object that implements the subscript operator such that
+                  it accept the key as a unique identifier and returns the
+                  alignment
+  :param key:     any object which uniquely identifies this pariwise alignment
+                  to the factory; i.e. a hash key
+  """
+  def __init__(self, factory, key):
+    self.factory = factory
+    self.key = key
+    self.item = None
 
 
 ###############################################################################

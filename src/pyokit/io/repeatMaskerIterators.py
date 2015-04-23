@@ -29,9 +29,11 @@ import StringIO
 
 # pyokit imports
 from pyokit.datastruct import retrotransposon
+from pyokit.datastruct.multipleAlignment import JustInTimePairwiseAlignment
 
 
-def repeat_masker_iterator(fh, header=True, verbose=False):
+def repeat_masker_iterator(fh, alignment_index=None,
+                           header=True, verbose=False):
   """
   Iterator for repeatmasker coordinate annotation files. These files describe
   the location of repeat occurrences. There is (optionally) a two-line header
@@ -62,8 +64,16 @@ def repeat_masker_iterator(fh, header=True, verbose=False):
     line = line.strip()
     if line == "":
       continue
-    yield retrotransposon.from_repeat_masker_string(line)
+    rto = retrotransposon.from_repeat_masker_string(line)
+    if alignment_index != None:
+      rto.pairwise_alignment =\
+          JustInTimePairwiseAlignment(alignment_index, rto.meta[RM_ID_KEY])
+    yield rto
 
+
+###############################################################################
+#                                 UNIT TESTS                                  #
+###############################################################################
 
 class TestRepMaskerIterators(unittest.TestCase):
 

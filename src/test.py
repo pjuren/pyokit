@@ -61,6 +61,7 @@ from pyokit.datastruct.maf import *
 ###############################################################################
 from pyokit.testing.dummyfiles import *
 from pyokit.util.progressIndicator import *
+from pyokit.util.meta import TestMeta
 
 
 if __name__ == "__main__":
