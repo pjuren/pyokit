@@ -147,17 +147,17 @@ def collapseRegions(s):
 
 def regionsIntersection(s1, s2):
   """
-  given two lists of genomic regions with chromosome, start and end coordinates,
-  return a new list of regions which is the intersection of those two sets.
-  Lists must be sorted by chromosome and start index
+  given two lists of genomic regions with chromosome, start and end
+  coordinates, return a new list of regions which is the intersection of those
+  two sets. Lists must be sorted by chromosome and start index
 
   :return: new list that represents the intersection of the two input lists.
            output regions will all have name "X", be on strand "+" and have
            score 0
   :param s1: first list of genomic regions
   :param s2: second list of genomic regions
-  :raise GenomicIntervalError: if the input regions are not sorted correctly (by
-                   chromosome and start index)
+  :raise GenomicIntervalError: if the input regions are not sorted correctly
+                               (by chromosome and start index)
   :note: O(n) time, O(n) space; informally, might use up to 3x space of input
   """
   debug = False
@@ -215,11 +215,12 @@ def regionsIntersection(s1, s2):
 def bucketIterator(elements, buckets) :
   """
     iterate over the genomic regions in buckets and, for each one, yeild the
-    bucket region and a list of regions from elements that intersect the bucket.
+    bucket region and a list of regions from elements that intersect the
+    bucket.
 
     :param elements: the genomic intervals to place into the buckets. Must be
-                     sorted by chromosome and start index. This could be a list,
-                     or an iterator.
+                     sorted by chromosome and start index. This could be a
+                     list, or an iterator.
     :param buckets: the buckets into which genomic intervals should be binned.
                     Must be sorted by chromosome and start index. This could be
                     a list, or an iterator
@@ -294,8 +295,8 @@ def bucketIterator(elements, buckets) :
     # of this bucket, we can stop -- everything else after it will also start
     # after the end of this bucket.
     while (elementIterator.peek() != None) and \
-          ((elementIterator.peek().chrom < bucketChrom) or \
-           ((elementIterator.peek().chrom == bucketChrom) and \
+          ((elementIterator.peek().chrom < bucketChrom) or
+           ((elementIterator.peek().chrom == bucketChrom) and
             (elementIterator.peek().start < bucketEnd))) :
       e = elementIterator.__next__()
       # if e falls before this bucket, we can skip it; buckets are sorted by
@@ -352,10 +353,10 @@ def parseBEDString(line, scoreType=int, dropAfter=None):
     @summary: Given a string in BED format, parse the string and return a
               GenomicInterval object
     @param line: the string to be parsed
-    @param dropAfter: an int indicating that any fields after and including this
-                      field should be ignored as they don't conform to the BED
-                      format. By default, None, meaning we use all fields. Index
-                      from zero.
+    @param dropAfter: an int indicating that any fields after and including
+                      this field should be ignored as they don't conform to
+                      the BED format. By default, None, meaning we use all
+                       fields. Index from zero.
     @return: GenomicInterval object built from the BED string representation
   """
   peices = line.split("\t")
@@ -398,8 +399,8 @@ class GenomicInterval :
   :param name: A name associated with this genomic interval.
   :param score: A score associated with this genomic interval.
   :param strand: The DNA strand (+ or -) that this genomic interval is on.
-  :param scoreType: The type (e.g. int, float) of the score associated with this
-                    genomic interval
+  :param scoreType: The type (e.g. int, float) of the score associated with
+                    this genomic interval
   """
 
   POSITIVE_STRAND = "+"
@@ -490,9 +491,9 @@ class GenomicInterval :
     """
     if e == None:
       return False
-    return self.chrom == e.chrom and self.start == e.start and\
-           self.end == e.end and self.name == e.name and\
-           self.strand == e.strand
+    return (self.chrom == e.chrom and self.start == e.start and
+            self.end == e.end and self.name == e.name and
+            self.strand == e.strand)
 
   def __len__(self):
     return (self.end - self.start)
@@ -506,9 +507,12 @@ class GenomicInterval :
     """
     delim = "\t"
     res = self.chrom + delim + str(self.start) + delim + str(self.end)
-    if self.name != None : res += (delim + str(self.name))
-    if self.score != None : res += (delim + str(self.score))
-    if self.strand != None : res += (delim + str(self.strand))
+    if self.name != None:
+      res += (delim + str(self.name))
+    if self.score != None:
+      res += (delim + str(self.score))
+    if self.strand != None:
+      res += (delim + str(self.strand))
 
     return res
 
@@ -524,8 +528,8 @@ class GenomicInterval :
     :raise GenomicIntervalError: if self and e are on different chromosomes.
     """
     if e.chrom != self.chrom :
-      raise GenomicIntervalError("cannot get distance from " + str(self) +\
-                                 " to " + str(e) + " as they're on "     +\
+      raise GenomicIntervalError("cannot get distance from " + str(self) +
+                                 " to " + str(e) + " as they're on " +
                                  "different chromosomes")
     dist = 0
     if not e.intersects(self) :
@@ -554,8 +558,8 @@ class GenomicInterval :
     Get a list of GenomicRegions produced by subtracting e from self.
 
     :return: a list of regions that represent the result of subtracting e from
-             self. The list might be empty if self is totally contained in e, or
-             may contain two elements if e is totally contained in self.
+             self. The list might be empty if self is totally contained in e,
+             or may contain two elements if e is totally contained in self.
              otherwise there'll be one element.
     """
     if e.chrom != self.chrom or e.end < self.start or e.start > self.end :
@@ -570,7 +574,7 @@ class GenomicInterval :
       r2 = copy.copy(self)
       r1.end = e.start
       r2.start = e.end
-      return [r1,r2]
+      return [r1, r2]
     if e.start <= self.start :
       # cuts off start of self
       r = copy.copy(self)
@@ -608,15 +612,20 @@ class GenomicInterval :
     :return: the number of bases that are shared in common between self and e.
     """
     # no overlap
-    if not self.intersects(e) : return 0
+    if not self.intersects(e):
+      return 0
 
     # complete inclusion..
-    if e.start >= self.start and e.end <= self.end : return len(e)
-    if self.start >= e.start and self.end <= e.end : return len(self)
+    if e.start >= self.start and e.end <= self.end:
+      return len(e)
+    if self.start >= e.start and self.end <= e.end:
+      return len(self)
 
     # partial overlap
-    if e.start > self.start : return (self.end - e.start)
-    if self.start > e.start : return (e.end - self.start)
+    if e.start > self.start:
+      return (self.end - e.start)
+    if self.start > e.start:
+      return (e.end - self.start)
 
   def intersects(self, e):
     """
@@ -625,11 +634,15 @@ class GenomicInterval :
     :return: true if this elements intersects the element e
     """
 
-    if self.chrom != e.chrom : return False
-    if self.end >= e.start and self.end <= e.end : return True
-    if self.start >= e.start and self.start <= e.end : return True
-    if e.start >= self.start and e.start <= self.end : return True
-    if e.end >= self.start and e.end <= self.end : return True
+    if self.chrom != e.chrom:
+      return False
+
+    if e.start >= self.start and e.start < self.end:
+      return True
+    if e.end > self.start and e.end <= self.end:
+      return True
+    if e.start < self.start and e.end > self.end:
+      return True
     return False
 
   def isPositiveStrand(self):
@@ -657,7 +670,7 @@ class GenomicInterval :
 #                         UNIT TESTS FOR THIS MODULE                          #
 ###############################################################################
 
-class GenomicIntervalUnitTests(unittest.TestCase):
+class TestGenomicInterval(unittest.TestCase):
   """
     @summary: Unit tests for functions and classes in this module
   """
@@ -667,22 +680,38 @@ class GenomicIntervalUnitTests(unittest.TestCase):
 
   def testCollapse(self):
     debug = False
-    elements = ["chr1"+"\t"+"10"+"\t"+"20"+"\t"+"R01"+"\t"+"0"+"\t"+"+",
-                "chr1"+"\t"+"30"+"\t"+"40"+"\t"+"R02"+"\t"+"1"+"\t"+"+",
-                "chr1"+"\t"+"35"+"\t"+"50"+"\t"+"R03"+"\t"+"0"+"\t"+"+",
-                "chr1"+"\t"+"45"+"\t"+"65"+"\t"+"R04"+"\t"+"0"+"\t"+"+",
-                "chr1"+"\t"+"55"+"\t"+"60"+"\t"+"R05"+"\t"+"3"+"\t"+"-",
-                "chr1"+"\t"+"70"+"\t"+"80"+"\t"+"R06"+"\t"+"0"+"\t"+"+",
-                "chr1"+"\t"+"75"+"\t"+"95"+"\t"+"R07"+"\t"+"0"+"\t"+"+",
-                "chr1"+"\t"+"85"+"\t"+"90"+"\t"+"R08"+"\t"+"1"+"\t"+"-",
-                "chr2"+"\t"+"40"+"\t"+"60"+"\t"+"R10"+"\t"+"0"+"\t"+"+",
-                "chr3"+"\t"+"10"+"\t"+"20"+"\t"+"R11"+"\t"+"4"+"\t"+"+",
-                "chr3"+"\t"+"20"+"\t"+"30"+"\t"+"R12"+"\t"+"0"+"\t"+"-"]
-    expect_str = ["chr1"+"\t"+"10"+"\t"+"20"+"\t"+"X"+"\t"+"0"+"\t"+"+",
-                  "chr1"+"\t"+"30"+"\t"+"65"+"\t"+"X"+"\t"+"0"+"\t"+"+",
-                  "chr1"+"\t"+"70"+"\t"+"95"+"\t"+"X"+"\t"+"0"+"\t"+"+",
-                  "chr2"+"\t"+"40"+"\t"+"60"+"\t"+"X"+"\t"+"0"+"\t"+"+",
-                  "chr3"+"\t"+"10"+"\t"+"30"+"\t"+"X"+"\t"+"0"+"\t"+"+"]
+    elements = ["chr1" + "\t" + "10" + "\t" + "20" + "\t" + "R01" + "\t" +
+                "0" + "\t" + "+",
+                "chr1" + "\t" + "30" + "\t" + "40" + "\t" + "R02" + "\t" +
+                "1" + "\t" + "+",
+                "chr1" + "\t" + "35" + "\t" + "50" + "\t" + "R03" + "\t" +
+                "0" + "\t" + "+",
+                "chr1" + "\t" + "45" + "\t" + "65" + "\t" + "R04" + "\t" +
+                "0" + "\t" + "+",
+                "chr1" + "\t" + "55" + "\t" + "60" + "\t" + "R05" + "\t" +
+                "3" + "\t" + "-",
+                "chr1" + "\t" + "70" + "\t" + "80" + "\t" + "R06" + "\t" +
+                "0" + "\t" + "+",
+                "chr1" + "\t" + "75" + "\t" + "95" + "\t" + "R07" + "\t" +
+                "0" + "\t" + "+",
+                "chr1" + "\t" + "85" + "\t" + "90" + "\t" + "R08" + "\t" +
+                "1" + "\t" + "-",
+                "chr2" + "\t" + "40" + "\t" + "60" + "\t" + "R10" + "\t" +
+                "0" + "\t" + "+",
+                "chr3" + "\t" + "10" + "\t" + "20" + "\t" + "R11" + "\t" +
+                "4" + "\t" + "+",
+                "chr3" + "\t" + "20" + "\t" + "30" + "\t" + "R12" + "\t" +
+                "0" + "\t" + "-"]
+    expect_str = ["chr1" + "\t" + "10" + "\t" + "20" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+",
+                  "chr1" + "\t" + "30" + "\t" + "65" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+",
+                  "chr1" + "\t" + "70" + "\t" + "95" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+",
+                  "chr2" + "\t" + "40" + "\t" + "60" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+",
+                  "chr3" + "\t" + "10" + "\t" + "30" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+"]
     input = [parseBEDString(x) for x in elements]
     expect = [parseBEDString(x) for x in expect_str]
     got = collapseRegions(input)
@@ -695,40 +724,74 @@ class GenomicIntervalUnitTests(unittest.TestCase):
 
   def testRegionsIntersection(self):
     debug = False
-    s1_elements = ["chr1"+"\t"+"40" +"\t"+"90" +"\t"+"R11" +"\t"+"0"+"\t"+"+",
-                   "chr1"+"\t"+"100"+"\t"+"120"+"\t"+"R12" +"\t"+"3"+"\t"+"+",
-                   "chr1"+"\t"+"160"+"\t"+"190"+"\t"+"R13" +"\t"+"1"+"\t"+"-",
-                   "chr1"+"\t"+"200"+"\t"+"210"+"\t"+"R14" +"\t"+"0"+"\t"+"-",
-                   "chr2"+"\t"+"10" +"\t"+"20" +"\t"+"R15" +"\t"+"0"+"\t"+"-",
-                   "chr3"+"\t"+"10" +"\t"+"80" +"\t"+"R16" +"\t"+"1"+"\t"+"+",
-                   "chr4"+"\t"+"20" +"\t"+"30" +"\t"+"R17" +"\t"+"1"+"\t"+"+",
-                   "chr4"+"\t"+"40" +"\t"+"50" +"\t"+"R18" +"\t"+"1"+"\t"+"-",
-                   "chr5"+"\t"+"40" +"\t"+"50" +"\t"+"R19" +"\t"+"1"+"\t"+"-"]
-    s2_elements = ["chr1"+"\t"+"10" +"\t"+"20" +"\t"+"R21" +"\t"+"0"+"\t"+"+",
-                   "chr1"+"\t"+"30" +"\t"+"50" +"\t"+"R22" +"\t"+"1"+"\t"+"-",
-                   "chr1"+"\t"+"60" +"\t"+"70" +"\t"+"R23" +"\t"+"0"+"\t"+"+",
-                   "chr1"+"\t"+"80" +"\t"+"110"+"\t"+"R24" +"\t"+"4"+"\t"+"+",
-                   "chr1"+"\t"+"130"+"\t"+"140"+"\t"+"R25" +"\t"+"0"+"\t"+"+",
-                   "chr1"+"\t"+"150"+"\t"+"170"+"\t"+"R26" +"\t"+"1"+"\t"+"-",
-                   "chr1"+"\t"+"180"+"\t"+"220"+"\t"+"R27" +"\t"+"0"+"\t"+"-",
-                   "chr2"+"\t"+"30" +"\t"+"40" +"\t"+"R28" +"\t"+"0"+"\t"+"-",
-                   "chr3"+"\t"+"20" +"\t"+"30" +"\t"+"R29" +"\t"+"0"+"\t"+"-",
-                   "chr3"+"\t"+"40" +"\t"+"50" +"\t"+"R210"+"\t"+"0"+"\t"+"-",
-                   "chr3"+"\t"+"60" +"\t"+"70" +"\t"+"R211"+"\t"+"0"+"\t"+"+",
-                   "chr4"+"\t"+"10" +"\t"+"60" +"\t"+"R212"+"\t"+"0"+"\t"+"+",
-                   "chr5"+"\t"+"10" +"\t"+"20" +"\t"+"R213"+"\t"+"1"+"\t"+"-"]
-    expect_str =  ["chr1"+"\t"+"40" +"\t"+"50" +"\t"+"X"   +"\t"+"0"+"\t"+"+",
-                   "chr1"+"\t"+"60" +"\t"+"70" +"\t"+"X"   +"\t"+"0"+"\t"+"+",
-                   "chr1"+"\t"+"80" +"\t"+"90" +"\t"+"X"   +"\t"+"0"+"\t"+"+",
-                   "chr1"+"\t"+"100"+"\t"+"110"+"\t"+"X"   +"\t"+"0"+"\t"+"+",
-                   "chr1"+"\t"+"160"+"\t"+"170"+"\t"+"X"   +"\t"+"0"+"\t"+"+",
-                   "chr1"+"\t"+"180"+"\t"+"190"+"\t"+"X"   +"\t"+"0"+"\t"+"+",
-                   "chr1"+"\t"+"200"+"\t"+"210"+"\t"+"X"   +"\t"+"0"+"\t"+"+",
-                   "chr3"+"\t"+"20" +"\t"+"30" +"\t"+"X"   +"\t"+"0"+"\t"+"+",
-                   "chr3"+"\t"+"40" +"\t"+"50" +"\t"+"X"   +"\t"+"0"+"\t"+"+",
-                   "chr3"+"\t"+"60" +"\t"+"70" +"\t"+"X"   +"\t"+"0"+"\t"+"+",
-                   "chr4"+"\t"+"20" +"\t"+"30" +"\t"+"X"   +"\t"+"0"+"\t"+"+",
-                   "chr4"+"\t"+"40" +"\t"+"50" +"\t"+"X"   +"\t"+"0"+"\t"+"+"]
+    s1_elements = ["chr1" + "\t" + "40" + "\t" + "90" + "\t" + "R11" + "\t" +
+                   "0" + "\t" + "+",
+                   "chr1" + "\t" + "100" + "\t" + "120" + "\t" + "R12" +
+                   "\t" + "3" + "\t" + "+",
+                   "chr1" + "\t" + "160" + "\t" + "190" + "\t" + "R13" +
+                   "\t" + "1" + "\t" + "-",
+                   "chr1" + "\t" + "200" + "\t" + "210" + "\t" + "R14" +
+                   "\t" + "0" + "\t" + "-",
+                   "chr2" + "\t" + "10" + "\t" + "20" + "\t" + "R15" + "\t" +
+                   "0" + "\t" + "-",
+                   "chr3" + "\t" + "10" + "\t" + "80" + "\t" + "R16" + "\t" +
+                   "1" + "\t" + "+",
+                   "chr4" + "\t" + "20" + "\t" + "30" + "\t" + "R17" + "\t" +
+                   "1" + "\t" + "+",
+                   "chr4" + "\t" + "40" + "\t" + "50" + "\t" + "R18" + "\t" +
+                   "1" + "\t" + "-",
+                   "chr5" + "\t" + "40" + "\t" + "50" + "\t" + "R19" + "\t" +
+                   "1" + "\t" + "-"]
+    s2_elements = ["chr1" + "\t" + "10" + "\t" + "20" + "\t" + "R21" + "\t" +
+                   "0" + "\t" + "+",
+                   "chr1" + "\t" + "30" + "\t" + "50" + "\t" + "R22" + "\t" +
+                   "1" + "\t" + "-",
+                   "chr1" + "\t" + "60" + "\t" + "70" + "\t" + "R23" + "\t" +
+                   "0" + "\t" + "+",
+                   "chr1" + "\t" + "80" + "\t" + "110" + "\t" + "R24" + "\t" +
+                   "4" + "\t" + "+",
+                   "chr1" + "\t" + "130" + "\t" + "140" + "\t" + "R25" + "\t" +
+                   "0" + "\t" + "+",
+                   "chr1" + "\t" + "150" + "\t" + "170" + "\t" + "R26" + "\t" +
+                   "1" + "\t" + "-",
+                   "chr1" + "\t" + "180" + "\t" + "220" + "\t" + "R27" + "\t" +
+                   "0" + "\t" + "-",
+                   "chr2" + "\t" + "30" + "\t" + "40" + "\t" + "R28" + "\t" +
+                   "0" + "\t" + "-",
+                   "chr3" + "\t" + "20" + "\t" + "30" + "\t" + "R29" + "\t" +
+                   "0" + "\t" + "-",
+                   "chr3" + "\t" + "40" + "\t" + "50" + "\t" + "R210" + "\t" +
+                   "0" + "\t" + "-",
+                   "chr3" + "\t" + "60" + "\t" + "70" + "\t" + "R211" + "\t" +
+                   "0" + "\t" + "+",
+                   "chr4" + "\t" + "10" + "\t" + "60" + "\t" + "R212" + "\t" +
+                   "0" + "\t" + "+",
+                   "chr5" + "\t" + "10" + "\t" + "20" + "\t" + "R213" + "\t" +
+                   "1" + "\t" + "-"]
+    expect_str = ["chr1" + "\t" + "40" + "\t" + "50" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+",
+                  "chr1" + "\t" + "60" + "\t" + "70" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+",
+                  "chr1" + "\t" + "80" + "\t" + "90" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+",
+                  "chr1" + "\t" + "100" + "\t" + "110" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+",
+                  "chr1" + "\t" + "160" + "\t" + "170" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+",
+                  "chr1" + "\t" + "180" + "\t" + "190" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+",
+                  "chr1" + "\t" + "200" + "\t" + "210" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+",
+                  "chr3" + "\t" + "20" + "\t" + "30" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+",
+                  "chr3" + "\t" + "40" + "\t" + "50" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+",
+                  "chr3" + "\t" + "60" + "\t" + "70" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+",
+                  "chr4" + "\t" + "20" + "\t" + "30" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+",
+                  "chr4" + "\t" + "40" + "\t" + "50" + "\t" + "X" + "\t" +
+                  "0" + "\t" + "+"]
     input_s1 = [parseBEDString(x) for x in s1_elements]
     input_s2 = [parseBEDString(x) for x in s2_elements]
     expect = [parseBEDString(x) for x in expect_str]
@@ -741,7 +804,7 @@ class GenomicIntervalUnitTests(unittest.TestCase):
     self.assertEqual(expect, got)
 
   def testSizeOfOverlap(self):
-    ## region 2 entirely inside region 1 -- ans = size of region 2
+    # region 2 entirely inside region 1 -- ans = size of region 2
     region1 = GenomicInterval("chr1", 10, 20, "read", 1, "+")
     region2 = GenomicInterval("chr1", 10, 20, "read", 1, "+")
     self.assertEqual(region1.sizeOfOverlap(region2), len(region2))
@@ -750,14 +813,14 @@ class GenomicIntervalUnitTests(unittest.TestCase):
 
   def testSubtract(self):
     debug = False
-    a = GenomicInterval("chr1",10,100)
-    b1 = GenomicInterval("chr1",1,8)
-    b2 = GenomicInterval("chr1",15,20)
-    b3 = GenomicInterval("chr1",50,60)
-    b4 = GenomicInterval("chr1",90,120)
-    c1 = GenomicInterval("chr2",30,40)
+    a = GenomicInterval("chr1", 10, 100)
+    b1 = GenomicInterval("chr1", 1, 8)
+    b2 = GenomicInterval("chr1", 15, 20)
+    b3 = GenomicInterval("chr1", 50, 60)
+    b4 = GenomicInterval("chr1", 90, 120)
+    c1 = GenomicInterval("chr2", 30, 40)
 
-    res = a.subtract([b1,b2,b3,b4,c1])
+    res = a.subtract([b1, b2, b3, b4, c1])
     expect = [GenomicInterval("chr1",10,15),
               GenomicInterval("chr1",20,50),
               GenomicInterval("chr1",60,90)]
@@ -791,43 +854,43 @@ class GenomicIntervalUnitTests(unittest.TestCase):
     debug = False
 
     # set up some 'genes'
-    g1 = GenomicInterval("chr1", 1,  6)
-    g2 = GenomicInterval("chr1", 4,  10)
-    g3 = GenomicInterval("chr1", 5,  19)
-    g4 = GenomicInterval("chr1", 9,  15)
+    g1 = GenomicInterval("chr1", 1, 6)
+    g2 = GenomicInterval("chr1", 4, 10)
+    g3 = GenomicInterval("chr1", 5, 19)
+    g4 = GenomicInterval("chr1", 9, 15)
     g5 = GenomicInterval("chr1", 18, 22)
-    g6 = GenomicInterval("chr2", 1,  12)
-    g7 = GenomicInterval("chr2", 4,  7)
-    buckets = [g1,g2,g3,g4,g5,g6,g7]
+    g6 = GenomicInterval("chr2", 1, 12)
+    g7 = GenomicInterval("chr2", 4, 7)
+    buckets = [g1, g2, g3, g4, g5, g6, g7]
 
     # set up some 'reads'
-    e1 = GenomicInterval("chr1", 2,  3)
-    e2 = GenomicInterval("chr1", 4,  5)
-    e3 = GenomicInterval("chr1", 4,  5)
-    e4 = GenomicInterval("chr1", 7,  9)
-    e5 = GenomicInterval("chr1", 7,  8)
+    e1 = GenomicInterval("chr1", 2, 3)
+    e2 = GenomicInterval("chr1", 4, 5)
+    e3 = GenomicInterval("chr1", 4, 5)
+    e4 = GenomicInterval("chr1", 7, 9)
+    e5 = GenomicInterval("chr1", 7, 8)
     e6 = GenomicInterval("chr1", 10, 14)
     e7 = GenomicInterval("chr1", 12, 20)
     e8 = GenomicInterval("chr1", 20, 23)
     e9 = GenomicInterval("chr1", 24, 26)
-    e10 = GenomicInterval("chr2", 1,  3)
-    e11 = GenomicInterval("chr2", 2,  6)
-    e12 = GenomicInterval("chr2", 4,  8)
+    e10 = GenomicInterval("chr2", 1, 3)
+    e11 = GenomicInterval("chr2", 2, 6)
+    e12 = GenomicInterval("chr2", 4, 8)
     e13 = GenomicInterval("chr2", 10, 15)
-    elements = [e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13]
+    elements = [e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13]
 
     # expected result
-    expect = [(g1, set([e1,e2,e3])),
-              (g2, set([e2,e3,e4,e5])),
-              (g3, set([e4,e5,e6,e7])),
-              (g4, set([e6,e7])),
-              (g5, set([e7,e8])),
-              (g6, set([e10,e11,e12,e13])),
-              (g7, set([e11,e12]))]
+    expect = [(g1, set([e1, e2, e3])),
+              (g2, set([e2, e3, e4, e5])),
+              (g3, set([e4, e5, e6, e7])),
+              (g4, set([e6, e7])),
+              (g5, set([e7, e8])),
+              (g6, set([e10, e11, e12, e13])),
+              (g7, set([e11, e12]))]
 
-    actual = [(x, set(l)) for x,l in bucketIterator(elements, buckets)]
-    ## compare against the interval tree approach too, just for good measure.
-    trees = intervalTreesFromList(elements, openEnded = True)
+    actual = [(x, set(l)) for x, l in bucketIterator(elements, buckets)]
+    # compare against the interval tree approach too, just for good measure.
+    trees = intervalTreesFromList(elements, openEnded=True)
     treeRes = [(g, set(trees[g.chrom].intersectingInterval(g.start, g.end)))
                for g in buckets]
 
@@ -849,11 +912,7 @@ class GenomicIntervalUnitTests(unittest.TestCase):
       sys.stderr.write(expectStr + "\n")
 
     self.assertEqual(actual, expect)
-
-
     self.assertEqual(actual, treeRes)
-
-
 
   def testDistance(self):
     """
@@ -877,14 +936,68 @@ class GenomicIntervalUnitTests(unittest.TestCase):
 
   def testIntersects(self):
     """
-      @summary: test that intervals on different chroms don't intersect even
-                when they have the same co-ordinates. Test that intervals
-                on the same chrom don't intersect when only the end co-ordinate
-                overlaps the start of the other.
-      @todo: test needs to be implemented
+    test GenomicInterval class code for determining whether two regions overlap
     """
-    pass
 
+    # region A contained entirely inside region B
+    a = GenomicInterval("chr1", 10, 20)
+    b = GenomicInterval("chr1", 15, 18)
+    self.assertEqual(a.intersects(b), True)
+
+    # region B contained entirely inside region A
+    a = GenomicInterval("chr1", 15, 18)
+    b = GenomicInterval("chr1", 10, 20)
+    self.assertEqual(a.intersects(b), True)
+
+    # region A overlaps start of region B
+    a = GenomicInterval("chr1", 15, 20)
+    b = GenomicInterval("chr1", 18, 25)
+    self.assertEqual(a.intersects(b), True)
+
+    # region A overlaps end of region B
+    a = GenomicInterval("chr1", 18, 25)
+    b = GenomicInterval("chr1", 10, 20)
+    self.assertEqual(a.intersects(b), True)
+
+    # region B overlaps one posiiton in A -- start
+    a = GenomicInterval("chr1", 15, 18)
+    b = GenomicInterval("chr1", 10, 16)
+    self.assertEqual(a.intersects(b), True)
+
+    # region B overlaps one position in A -- end
+    a = GenomicInterval("chr1", 15, 18)
+    b = GenomicInterval("chr1", 17, 26)
+    self.assertEqual(a.intersects(b), True)
+
+    # regions overlap on start/end, but different chroms
+    a = GenomicInterval("chr1", 15, 18)
+    b = GenomicInterval("chr2", 10, 20)
+    self.assertEqual(a.intersects(b), False)
+
+    # boundary case: region A ends immediately before B starts
+    a = GenomicInterval("chr1", 15, 18)
+    b = GenomicInterval("chr1", 18, 25)
+    self.assertEqual(a.intersects(b), False)
+
+    # boundary case: region A start immediately after B ends
+    a = GenomicInterval("chr1", 16, 18)
+    b = GenomicInterval("chr1", 10, 16)
+    self.assertEqual(a.intersects(b), False)
+
+    # boundary case: region B ends immediately before A starts
+    a = GenomicInterval("chr1", 15, 18)
+    b = GenomicInterval("chr1", 10, 15)
+    self.assertEqual(a.intersects(b), False)
+
+    # boundary case: region B start immediately after A ends
+    a = GenomicInterval("chr1", 15, 18)
+    b = GenomicInterval("chr1", 18, 25)
+    self.assertEqual(a.intersects(b), False)
+
+
+###############################################################################
+#               ENTRY POINT WHEN RUN AS A STAND-ALONE MODULE                  #
+###############################################################################
 
 if __name__ == "__main__":
-    unittest.main(argv = [sys.argv[0]])
+    unittest.main(argv=[sys.argv[0]])
