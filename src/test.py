@@ -52,7 +52,7 @@ from pyokit.io.wigIterators import WigIteratorUnitTests
 from pyokit.datastruct.multipleAlignment import TestAlignments
 from pyokit.datastruct.retrotransposon import TestRetrotransposon
 from pyokit.datastruct.intervalTree import *
-from pyokit.datastruct.genomicInterval import *
+from pyokit.datastruct.genomicInterval import TestGenomicInterval
 from pyokit.datastruct.sequence import *
 from pyokit.datastruct.maf import *
 
@@ -65,15 +65,34 @@ from pyokit.util.meta import TestMeta
 
 
 if __name__ == "__main__":
-  sys.stderr.write("registered tests in " + str(TestAlignmentIterators) + "\n")
-  sys.stderr.write("registered tests in " + str(TestIndexedFile) + "\n")
-  sys.stderr.write("registered tests in " + str(BEDIteratorUnitTests) + "\n")
-  sys.stderr.write("registered tests in " + str(FastQUintTests) + "\n")
-  sys.stderr.write("registered tests in " + str(TestFastaIterators) + "\n")
-  sys.stderr.write("registered tests in " + str(WigIteratorUnitTests) + "\n")
-  sys.stderr.write("registered tests in " + str(TestRetrotransposon) + "\n")
-  sys.stderr.write("registered tests in " + str(TestAlignments) + "\n")
-  sys.stderr.write("registered tests in " + str(ProbabilityTests) + "\n")
-  sys.stderr.write("registered tests in " + str(FisherTests) + "\n")
-  sys.stderr.write("registered tests in " + str(TestRepMaskerIterators) + "\n")
+  head = " ------------------------  DATA STRUCTURES  --------------------- \n"
+  sys.stderr.write(head)
+  sys.stderr.write("registered tests in \n")
+  sys.stderr.write("  " + str(TestAlignments) + "\n")
+  sys.stderr.write("  " + str(TestRetrotransposon) + "\n")
+  sys.stderr.write("  " + str(TestGenomicInterval) + "\n\n")
+
+  head = " ------------------------        IO         --------------------- \n"
+  sys.stderr.write(head)
+  sys.stderr.write("registered tests in \n")
+  sys.stderr.write("  " + str(TestAlignmentIterators) + "\n")
+  sys.stderr.write("  " + str(TestIndexedFile) + "\n")
+  sys.stderr.write("  " + str(BEDIteratorUnitTests) + "\n")
+  sys.stderr.write("  " + str(FastQUintTests) + "\n")
+  sys.stderr.write("  " + str(TestFastaIterators) + "\n")
+  sys.stderr.write("  " + str(WigIteratorUnitTests) + "\n")
+  sys.stderr.write("  " + str(TestRepMaskerIterators) + "\n\n")
+
+  head = " ------------------------     STATISTICS    --------------------- \n"
+  sys.stderr.write(head)
+  sys.stderr.write("registered tests in \n")
+  sys.stderr.write("  " + str(ProbabilityTests) + "\n")
+  sys.stderr.write("  " + str(FisherTests) + "\n\n")
+
+  head = " ------------------------  TESTING AND UTIL  -------------------- \n"
+  sys.stderr.write(head)
+  sys.stderr.write("registered tests in \n")
+  sys.stderr.write("  " + str(TestMeta) + "\n")
+
+  sys.stderr.write("\n\n RUNNING TESTS \n\n")
   unittest.main()
