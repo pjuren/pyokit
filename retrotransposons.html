@@ -80,7 +80,7 @@ from the IO module. alignment_index should be left as None (default) when
 loading only annotations (more details about this below).</p>
 <dl class="function">
 <dt id="pyokit.io.repeatMaskerIterators.repeat_masker_iterator">
-<code class="descclassname">pyokit.io.repeatMaskerIterators.</code><code class="descname">repeat_masker_iterator</code><span class="sig-paren">(</span><em>fh</em>, <em>header=True</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.repeatMaskerIterators.repeat_masker_iterator" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.io.repeatMaskerIterators.</code><code class="descname">repeat_masker_iterator</code><span class="sig-paren">(</span><em>fh</em>, <em>alignment_index=None</em>, <em>header=True</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.repeatMaskerIterators.repeat_masker_iterator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Iterator for repeatmasker coordinate annotation files. These files describe
 the location of repeat occurrences. There is (optionally) a two-line header
 with the names of the fields (ignored by the iterator, if present). Each line

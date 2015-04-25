@@ -92,9 +92,9 @@ and score 0</td>
 <dl class="function">
 <dt id="pyokit.datastruct.genomicInterval.regionsIntersection">
 <code class="descclassname">pyokit.datastruct.genomicInterval.</code><code class="descname">regionsIntersection</code><span class="sig-paren">(</span><em>s1</em>, <em>s2</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.genomicInterval.regionsIntersection" title="Permalink to this definition">¶</a></dt>
-<dd><p>given two lists of genomic regions with chromosome, start and end coordinates,
-return a new list of regions which is the intersection of those two sets.
-Lists must be sorted by chromosome and start index</p>
+<dd><p>given two lists of genomic regions with chromosome, start and end
+coordinates, return a new list of regions which is the intersection of those
+two sets. Lists must be sorted by chromosome and start index</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -111,8 +111,8 @@ score 0</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name" colspan="2">Raises GenomicIntervalError:</th></tr>
-<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first">if the input regions are not sorted correctly (by
-chromosome and start index)</p>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first">if the input regions are not sorted correctly
+(by chromosome and start index)</p>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Note:</th><td class="field-body"><p class="first last">O(n) time, O(n) space; informally, might use up to 3x space of input</p>
@@ -150,15 +150,16 @@ object that contains genomic intervals. Here&#8217;s the signature of the iterat
 <dt id="pyokit.datastruct.genomicInterval.bucketIterator">
 <code class="descclassname">pyokit.datastruct.genomicInterval.</code><code class="descname">bucketIterator</code><span class="sig-paren">(</span><em>elements</em>, <em>buckets</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.genomicInterval.bucketIterator" title="Permalink to this definition">¶</a></dt>
 <dd><p>iterate over the genomic regions in buckets and, for each one, yeild the
-bucket region and a list of regions from elements that intersect the bucket.</p>
+bucket region and a list of regions from elements that intersect the
+bucket.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>elements</strong> &#8211; the genomic intervals to place into the buckets. Must be
-sorted by chromosome and start index. This could be a list,
-or an iterator.</li>
+sorted by chromosome and start index. This could be a
+list, or an iterator.</li>
 <li><strong>buckets</strong> &#8211; the buckets into which genomic intervals should be binned.
 Must be sorted by chromosome and start index. This could be
 a list, or an iterator</li>
