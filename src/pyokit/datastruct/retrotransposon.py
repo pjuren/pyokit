@@ -179,15 +179,15 @@ def from_repeat_masker_string(s):
   con_pos_left = int(parts[13]) if strand is "+" else int(parts[11])
 
   # might get ID, mgiht not -- its sometimes missing.
-  # we won't be using this...
-  # repeat_id = parts[14].strip() if len(parts) != 15 else None
+  repeat_id = parts[14].strip() if len(parts) == 15 else None
 
   # we can compute the length of the consensus using the 'leftover' index
   con_seq_len = con_pos_end + con_pos_left
 
   rt = Retrotransposon(repeat_name, repeat_family)
   return RetrotransposonOccurrence(q_seq, q_seq_start, q_seq_end, strand,
-                                   con_pos_start, con_pos_end, con_seq_len, rt)
+                                   con_pos_start, con_pos_end, con_seq_len,
+                                   rt, uniq_id=repeat_id)
 
 
 ###############################################################################
@@ -208,7 +208,10 @@ class Retrotransposon(object):
 
 class RetrotransposonOccurrence(GenomicInterval):
   """
-  Represents the occurrence of a retrotransposon in a genome.
+  Represents the occurrence of a retrotransposon in a genome. Note that
+  occurrences are always consdiered to be on the positive strand of the
+  genome, and might match either the concensus sequence of the repeat, or
+  its reverse complement.
 
   :param chrom:                  name of the sequence the occurrence is on
   :param genomic_start:          location in the sequence the occurrence starts
@@ -222,11 +225,13 @@ class RetrotransposonOccurrence(GenomicInterval):
   :param retrotransposon:        the retrotransposon this is an occurrence of
   :param pairwise_alignment:     the full pairwise alignment between this
                                  occurrence and the consensus sequence
+  :param uniq_id:                a unique identifier for this alignment, if
+                                 one exists
   """
 
   def __init__(self, chrom, genomic_start, genomic_end, consensus_match_strand,
                consensus_start, consensus_end, consensus_len, retrotransposon,
-               pairwise_alignment=None):
+               pairwise_alignment=None, uniq_id=None):
     GenomicInterval.__init__(self, chrom, genomic_start, genomic_end,
                              retrotransposon.name, 0, "+")
     self.consensus_start = consensus_start
@@ -234,6 +239,7 @@ class RetrotransposonOccurrence(GenomicInterval):
     self.consensus_len = consensus_len
     self.consensus_match_strand = consensus_match_strand
     self.retrotransposon = retrotransposon
+    self.uniq_id = uniq_id
     # TODO would be good to provide some error-checking here to make sure the
     # alignment matches up properly with this occurrence...
     self.pairwise_alignment = pairwise_alignment
@@ -242,19 +248,38 @@ class RetrotransposonOccurrence(GenomicInterval):
     return GenomicInterval.__str__(self) + " --> " +\
         str(self.consensus_start) +\
         "\t" + str(self.consensus_end) + "\t" + str(self.consensus_len) +\
-        "\t" + str(self.family_name) + "\t" +\
+        "\t" + str(self.retrotransposon.family_name) + "#" +\
+        str(self.retrotransposon.name) + "\t" +\
         str(self.consensus_match_strand)
 
   def liftover(self, intersecting_region):
     """
     Lift a region that overlaps the genomic occurrence of the retrotransposon
-    to consensus sequence co-ordinates. If we ahve the full alignment, we will
-    make use of that, otherwise we will fall back on the co-ordinates of the
-    match start/end within the consensus. Note that since the alignment is
-    gapped, the resultant co-ordinates can be slightly off if just using the
-    start/end coordinates of the match
+    to consensus sequence co-ordinates. This method will behave differently
+    depending on whether this retrotransposon occurrance contains a full
+    alignment or not. If it does, the alignment is used to do the liftover and
+    an exact result is provided. If it does not, then there are three
+    possibilities:
+
+    1. the length of the genomic match is equal to the length of the concensus
+       match; in this case, the liftover is trivial.
+    2. the length of the genomic match is greater than the concensus match,
+       presumably because there are insertions in the genomic sequence. In this
+       case, we uniformly distribute the insertions through the genomic region.
+       e.g. if the genomic regions is 100nt long and the consensus match is
+       90nt long, we will consider an insertion to occurr every 10nt in the
+       genomic sequence. The start and end coordinates of the region after
+       lifting will be reduced by the number of genomic insertions that would
+       have come before them.
+    3. the length of the genomic match is smaller than the concensus match,
+       presumably because the genomic region contains deletions. In this case,
+       we uniformly distribute the deletions through the genomic region. This
+       is the trickiest case because it fragments the region after liftover.
 
     :param intersecting_region: a region that intersects this occurrence.
+    :return: list of GenomicInterval objects. This is a list because a genomic
+             deletion of part of the retrotransposon can fragment the
+             intersecting region and result in more than one returned interval.
     """
 
     # a little sanity check here to make sure intersecting_region really does..
@@ -264,21 +289,44 @@ class RetrotransposonOccurrence(GenomicInterval):
                                  "in " + str(self) + ", but it doesn't " +
                                  "intersect!")
 
-    if self.pariwise_alignment is not None:
-      s, e = self.pairwise_alignment.liftover(intersecting_region.start,
+    name = (self.retrotransposon.family_name + "#" +
+            self.retrotransposon.name)
+
+    if self.pairwise_alignment is not None:
+      return self.pairwise_alignment.liftover(intersecting_region.start,
                                               intersecting_region.end)
     else:
-      s = max(intersecting_region.start - self.start, 0)
-      e = min(s + (intersecting_region.end - intersecting_region.start),
-              self.consensus_len)
-      if self.consensus_match_strand is "-":
-        e = self.consensus_len - s
-        s = max(e - (intersecting_region.end - intersecting_region.start),
-                0)
+      size_dif = (self.consensus_end - self.consensus_start) - len(self)
+      if self.consensus_match_strand is '+':
+        if size_dif == 0:
+          s = max(intersecting_region.start - self.start, 0) +\
+              self.consensus_start
+          e = min(max(intersecting_region.end - self.start, 0) +
+                  self.consensus_start, self.consensus_len)
+          g = GenomicInterval(name, s, e, intersecting_region.name,
+                              intersecting_region.score, self.strand)
+          return [g]
+        elif size_dif < 0:
+          # match is longer, assume genomic region contains deletions
 
-    return GenomicInterval(self.name, s, e,
-                           intersecting_region.name, intersecting_region.score,
-                           self.strand)
+          raise RetrotransposonError("oops; not implemented yet")
+        elif size_dif > 0:
+          # match is shorter, assume genomic region contains insertions
+          raise RetrotransposonError("oops; not implemented yet")
+      elif self.consensus_match_strand is '-':
+        if size_dif == 0:
+          e = (self.consensus_end -\
+               max(intersecting_region.start - self.start, 0))
+          s = (self.consensus_end -\
+               min(max(intersecting_region.end - self.start, 0), len(self)))
+          g = GenomicInterval(name, s, e, intersecting_region.name,
+                              intersecting_region.score, self.strand)
+          return [g]
+        else:
+          raise RetrotransposonError("oops; not implemented yet")
+      else:
+        raise RetrotransposonError("couldn't determine strand of " +
+                                   "retrotransposon occurrance " + str(self))
 
 
 ###############################################################################
@@ -290,6 +338,36 @@ class TestRetrotransposon(unittest.TestCase):
   Test cases for this module.
   """
 
+  def setUp(self):
+    self.rt1 = Retrotransposon("(TAACCC)n", "Simple_repeat")
+    self.rt2 = Retrotransposon("TAR1", "Satellite/telo")
+    self.rt3 = Retrotransposon("L1MC5a", "LINE/L1")
+    self.rto0 = RetrotransposonOccurrence("chr1", 10001, 10468, '+', 1, 468,
+                                          468, self.rt1, uniq_id=0)
+    self.rto1 = RetrotransposonOccurrence("chr1", 10001, 10468, '+', 1, 463,
+                                          463, self.rt1, uniq_id=1)
+    self.rto2 = RetrotransposonOccurrence("chr14", 10469, 11447, '-', 483,
+                                          1712, 1229, self.rt2, uniq_id=2)
+    self.rto3 = RetrotransposonOccurrence("chrX", 11505, 11675, '-',
+                                          5452, 5648, 196, self.rt3, uniq_id=3)
+    self.rto4 = RetrotransposonOccurrence("chr14", 10469, 11447, '-', 469,
+                                          1447, 3000, self.rt2, uniq_id=4)
+    self.rto5 = RetrotransposonOccurrence("chrX", 11505, 11675, '-',
+                                          505, 701, 1000, self.rt3, uniq_id=5)
+
+    self.rm_0 = ("463   1.3  0.6  1.7  chr1      10001   10468 (249240153) +  "
+                 + "(TAACCC)n      Simple_repeat          1  468    (0)     1")
+    self.rm_1 = ("463   1.3  0.6  1.7  chr1      10001   10468 (249240153) +  "
+                 + "(TAACCC)n      Simple_repeat          1  463    (0)     1")
+    self.rm_2 = ("3612  11.4 21.5  1.3  chr14    10469   11447 (249239174) C  "
+                 + "TAR1           Satellite/telo     (399) 1712    483     2")
+    self.rm_3 = ("484  25.1 13.2  0.0  chrX      11505   11675 (249238946) C  "
+                 + "L1MC5a         LINE/L1           (2382) 5648   5452     3")
+    self.rm_4 = ("3612  11.4 21.5  1.3  chr14    10469   11447 (249239174) C  "
+                 + "TAR1           Satellite/telo     (399) 1447    469     2")
+    self.rm_5 = ("484  25.1 13.2  0.0  chrX      11505   11675 (249238946) C  "
+                 + "L1MC5a         LINE/L1           (2382) 675   505     3")
+
   def test_from_rm_string(self):
     """
     test the conversion of repeat-masker strings to retrotransposon occurrence
@@ -297,16 +375,9 @@ class TestRetrotransposon(unittest.TestCase):
     enough of the RM fields to reconstruct it.
     """
 
-    rm_1 = ("463   1.3  0.6  1.7  chr1        10001   10468 (249240153) +  "
-            + "(TAACCC)n      Simple_repeat            1  463    (0)      1")
-    rm_2 = ("3612  11.4 21.5  1.3  chr14        10469   11447 (249239174) C  "
-            + "TAR1           Satellite/telo       (399) 1712    483      2")
-    rm_3 = ("484  25.1 13.2  0.0  chrX        11505   11675 (249238946) C  "
-            + "L1MC5a         LINE/L1             (2382) 5648   5452      3")
-
-    rm_1_p = from_repeat_masker_string(rm_1)
-    rm_2_p = from_repeat_masker_string(rm_2)
-    rm_3_p = from_repeat_masker_string(rm_3)
+    rm_1_p = from_repeat_masker_string(self.rm_1)
+    rm_2_p = from_repeat_masker_string(self.rm_2)
+    rm_3_p = from_repeat_masker_string(self.rm_3)
 
     self.assertEqual(rm_1_p.chrom, "chr1")
     self.assertEqual(rm_2_p.chrom, "chr14")
@@ -351,6 +422,117 @@ class TestRetrotransposon(unittest.TestCase):
     self.assertEqual(rm_1_p.pairwise_alignment, None)
     self.assertEqual(rm_2_p.pairwise_alignment, None)
     self.assertEqual(rm_3_p.pairwise_alignment, None)
+
+  def test_liftover_pos_strand_no_alignment_no_indels(self):
+    """
+    test lifting regions from genomic coordinates into repeat coordinates when
+    the match is to the consensus sequence (not the reverse complement) and
+    we don't have a full allignment to use
+
+    the test case that can be used for this are:
+    rto0   "chr1",  10001   10468  '+'   ->    1  468      +
+
+    (others are all matches to reverse complement of consensus); the first
+    gives use a mapping where the size of the genomic region is the same as
+    the matching region in the consensus, while the second gives us a mapping
+    where the genomic region is larger than the consensus and so presumably
+    contains some insertions, and finally the last one gives us a mapping
+    where the genomic region is ...
+    """
+
+    # intersecting region is fully contained within repeat.
+    in1 = GenomicInterval("chr1", 10005, 10015, "AA", 50, '+')
+    lf1 = self.rto0.liftover(in1)
+    expc1 = [GenomicInterval("Simple_repeat#(TAACCC)n", 5, 15, "AA", 50, '+')]
+    self.assertEqual(lf1, expc1)
+
+    # intersecting region overlaps the start of the match.
+    in2 = GenomicInterval("chr1", 9995, 10015, "BB", 10, '+')
+    lf2 = self.rto0.liftover(in2)
+    expc2 = [GenomicInterval("Simple_repeat#(TAACCC)n", 1, 15, "BB", 10, '+')]
+    self.assertEqual(lf2, expc2)
+
+    # we have no full alignment, the match is the same size as the consensus
+    # and the intersecting region is at the start of the match (boundary case)
+    in3 = GenomicInterval("chr1", 10001, 10015, "CC", 20, '+')
+    lf3 = self.rto0.liftover(in3)
+    expc3 = [GenomicInterval("Simple_repeat#(TAACCC)n", 1, 15, "CC", 20, '+')]
+    self.assertEqual(lf3, expc3)
+
+    # intersecting region overlaps the end of the match
+    in4 = GenomicInterval("chr1", 10460, 10470, "DD", 14, '+')
+    lf4 = self.rto0.liftover(in4)
+    expc4 = GenomicInterval("Simple_repeat#(TAACCC)n", 460, 468, "DD", 14, '+')
+    self.assertEqual(lf4, [expc4])
+
+    # intersecting region is at the end of the match (boundary case)
+    in5 = GenomicInterval("chr1", 10467, 10470, "EE", 50, '+')
+    lf5 = self.rto0.liftover(in5)
+    expc5 = GenomicInterval("Simple_repeat#(TAACCC)n", 467, 468, "EE", 50, '+')
+    self.assertEqual(lf5, [expc5])
+
+    # we have no full alignment, the match is the same size as the consensus
+    # and the intersecting region ends before (at) the match; this should fail
+    # with an exception
+    in6 = GenomicInterval("chr1", 9995, 10001, "FF", 50, '+')
+    self.assertRaises(RetrotransposonError, self.rto0.liftover, in6)
+
+    # we have no full alignment, the match is the same size as the consensus
+    # and the intersecting region start after (at) the match; this should fail
+    # with an exception
+    in7 = GenomicInterval("chr1", 10468, 10470, "GG", 50, '+')
+    self.assertRaises(RetrotransposonError, self.rto0.liftover, in7)
+
+  def test_liftover_neg_strand_no_alignment_no_indels(self):
+    """
+    test lifting regions from genomic coordinates to repeat coordinates when
+    the repeat occurrence is a match to the reverse complement of the
+    consensus.
+
+    rto4 chr14 10469 11447  -->  469  1447  -
+
+    """
+    # intersecting region is fully contained within repeat.
+    in1 = GenomicInterval("chr14", 10470, 10480, "AA", 50, '+')
+    lf1 = self.rto4.liftover(in1)
+    expc1 = [GenomicInterval("Satellite/telo#TAR1", 1436, 1446, "AA",
+                             50, '+')]
+    self.assertEqual(lf1, expc1)
+
+    # intersecting region overlaps the start of the match.
+    in2 = GenomicInterval("chr14", 10465, 10475, "BB", 10, '+')
+    lf2 = self.rto4.liftover(in2)
+    expc2 = [GenomicInterval("Satellite/telo#TAR1", 1441, 1447, "BB",
+                             10, '+')]
+    self.assertEqual(lf2, expc2)
+
+    # intersecting region is at the start of the match (boundary case)
+    in3 = GenomicInterval("chr14", 10459, 10470, "CC", 20, '+')
+    lf3 = self.rto4.liftover(in3)
+    expc3 = [GenomicInterval("Satellite/telo#TAR1", 1446, 1447, "CC", 20, '+')]
+    self.assertEqual(lf3, expc3)
+
+    # intersecting region overlaps the end of the match
+    in4 = GenomicInterval("chr14", 11440, 11450, "DD", 14, '+')
+    lf4 = self.rto4.liftover(in4)
+    expc4 = GenomicInterval("Satellite/telo#TAR1", 469, 476, "DD", 14, '+')
+    self.assertEqual(lf4, [expc4])
+
+    # intersecting region is at the end of the match (boundary case)
+    in5 = GenomicInterval("chr14", 11446, 11450, "EE", 50, '+')
+    lf5 = self.rto4.liftover(in5)
+    expc5 = GenomicInterval("Satellite/telo#TAR1", 469, 470, "EE", 50, '+')
+    #self.assertEqual(lf5, [expc5])
+
+    # intersecting region ends before (at) the match; this should fail
+    # with an exception
+    in6 = GenomicInterval("chr14", 9995, 10469, "FF", 50, '+')
+    self.assertRaises(RetrotransposonError, self.rto4.liftover, in6)
+
+    # intersecting region start after (at) the match; this should fail
+    # with an exception
+    in7 = GenomicInterval("chr14", 11447, 11470, "GG", 50, '+')
+    self.assertRaises(RetrotransposonError, self.rto4.liftover, in7)
 
 
 ###############################################################################
