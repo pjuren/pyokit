@@ -219,9 +219,13 @@ class RetrotransposonOccurrence(GenomicInterval):
   :param consensus_match_strand: the strand of the consensus this occurrence
                                  is a match to ('+', or '-', where - means a
                                  match to the rev-comp of the consensus)
-  :param consensus_start:
-  :param consensus_end:
-  :param concensus_len:
+  :param consensus_start:        start coordinate of the match, in consensus
+                                 sequence coordinates.
+  :param consensus_end:          end coordinate of the match, in consensus
+                                 sequence coordinates.
+  :param concensus_len:          the length of the consensus sequence (not
+                                 the length of the match in the consensus
+                                 sequence)
   :param retrotransposon:        the retrotransposon this is an occurrence of
   :param pairwise_alignment:     the full pairwise alignment between this
                                  occurrence and the consensus sequence
@@ -236,6 +240,7 @@ class RetrotransposonOccurrence(GenomicInterval):
                              retrotransposon.name, 0, "+")
     self.consensus_start = consensus_start
     self.consensus_end = consensus_end
+    # TODO check that consensus length is at least as long as end index
     self.consensus_len = consensus_len
     self.consensus_match_strand = consensus_match_strand
     self.retrotransposon = retrotransposon
@@ -296,7 +301,8 @@ class RetrotransposonOccurrence(GenomicInterval):
       return self.pairwise_alignment.liftover(intersecting_region.start,
                                               intersecting_region.end)
     else:
-      size_dif = (self.consensus_end - self.consensus_start) - len(self)
+      consensus_match_length = self.consensus_end - self.consensus_start
+      size_dif = consensus_match_length - len(self)
       if self.consensus_match_strand is '+':
         if size_dif == 0:
           s = max(intersecting_region.start - self.start, 0) +\
@@ -339,12 +345,16 @@ class RetrotransposonOccurrence(GenomicInterval):
           gap_interval = len(self) / (-1 * size_dif)
           s_dist_to_gen_start = max(intersecting_region.start - self.start, 0)
           e_dist_to_gen_start = max(intersecting_region.end - self.start, 0)
-          s = self.consensus_end - s_dist_to_gen_start
-          e = self.consensus_end - e_dist_to_gen_start
-          s = s + (s_dist_to_gen_start / gap_interval)
-          e = min(e + (e_dist_to_gen_start / gap_interval), self.consensus_len)
+          e = self.consensus_end - s_dist_to_gen_start
+          s = self.consensus_end - e_dist_to_gen_start
+          s = max(s + (e_dist_to_gen_start / gap_interval),
+                  self.consensus_start)
+          e = min(e + (s_dist_to_gen_start / gap_interval), self.consensus_end)
           g = GenomicInterval(name, s, e, intersecting_region.name,
                               intersecting_region.score, self.strand)
+          if s == e:
+            return []
+          return [g]
         else:
           # match is shorter, assume genomic region contains insertions
           raise RetrotransposonError("oops; not implemented yet")
@@ -379,6 +389,9 @@ class TestRetrotransposon(unittest.TestCase):
     self.rto5 = RetrotransposonOccurrence("chrX", 11505, 11675, '-',
                                           505, 701, 1000, self.rt3, uniq_id=5)
 
+    self.rto6 = RetrotransposonOccurrence("chr5", 10, 50, '-',
+                                          10, 40, 196, self.rt3, uniq_id=6)
+
     self.rm_0 = ("463   1.3  0.6  1.7  chr1      10001   10468 (249240153) +  "
                  + "(TAACCC)n      Simple_repeat          1  468    (0)     1")
     self.rm_1 = ("463   1.3  0.6  1.7  chr1      10001   10468 (249240153) +  "
@@ -391,6 +404,8 @@ class TestRetrotransposon(unittest.TestCase):
                  + "TAR1           Satellite/telo     (399) 1447    469     2")
     self.rm_5 = ("484  25.1 13.2  0.0  chrX      11505   11675 (249238946) C  "
                  + "L1MC5a         LINE/L1           (2382) 675   505     3")
+    self.rm_6 = ("146  25.6 14.9  0.0  chr5      10 50 (249238946) C " +
+                 "L1MC5a         LINE/L1             (2382) 10    40      6")
 
   def test_from_rm_string(self):
     """
@@ -632,6 +647,92 @@ class TestRetrotransposon(unittest.TestCase):
     expc10 = []
     self.assertEqual(lf10, expc10)
 
+  def test_liftover_no_alignment_genomic_insertions_neg(self):
+    """
+    test lifting regions when there is an unknown net insertion in the genomic
+    region (i.e. genomic region is larger than match to consensus) and the
+    match is to the reverse complement of the consensus sequence
+
+    rto6  chr5 10 50 --> 10 40 -   (LINE/L1#L1MC5a)
+    [40 to 30; genomic region is larger by 10bp; insert space is 4]
+    """
+
+    # intersecting region overlaps start and no insertions in genomic seq.
+    in1 = GenomicInterval("chr5", 8, 12, "AA", 50, '+')
+    lf1 = self.rto6.liftover(in1)
+    expc1 = [GenomicInterval("LINE/L1#L1MC5a", 38, 40, "AA", 50, '+')]
+    self.assertEqual(lf1, expc1)
+
+    # intersecting region overlaps start and some insertions in genomic seq.
+    in2 = GenomicInterval("chr5", 8, 20, "BB", 50, '+')
+    lf2 = self.rto6.liftover(in2)
+    expc2 = [GenomicInterval("LINE/L1#L1MC5a", 32, 40, "BB", 50, '+')]
+    self.assertEqual(lf2, expc2)
+
+    # intersecting region overlaps whole match
+    in3 = GenomicInterval("chr5", 8, 55, "CC", 50, '+')
+    lf3 = self.rto6.liftover(in3)
+    expc3 = [GenomicInterval("LINE/L1#L1MC5a", 10, 40, "CC", 50, '+')]
+    self.assertEqual(lf3, expc3)
+
+    # intersecting region overlaps end and some insertions
+    in4 = GenomicInterval("chr5", 40, 55, "DD", 50, '+')
+    lf4 = self.rto6.liftover(in4)
+    expc4 = [GenomicInterval("LINE/L1#L1MC5a", 10, 17, "DD", 50, '+')]
+    self.assertEqual(lf4, expc4)
+
+    # start sits on a gap
+    in5 = GenomicInterval("chr5", 14, 17, "EE", 50, '+')
+    lf5 = self.rto6.liftover(in5)
+    expc5 = [GenomicInterval("LINE/L1#L1MC5a", 34, 37, "EE", 50, '+')]
+    self.assertEqual(lf5, expc5)
+
+    # start is first after gap
+    in6 = GenomicInterval("chr5", 15, 17, "FF", 50, '+')
+    lf6 = self.rto6.liftover(in6)
+    expc6 = [GenomicInterval("LINE/L1#L1MC5a", 34, 36, "FF", 50, '+')]
+    self.assertEqual(lf6, expc6)
+
+    # start is first before gap
+    in7 = GenomicInterval("chr5", 13, 17, "GG", 50, '+')
+    lf7 = self.rto6.liftover(in7)
+    expc7 = [GenomicInterval("LINE/L1#L1MC5a", 34, 37, "GG", 50, '+')]
+    self.assertEqual(lf7, expc7)
+
+    # end is first before gap
+    in8 = GenomicInterval("chr5", 10, 13, "HH", 50, '+')
+    lf8 = self.rto6.liftover(in8)
+    expc8 = [GenomicInterval("LINE/L1#L1MC5a", 37, 40, "HH", 50, '+')]
+    self.assertEqual(lf8, expc8)
+
+    # end sits on gap
+    in9 = GenomicInterval("chr5", 10, 14, "II", 50, '+')
+    lf9 = self.rto6.liftover(in9)
+    expc9 = [GenomicInterval("LINE/L1#L1MC5a", 37, 40, "II", 50, '+')]
+    self.assertEqual(lf9, expc9)
+
+    # end is first after gap
+    in10 = GenomicInterval("chr5", 10, 15, "JJ", 50, '+')
+    lf10 = self.rto6.liftover(in10)
+    expc10 = [GenomicInterval("LINE/L1#L1MC5a", 36, 40, "JJ", 50, '+')]
+    self.assertEqual(lf10, expc10)
+
+    # region covers only gaps -- should get an empty list
+    in11 = GenomicInterval("chr5", 13, 14, "KK", 50, '+')
+    lf11 = self.rto6.liftover(in11)
+    self.assertEqual(lf11, [])
+
+
+  def test_liftover_no_alignment_genomic_deletions_neg(self):
+    """
+    test lifting regions when there is an unknown net deletion in the genomic
+    region (i.e. genomic region is shorter than match to consensus) and the
+    match is to the reverse complement of the consensus sequence
+
+    rto3  chrX   11505  11675  -->  5452 5648  -
+    [170 to 196; genomic region is smaller by 26bp]
+    """
+    pass
 
 
 ###############################################################################
