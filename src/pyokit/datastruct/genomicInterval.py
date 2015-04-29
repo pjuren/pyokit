@@ -124,9 +124,9 @@ def collapseRegions(s):
     # make sure things are sorted..
     if (s[i].chrom < s[i - 1].chrom) or \
        (s[i].chrom == s[i - 1].chrom and s[i].start < s[i - 1].start):
-      raise GenomicIntervalError("collapsing regions failed. saw this region: "
-                                 + str(s[i - 1]) + " before this one: "
-                                 + str(s[i]))
+      raise GenomicIntervalError("collapsing regions failed. saw this " +
+                                 "region: " + str(s[i - 1]) + " before this " +
+                                 "one: " + str(s[i]))
 
     # because of sorting order, we know that nothing else exists with
     # start less than s[i] which we haven't already seen.
@@ -177,7 +177,6 @@ def regionsIntersection(s1, s2):
       sys.stderr.write("processing from s1_c : " + str(s1_c[i]) + "\n")
 
     # find first thing in s2_c with end in or after s1_c[i]
-    hits = True
     if debug:
       sys.stderr.write("i = " + str(i) + " and j = " + str(j) + "\n")
     while (j < len(s2_c) and
@@ -239,7 +238,7 @@ def bucketIterator(elements, buckets) :
       try :
         prev = self._head
         self._head = self._iterable.next()
-        if (prev != None) and \
+        if (prev is not None) and \
            ((prev.chrom > self._head.chrom) or
             ((prev.chrom == self._head.chrom) and
              (prev.start > self._head.start))) :
@@ -250,7 +249,7 @@ def bucketIterator(elements, buckets) :
     def __next__(self):
       res = self._head
       self._fill()
-      if res == None :
+      if res is None :
         raise StopIteration()
       return res
 
@@ -312,9 +311,9 @@ def bucketIterator(elements, buckets) :
   elementIter = peekableIter(elements)
   for bucket in buckets :
     # make sure the buckets are sorted by start index
-    if prevBucket != None and ((bucket.chrom < prevBucket.chrom) or
-                               (bucket.chrom == prevBucket.chrom and
-                                bucket.start < prevBucket.start)) :
+    if prevBucket is not None and ((bucket.chrom < prevBucket.chrom) or
+                                   (bucket.chrom == prevBucket.chrom and
+                                    bucket.start < prevBucket.start)) :
       raise GenomicIntervalError("not sorted")
     updateOpen(openElems, elementIter, bucket.chrom, bucket. start, bucket.end)
 
@@ -342,8 +341,8 @@ def parseWigString(line, scoreType=int):
   """
   parts = line.split("\t")
   if (len(parts) < 4) :
-    raise GenomicIntervalError("failed to parse " + line
-                               + " as wig format, too few fields")
+    raise GenomicIntervalError("failed to parse " + line +
+                               " as wig format, too few fields")
   return GenomicInterval(parts[0].strip(), int(parts[1]), int(parts[2]), None,
                          scoreType(parts[3]))
 
@@ -360,12 +359,12 @@ def parseBEDString(line, scoreType=int, dropAfter=None):
     @return: GenomicInterval object built from the BED string representation
   """
   peices = line.split("\t")
-  if dropAfter != None:
+  if dropAfter is not None:
     peices = peices[0:dropAfter]
   if len(peices) < 3 :
-    raise GenomicIntervalError("BED elements must have at least chrom, "
-                               + "start and end; found only "
-                               + str(len(peices)) + " in " + line)
+    raise GenomicIntervalError("BED elements must have at least chrom, " +
+                               "start and end; found only " +
+                               str(len(peices)) + " in " + line)
   chrom = peices[0]
   start = peices[1]
   end = peices[2]
@@ -374,11 +373,11 @@ def parseBEDString(line, scoreType=int, dropAfter=None):
   score = None
   strand = None
 
-  if len(peices) >= 4 != None:
+  if len(peices) >= 4 is not None:
     name = peices[3]
-  if len(peices) >= 5 != None:
+  if len(peices) >= 5 is not None:
     score = peices[4]
-  if len(peices) >= 6 != None:
+  if len(peices) >= 6 is not None:
     strand = peices[5]
 
   return GenomicInterval(chrom, start, end, name, score, strand, scoreType)
@@ -388,7 +387,7 @@ def parseBEDString(line, scoreType=int, dropAfter=None):
 #                           GENOMIC INTERVAL CLASS                            #
 ###############################################################################
 
-class GenomicInterval :
+class GenomicInterval(object):
   """
   Represents a contiguous segment of a genome; inclusive of the start, but not
   the end coordinate
@@ -424,17 +423,17 @@ class GenomicInterval :
     # we might get the following too...
     # name:
     self.name = None
-    if name != None:
+    if name is not None:
       self.name = name.strip()
 
     # score
     self.score = None
-    if score != None:
+    if score is not None:
       self.score = scoreType(score)
 
     # strand
     self.strand = None
-    if strand != None:
+    if strand is not None:
       self.strand = strand.strip()
     if self.strand != None and self.strand != self.POSITIVE_STRAND and \
        self.strand != self.NEGATIVE_STRAND :
@@ -454,7 +453,7 @@ class GenomicInterval :
 
     :return: True if self is equal to e
     """
-    if e == None:
+    if e is None:
       return False
     try :
       return (self.chrom == e.chrom and self.start == e.start and
@@ -470,7 +469,7 @@ class GenomicInterval :
     :param rhs: object from the right-hand-side of the comparaison self < rhs
     :return: True if self is considered 'less' than rhs.
     """
-    if rhs == None:
+    if rhs is None:
       return False
     if self.chrom < rhs.chrom:
       return True
@@ -489,7 +488,7 @@ class GenomicInterval :
              in non-region related fields, such as name or score -- but does
              consider strand)
     """
-    if e == None:
+    if e is None:
       return False
     return (self.chrom == e.chrom and self.start == e.start and
             self.end == e.end and self.name == e.name and
@@ -507,11 +506,11 @@ class GenomicInterval :
     """
     delim = "\t"
     res = self.chrom + delim + str(self.start) + delim + str(self.end)
-    if self.name != None:
+    if self.name is not None:
       res += (delim + str(self.name))
-    if self.score != None:
+    if self.score is not None:
       res += (delim + str(self.score))
-    if self.strand != None:
+    if self.strand is not None:
       res += (delim + str(self.strand))
 
     return res
@@ -586,8 +585,8 @@ class GenomicInterval :
       r.end = e.start
       return [r]
     # oops, we screwed up if we got to here..
-    raise GenomicIntervalError("fatal error - failed BED subtraction of "
-                               + str(e) + " from " + str(self))
+    raise GenomicIntervalError("fatal error - failed BED subtraction of " +
+                               str(e) + " from " + str(self))
 
   def subtract(self, es):
     """
@@ -651,7 +650,7 @@ class GenomicInterval :
 
     :return: True if this element is on the positive strand
     """
-    if self.strand == None and self.DEFAULT_STRAND == self.POSITIVE_STRAND :
+    if self.strand is None and self.DEFAULT_STRAND == self.POSITIVE_STRAND :
       return True
     return self.strand == self.POSITIVE_STRAND
 
@@ -661,7 +660,7 @@ class GenomicInterval :
 
     :return: True if this element is on the negative strand
     """
-    if self.strand == None and self.DEFAULT_STRAND == self.NEGATIVE_STRAND :
+    if self.strand is None and self.DEFAULT_STRAND == self.NEGATIVE_STRAND :
       return True
     return self.strand == self.NEGATIVE_STRAND
 
@@ -712,9 +711,9 @@ class TestGenomicInterval(unittest.TestCase):
                   "0" + "\t" + "+",
                   "chr3" + "\t" + "10" + "\t" + "30" + "\t" + "X" + "\t" +
                   "0" + "\t" + "+"]
-    input = [parseBEDString(x) for x in elements]
+    input_x = [parseBEDString(x) for x in elements]
     expect = [parseBEDString(x) for x in expect_str]
-    got = collapseRegions(input)
+    got = collapseRegions(input_x)
     if debug :
       sys.stderr.write("expect:\n")
       sys.stderr.write("\n".join([str(x) for x in expect]) + "\n")
@@ -821,9 +820,9 @@ class TestGenomicInterval(unittest.TestCase):
     c1 = GenomicInterval("chr2", 30, 40)
 
     res = a.subtract([b1, b2, b3, b4, c1])
-    expect = [GenomicInterval("chr1",10,15),
-              GenomicInterval("chr1",20,50),
-              GenomicInterval("chr1",60,90)]
+    expect = [GenomicInterval("chr1", 10, 15),
+              GenomicInterval("chr1", 20, 50),
+              GenomicInterval("chr1", 60, 90)]
     res.sort()
     expect.sort()
     if debug :
