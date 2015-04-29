@@ -307,9 +307,20 @@ class RetrotransposonOccurrence(GenomicInterval):
                               intersecting_region.score, self.strand)
           return [g]
         elif size_dif < 0:
-          # match is longer, assume genomic region contains deletions
-
-          raise RetrotransposonError("oops; not implemented yet")
+          # genomic region longer than consensus match;
+          # assume genomic region contains insertions
+          gap_interval = len(self) / (-1 * size_dif)
+          s_dist_to_gen_start = max(intersecting_region.start - self.start, 0)
+          e_dist_to_gen_start = max(intersecting_region.end - self.start, 0)
+          s = s_dist_to_gen_start + self.consensus_start
+          e = e_dist_to_gen_start + self.consensus_start
+          s = s - (s_dist_to_gen_start / gap_interval)
+          e = min(e - (e_dist_to_gen_start / gap_interval), self.consensus_len)
+          if s == e:
+            return []
+          g = GenomicInterval(name, s, e, intersecting_region.name,
+                              intersecting_region.score, self.strand)
+          return [g]
         elif size_dif > 0:
           # match is shorter, assume genomic region contains insertions
           raise RetrotransposonError("oops; not implemented yet")
@@ -322,7 +333,20 @@ class RetrotransposonOccurrence(GenomicInterval):
           g = GenomicInterval(name, s, e, intersecting_region.name,
                               intersecting_region.score, self.strand)
           return [g]
+        elif size_dif < 0:
+          # genomic region longer than consensus match;
+          # assume genomic region contains insertions
+          gap_interval = len(self) / (-1 * size_dif)
+          s_dist_to_gen_start = max(intersecting_region.start - self.start, 0)
+          e_dist_to_gen_start = max(intersecting_region.end - self.start, 0)
+          s = self.consensus_end - s_dist_to_gen_start
+          e = self.consensus_end - e_dist_to_gen_start
+          s = s + (s_dist_to_gen_start / gap_interval)
+          e = min(e + (e_dist_to_gen_start / gap_interval), self.consensus_len)
+          g = GenomicInterval(name, s, e, intersecting_region.name,
+                              intersecting_region.score, self.strand)
         else:
+          # match is shorter, assume genomic region contains insertions
           raise RetrotransposonError("oops; not implemented yet")
       else:
         raise RetrotransposonError("couldn't determine strand of " +
@@ -533,6 +557,81 @@ class TestRetrotransposon(unittest.TestCase):
     # with an exception
     in7 = GenomicInterval("chr14", 11447, 11470, "GG", 50, '+')
     self.assertRaises(RetrotransposonError, self.rto4.liftover, in7)
+
+  def test_liftover_no_alignment_genomic_insertions(self):
+    """
+    test lifting regions when there is an unknown net insertion in the genomic
+    region (i.e. genomic region is larger than match to consensus)
+
+    rto1 -->   chr1  10001  10468  -->  1, 463, +
+    [5 bp larger; space = 467 / 5 = 93]
+    """
+
+    # intersecting region overlaps start and no insertions in genomic seq.
+    in1 = GenomicInterval("chr1", 9990, 10010, "AA", 50, '+')
+    lf1 = self.rto1.liftover(in1)
+    expc1 = [GenomicInterval("Simple_repeat#(TAACCC)n", 1, 10, "AA", 50, '+')]
+    self.assertEqual(lf1, expc1)
+
+    # intersecting region overlaps start and some insertions in genomic seq.
+    in2 = GenomicInterval("chr1", 9990, 10200, "BB", 50, '+')
+    lf2 = self.rto1.liftover(in2)
+    expc2 = [GenomicInterval("Simple_repeat#(TAACCC)n", 1, 198, "BB", 50, '+')]
+    self.assertEqual(lf2, expc2)
+
+    # intersecting region overlaps first insertion in genomic sequence
+    in3 = GenomicInterval("chr1", 10090, 10100, "CC", 50, '+')
+    lf3 = self.rto1.liftover(in3)
+    expc3 = [GenomicInterval("Simple_repeat#(TAACCC)n", 90, 99, "CC", 50, '+')]
+    self.assertEqual(lf3, expc3)
+
+    # intersecting region overlaps whole match
+    in4 = GenomicInterval("chr1", 9990, 10500, "DD", 50, '+')
+    lf4 = self.rto1.liftover(in4)
+    expc4 = [GenomicInterval("Simple_repeat#(TAACCC)n", 1, 463, "DD", 50, '+')]
+    self.assertEqual(lf4, expc4)
+
+    # intersecting region overlaps end and some insertions
+    in5 = GenomicInterval("chr1", 10460, 10470, "EE", 50, '+')
+    lf5 = self.rto1.liftover(in5)
+    expc5 = [GenomicInterval("Simple_repeat#(TAACCC)n", 456, 463,
+                             "EE", 50, '+')]
+    self.assertEqual(lf5, expc5)
+
+    # intersecting region overlaps end and no insertions
+    in6 = GenomicInterval("chr1", 10466, 10470, "FF", 50, '+')
+    lf6 = self.rto1.liftover(in6)
+    expc6 = [GenomicInterval("Simple_repeat#(TAACCC)n", 461, 463,
+                             "FF", 50, '+')]
+    self.assertEqual(lf6, expc6)
+
+    # start sits on a gap
+    in7 = GenomicInterval("chr1", 10093, 10096, "GG", 50, '+')
+    lf7 = self.rto1.liftover(in7)
+    expc7 = [GenomicInterval("Simple_repeat#(TAACCC)n", 93, 95,
+                             "GG", 50, '+')]
+    self.assertEqual(lf7, expc7)
+
+    # start is first after gap
+    in8 = GenomicInterval("chr1", 10094, 10096, "GG", 50, '+')
+    lf8 = self.rto1.liftover(in8)
+    expc8 = [GenomicInterval("Simple_repeat#(TAACCC)n", 93, 95,
+                             "GG", 50, '+')]
+    self.assertEqual(lf8, expc8)
+
+    # end sits on a gap
+    in9 = GenomicInterval("chr1", 10090, 10093, "GG", 50, '+')
+    lf9 = self.rto1.liftover(in9)
+    expc9 = [GenomicInterval("Simple_repeat#(TAACCC)n", 90, 93,
+                             "GG", 50, '+')]
+    self.assertEqual(lf9, expc9)
+
+    # region covers only gaps -- should get an empty list
+    in10 = GenomicInterval("chr1", 10093, 10094, "FF", 50, '+')
+    lf10 = self.rto1.liftover(in10)
+    expc10 = []
+    self.assertEqual(lf10, expc10)
+
 
 
 ###############################################################################
