@@ -66,7 +66,8 @@ def intervalTrees(reffh, scoreType=int, verbose=False):
   :param reffh: This can be either a string, or a stream-like object. In the
                 former case, it is treated as a filename. The format of the
                 file/stream must be BED.
-  :param scoreType: The data type for scores (the fifth column) in the BED file.
+  :param scoreType: The data type for scores (the fifth column) in the BED
+                    file.
   :param verbose: output progress messages to sys.stderr if True
   """
   if type(reffh).__name__ == "str":
@@ -124,7 +125,8 @@ def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType=int,
                    if == ITERATOR_SORTED_END, element must be sorted
                    by chrom and end index.
   :param verbose: if True, output additional progress messages to stderr
-  :param scoreType: The data type for scores (the fifth column) in the BED file.
+  :param scoreType: The data type for scores (the fifth column) in the BED
+                    file.
   :param dropAfter: an int indicating that any fields after and including this
                     field should be ignored as they don't conform to the BED
                     format. By default, None, meaning we use all fields. Index
@@ -141,11 +143,11 @@ def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType=int,
     try :
       pind = ProgressIndicator(totalToDo=os.path.getsize(filehandle.name),
                                messagePrefix="completed",
-                               messageSuffix="of processing "
-                                             + filehandle.name)
+                               messageSuffix="of processing " +
+                                             filehandle.name)
     except (AttributeError, OSError) as e :
-      sys.stderr.write("BEDIterator -- warning: "
-                       + "unable to show progress for stream")
+      sys.stderr.write("BEDIterator -- warning: " +
+                       "unable to show progress for stream")
       verbose = False
 
   for line in filehandle :
@@ -166,27 +168,27 @@ def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType=int,
                      + prev.name)
 
     # first item
-    if prev == None :
+    if prev is None :
       chromsSeen.add(e.chrom)
 
     # on same chrom as the prev item, make sure order is right
-    if prev != None and sortedby != None and e.chrom == prev.chrom :
+    if prev is not None and sortedby is not None and e.chrom == prev.chrom :
       if sortedby == ITERATOR_SORTED_START and prev.start > e.start :
-        raise BEDError("bed file " + filehandle.name
-                       + " not sorted by start index - saw item "
-                       + str(prev) + " before " + str(e))
+        raise BEDError("bed file " + filehandle.name +
+                       " not sorted by start index - saw item " +
+                       str(prev) + " before " + str(e))
       if sortedby == ITERATOR_SORTED_END and prev.end > e.end :
-        raise BEDError("bed file " + filehandle.name
-                       + " not sorted by end index - saw item "
-                       + str(prev) + " before " + str(e))
+        raise BEDError("bed file " + filehandle.name +
+                       " not sorted by end index - saw item " +
+                       str(prev) + " before " + str(e))
 
     # starting a new chrom.. make sure we haven't already seen it
-    if prev != None and prev.chrom != e.chrom :
+    if prev is not None and prev.chrom != e.chrom :
       if (sortedby == ITERATOR_SORTED_START or
           sortedby == ITERATOR_SORTED_END or
           sortedby == ITERATOR_SORTED_CHROM) and\
          (e.chrom in chromsSeen or prev.chrom > e.chrom) :
-        raise BEDError("BED file " + filehandle.name +\
+        raise BEDError("BED file " + filehandle.name +
                        " not sorted by chrom")
       chromsSeen.add(e.chrom)
 
@@ -257,26 +259,26 @@ def pairedBEDIterator(inputStreams, mirror=False, mirrorScore=None,
     else :
       # something wasn't equal.. find the smallest thing, it's about to drop
       # out of range and will never have the chance to match anything again
-      minElement = min([x for x in elements if x != None], key=keyFunc)
+      minElement = min([x for x in elements if x is not None], key=keyFunc)
       minIndices = [i for i in range(0, len(elements))
                     if elements[i] != None and
                     keyFunc(elements[i]) == keyFunc(minElement)]
       if mirror :
         # mirror the min item for any streams in which it doesn't match
-        score = minElement.score if mirrorScore == None else mirrorScore
+        score = minElement.score if mirrorScore is None else mirrorScore
         yield [elements[i] if i in minIndices
                else GenomicInterval(minElement.chrom, minElement.start,
                                     minElement.end, minElement.name,
                                     score, minElement.strand,
                                     scoreType=scoreType)
-               for i in range(0,len(elements))]
+               for i in range(0, len(elements))]
 
       # move the smallest element onwards now, we're done with it
       for index in minIndices:
         elements[index] = next_item(bIterators[index])
 
     # stop once all streams are exhausted
-    if reduce(lambda x, y:x and y, [e == None for e in elements]) : break
+    if reduce(lambda x, y:x and y, [e is None for e in elements]) : break
 
 
 def BEDDuplicateIterator(fh1, fh2, removeJuncTags=False, removePETags=False,
@@ -339,22 +341,24 @@ def BEDDuplicateIterator(fh1, fh2, removeJuncTags=False, removePETags=False,
 
   while True:
     # try to get an item from each stream if we don't already have one
-    if bf1 == None: bf1 = next_item(bit1)
-    if bf2 == None: bf2 = next_item(bit2)
+    if bf1 is None:
+      bf1 = next_item(bit1)
+    if bf2 is None:
+      bf2 = next_item(bit2)
 
-    if bf1 != None and (bf2 == None or name(bf1) < name(bf2)) :
+    if bf1 is not None and (bf2 is None or name(bf1) < name(bf2)) :
       if not match(bf1, bf1List, bf2List) :
         yield (bf1List, bf2List)
         bf1List, bf2List = [], []
       bf1List.append(bf1)
       bf1 = next_item(bit1)
-    elif bf2 != None and (bf1 == None or name(bf2) < name(bf1)) :
+    elif bf2 is not None and (bf1 is None or name(bf2) < name(bf1)) :
       if not match(bf2, bf1List, bf2List) :
         yield (bf1List, bf2List)
         bf1List, bf2List = [], []
       bf2List.append(bf2)
       bf2 = next_item(bit2)
-    elif bf1 != None and bf2 != None and name(bf1) == name(bf2) :
+    elif bf1 is not None and bf2 is not None and name(bf1) == name(bf2) :
       if not match(bf2, bf1List, bf2List) :
         yield (bf1List, bf2List)
         bf1List, bf2List = [], []
@@ -363,11 +367,12 @@ def BEDDuplicateIterator(fh1, fh2, removeJuncTags=False, removePETags=False,
       bf1 = next_item(bit1)
       bf2 = next_item(bit2)
 
-    if bf1 == None and bf2 == None:
+    if bf1 is None and bf2 is None:
       if bf1List != [] or bf2List != None :
         yield (bf1List, bf2List)
         bf1List, bf2List = [], []
       break
+
 
 def BEDUniqueIterator(fh1, fh2, verbose=False, best=False, dropAfter=None):
   """
@@ -383,10 +388,10 @@ def BEDUniqueIterator(fh1, fh2, verbose=False, best=False, dropAfter=None):
     @param best: If True, when encountering two reads with the same name,
                  we'll output the one with the better (smaller) score, unless
                  they both get the same score, then we'll skip them
-    @param dropAfter: an int indicating that any fields after and including this
-                      field should be ignored as they don't conform to the BED
-                      format. By default, None, meaning we use all fields. Index
-                      from zero.
+    @param dropAfter: an int indicating that any fields after and including
+                      this field should be ignored as they don't conform to
+                      the BED format. By default, None, meaning we use all
+                      fields. Index from zero.
   """
 
   def next_item(iterator):
@@ -405,20 +410,20 @@ def BEDUniqueIterator(fh1, fh2, verbose=False, best=False, dropAfter=None):
 
   while True:
     # try to get an item from each stream if we don't already have one
-    if bf1 == None:
+    if bf1 is None:
       bf1 = next_item(bit1)
-    if bf2 == None:
+    if bf2 is None:
       bf2 = next_item(bit2)
 
     # the item in bf1 (if there is one) can be output if it's less
     # than bf2, or we've used up all of the second stream
-    if bf1 != None and (bf2 == None or bf1.name < bf2.name) :
+    if bf1 is not None and (bf2 is None or bf1.name < bf2.name) :
       bf1_Q.put(bf1)
       bf1 = next_item(bit1)
-    if bf2 != None and (bf1 == None or bf2.name < bf1.name) :
+    if bf2 is not None and (bf1 is None or bf2.name < bf1.name) :
       bf2_Q.put(bf2)
       bf2 = next_item(bit2)
-    if bf1 != None and bf2 != None and bf1.name == bf2.name :
+    if bf1 is not None and bf2 is not None and bf1.name == bf2.name :
       if best and bf1.score < bf2.score:
         bf1_Q.put(bf1)
       if best and bf2.score < bf1.score:
@@ -434,7 +439,7 @@ def BEDUniqueIterator(fh1, fh2, verbose=False, best=False, dropAfter=None):
       y2 = bf2_Q.get()
     yield (y1, y2)
 
-    if bf1_Q.empty() and bf2_Q.empty() and bf1 == None and bf2 == None:
+    if bf1_Q.empty() and bf2_Q.empty() and bf1 is None and bf2 is None:
       break
 
 
@@ -453,26 +458,43 @@ class BEDIteratorUnitTests(unittest.TestCase):
   def testPairedIterator(self):
     debug = False
 
-    in1 = "chr1"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"1"+"\t"+"+"+"\n" +\
-          "chr1"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"2"+"\t"+"-"+"\n" +\
-          "chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"3"+"\t"+"+"+"\n" +\
-          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"4"+"\t"+"-"+"\n"
-    in2 = "chr1"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"1"+"\t"+"+"+"\n" +\
-          "chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"2"+"\t"+"+"+"\n" +\
-          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"3"+"\t"+"-"+"\n"
-    in3 = "chr1"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"1"+"\t"+"+"+"\n" +\
-          "chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"2"+"\t"+"+"+"\n" +\
-          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"3"+"\t"+"-"+"\n" +\
-          "chr3"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"4"+"\t"+"+"+"\n"
+    in1 = "chr1" + "\t" + "10" + "\t" + "15" + "\t" + "X" + "\t" + "1" +\
+          "\t" + "+" + "\n" +\
+          "chr1" + "\t" + "20" + "\t" + "25" + "\t" + "X" + "\t" + "2" +\
+          "\t" + "-" + "\n" +\
+          "chr1" + "\t" + "40" + "\t" + "47" + "\t" + "X" + "\t" + "3" +\
+          "\t" + "+" + "\n" +\
+          "chr2" + "\t" + "10" + "\t" + "15" + "\t" + "X" + "\t" + "4" +\
+          "\t" + "-" + "\n"
+    in2 = "chr1" + "\t" + "10" + "\t" + "15" + "\t" + "X" + "\t" + "1" +\
+          "\t" + "+" + "\n" +\
+          "chr1" + "\t" + "40" + "\t" + "47" + "\t" + "X" + "\t" + "2" +\
+          "\t" + "+" + "\n" +\
+          "chr2" + "\t" + "10" + "\t" + "15" + "\t" + "X" + "\t" + "3" +\
+          "\t" + "-" + "\n"
+    in3 = "chr1" + "\t" + "20" + "\t" + "25" + "\t" + "X" + "\t" + "1" +\
+          "\t" + "+" + "\n" +\
+          "chr1" + "\t" + "40" + "\t" + "47" + "\t" + "X" + "\t" + "2" +\
+          "\t" + "+" + "\n" +\
+          "chr2" + "\t" + "10" + "\t" + "15" + "\t" + "X" + "\t" + "3" +\
+          "\t" + "-" + "\n" +\
+          "chr3" + "\t" + "20" + "\t" + "25" + "\t" + "X" + "\t" + "4" +\
+          "\t" + "+" + "\n"
 
     # first, ignore strand, name and score and don't mirror missing elements
-    e1 = ["chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"3"+"\t"+"+",
-          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"4"+"\t"+"-"]
-    e2 = ["chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"2"+"\t"+"+",
-          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"3"+"\t"+"-"]
-    e3 = ["chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"2"+"\t"+"+",
-          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"3"+"\t"+"-"]
-    instms = [DummyInputStream(x) for x in [in1,in2,in3]]
+    e1 = ["chr1" + "\t" + "40" + "\t" + "47" + "\t" + "X" + "\t" + "3" +
+          "\t" + "+",
+          "chr2" + "\t" + "10" + "\t" + "15" + "\t" + "X" + "\t" + "4" +
+          "\t" + "-"]
+    e2 = ["chr1" + "\t" + "40" + "\t" + "47" + "\t" + "X" + "\t" + "2" +
+          "\t" + "+",
+          "chr2" + "\t" + "10" + "\t" + "15" + "\t" + "X" + "\t" + "3" +
+          "\t" + "-"]
+    e3 = ["chr1" + "\t" + "40" + "\t" + "47" + "\t" + "X" + "\t" + "2" +
+          "\t" + "+",
+          "chr2" + "\t" + "10" + "\t" + "15" + "\t" + "X" + "\t" + "3" +
+          "\t" + "-"]
+    instms = [DummyInputStream(x) for x in [in1, in2, in3]]
     allOut = [x for x in pairedBEDIterator(instms, mirror=False,
                                            mirrorScore=None, ignoreStrand=True,
                                            ignoreScore=True, ignoreName=True)]
@@ -491,25 +513,43 @@ class BEDIteratorUnitTests(unittest.TestCase):
 
     # now, same sort order but include strand, and mirror missing elements
     # using a score of 0
-    e1 = ["chr1"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"1"+"\t"+"+",
-          "chr1"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"0"+"\t"+"+",
-          "chr1"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"2"+"\t"+"-",
-          "chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"3"+"\t"+"+",
-          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"4"+"\t"+"-",
-          "chr3"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"0"+"\t"+"+"]
-    e2 = ["chr1"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"1"+"\t"+"+",
-          "chr1"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"0"+"\t"+"+",
-          "chr1"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"0"+"\t"+"-",
-          "chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"2"+"\t"+"+",
-          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"3"+"\t"+"-",
-          "chr3"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"0"+"\t"+"+"]
-    e3 = ["chr1"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"0"+"\t"+"+",
-          "chr1"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"1"+"\t"+"+",
-          "chr1"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"0"+"\t"+"-",
-          "chr1"+"\t"+"40"+"\t"+"47"+"\t"+"X"+"\t"+"2"+"\t"+"+",
-          "chr2"+"\t"+"10"+"\t"+"15"+"\t"+"X"+"\t"+"3"+"\t"+"-",
-          "chr3"+"\t"+"20"+"\t"+"25"+"\t"+"X"+"\t"+"4"+"\t"+"+"]
-    instms = [DummyInputStream(x) for x in [in1,in2,in3]]
+    e1 = ["chr1" + "\t" + "10" + "\t" + "15" + "\t" + "X" + "\t" + "1" +
+          "\t" + "+",
+          "chr1" + "\t" + "20" + "\t" + "25" + "\t" + "X" + "\t" + "0" +
+          "\t" + "+",
+          "chr1" + "\t" + "20" + "\t" + "25" + "\t" + "X" + "\t" + "2" +
+          "\t" + "-",
+          "chr1" + "\t" + "40" + "\t" + "47" + "\t" + "X" + "\t" + "3" +
+          "\t" + "+",
+          "chr2" + "\t" + "10" + "\t" + "15" + "\t" + "X" + "\t" + "4" +
+          "\t" + "-",
+          "chr3" + "\t" + "20" + "\t" + "25" + "\t" + "X" + "\t" + "0" +
+          "\t" + "+"]
+    e2 = ["chr1" + "\t" + "10" + "\t" + "15" + "\t" + "X" + "\t" + "1" +
+          "\t" + "+",
+          "chr1" + "\t" + "20" + "\t" + "25" + "\t" + "X" + "\t" + "0" +
+          "\t" + "+",
+          "chr1" + "\t" + "20" + "\t" + "25" + "\t" + "X" + "\t" + "0" +
+          "\t" + "-",
+          "chr1" + "\t" + "40" + "\t" + "47" + "\t" + "X" + "\t" + "2" +
+          "\t" + "+",
+          "chr2" + "\t" + "10" + "\t" + "15" + "\t" + "X" + "\t" + "3" +
+          "\t" + "-",
+          "chr3" + "\t" + "20" + "\t" + "25" + "\t" + "X" + "\t" + "0" +
+          "\t" + "+"]
+    e3 = ["chr1" + "\t" + "10" + "\t" + "15" + "\t" + "X" + "\t" + "0" +
+          "\t" + "+",
+          "chr1" + "\t" + "20" + "\t" + "25" + "\t" + "X" + "\t" + "1" +
+          "\t" + "+",
+          "chr1" + "\t" + "20" + "\t" + "25" + "\t" + "X" + "\t" + "0" +
+          "\t" + "-",
+          "chr1" + "\t" + "40" + "\t" + "47" + "\t" + "X" + "\t" + "2" +
+          "\t" + "+",
+          "chr2" + "\t" + "10" + "\t" + "15" + "\t" + "X" + "\t" + "3" +
+          "\t" + "-",
+          "chr3" + "\t" + "20" + "\t" + "25" + "\t" + "X" + "\t" + "4" +
+          "\t" + "+"]
+    instms = [DummyInputStream(x) for x in [in1, in2, in3]]
     allOut = [x for x in pairedBEDIterator(instms, mirror=True,
                                            mirrorScore=0, ignoreStrand=False,
                                            ignoreScore=True, ignoreName=True)]
@@ -545,9 +585,11 @@ class BEDIteratorUnitTests(unittest.TestCase):
     end2_infs = DummyInputStream(end2)
     gotOutput1 = []
     gotOutput2 = []
-    for r1,r2 in BEDUniqueIterator(end1_infs, end2_infs):
-      if r1 != None : gotOutput1.append(str(r1))
-      if r2 != None : gotOutput2.append(str(r2))
+    for r1, r2 in BEDUniqueIterator(end1_infs, end2_infs):
+      if r1 is not None:
+        gotOutput1.append(str(r1))
+      if r2 is not None:
+        gotOutput2.append(str(r2))
 
     gotOutput1.sort()
     gotOutput2.sort()
@@ -581,19 +623,19 @@ class BEDIteratorUnitTests(unittest.TestCase):
            "chr1 \t 80 \t 84 \t read5.2\n" +\
            "chr1 \t 80 \t 84 \t read9.2\n"
     expectOutput = [(["read1.1"], []),
-                   ([], ["read2.2"]),
-                   (["read3.1"], ["read3.2%1","read3.2%2", "read3.2%3"]),
-                   ([], ["read4.2"]),
-                   (["read5.1"], ["read5.2"]),
-                   (["read8.1"],[]),
-                   (["read9.1%1","read9.1%2"],["read9.2"])]
+                    ([], ["read2.2"]),
+                    (["read3.1"], ["read3.2%1", "read3.2%2", "read3.2%3"]),
+                    ([], ["read4.2"]),
+                    (["read5.1"], ["read5.2"]),
+                    (["read8.1"], []),
+                    (["read9.1%1", "read9.1%2"], ["read9.2"])]
 
     end1_infs = DummyInputStream(end1)
     end2_infs = DummyInputStream(end2)
 
     gotOutput = []
-    for r1,r2 in BEDDuplicateIterator(end1_infs, end2_infs, removeJuncTags=True,
-                                      removePETags=True):
+    for r1, r2 in BEDDuplicateIterator(end1_infs, end2_infs,
+                                       removeJuncTags=True, removePETags=True):
       r1 = [x.name for x in r1]
       r2 = [x.name for x in r2]
       gotOutput.append((r1, r2))
@@ -705,24 +747,24 @@ class BEDIteratorUnitTests(unittest.TestCase):
       not screw everything else up..
     """
     debug = False
-    infs =  "chr12" + "\t" + "83810028" + "\t" + "83810066" + "\t" +\
-              "SRR189775.10000" + "\t" + "9" + "\t" + "-" + "\t" +\
-              "TTTTTTTTTTTTTTTAAATTCTTCGAATGCCGTTTTCT" + "\t" +\
-              "]&(2-'+0'+:34J########################\n" +\
-            "chr5" + "\t" + "177570573" + "\t" +"177570611" + "\t" +\
-              "SRR189775.10000001" + "\t" + "3" + "\t" + "+" + "\t" +\
-              "TCACCTTTTTTTCACCTTTTAATTTTATATTATTTATC" + "\t" +\
-              "K79:77:79797:7797<;>BC979:77B?997:79:7\n" +\
-            "chr4" + "\t" + "78174772" + "\t" + "78174810" + "\t" +\
-              "SRR189775.10000009" + "\t" + "0" + "\t" + "+" + "\t" +\
-              "TTTTATTTTATTTTATTTTTTTACCCTTCCTCAAACAC" +"\t" +\
-              "G77:797:77977<TS;:9:9:9:9:977<;7@?@=97\n"
+    infs = "chr12" + "\t" + "83810028" + "\t" + "83810066" + "\t" +\
+           "SRR189775.10000" + "\t" + "9" + "\t" + "-" + "\t" +\
+           "TTTTTTTTTTTTTTTAAATTCTTCGAATGCCGTTTTCT" + "\t" +\
+           "]&(2-'+0'+:34J########################\n" +\
+           "chr5" + "\t" + "177570573" + "\t" + "177570611" + "\t" +\
+           "SRR189775.10000001" + "\t" + "3" + "\t" + "+" + "\t" +\
+           "TCACCTTTTTTTCACCTTTTAATTTTATATTATTTATC" + "\t" +\
+           "K79:77:79797:7797<;>BC979:77B?997:79:7\n" +\
+           "chr4" + "\t" + "78174772" + "\t" + "78174810" + "\t" +\
+           "SRR189775.10000009" + "\t" + "0" + "\t" + "+" + "\t" +\
+           "TTTTATTTTATTTTATTTTTTTACCCTTCCTCAAACAC" + "\t" +\
+           "G77:797:77977<TS;:9:9:9:9:977<;7@?@=97\n"
     expectOut = ["chr12" + "\t" + "83810028" + "\t" + "83810066" + "\t"
-                  "SRR189775.10000" + "\t" + "9" + "\t" + "-",
-                "chr5" + "\t" + "177570573" + "\t" +"177570611" + "\t" +\
-                  "SRR189775.10000001" + "\t" + "3" + "\t" + "+",
-                "chr4" + "\t" + "78174772" + "\t" + "78174810" + "\t" +\
-                  "SRR189775.10000009" + "\t" + "0" + "\t" + "+"]
+                 "SRR189775.10000" + "\t" + "9" + "\t" + "-",
+                 "chr5" + "\t" + "177570573" + "\t" + "177570611" + "\t" +
+                 "SRR189775.10000001" + "\t" + "3" + "\t" + "+",
+                 "chr4" + "\t" + "78174772" + "\t" + "78174810" + "\t" +
+                 "SRR189775.10000009" + "\t" + "0" + "\t" + "+"]
     ifh = DummyInputStream(infs)
     ofh = DummyOutputStream()
 
@@ -744,4 +786,4 @@ class BEDIteratorUnitTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main(argv = [sys.argv[0]])
+    unittest.main(argv=[sys.argv[0]])
