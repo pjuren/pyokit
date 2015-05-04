@@ -451,7 +451,7 @@ class PairwiseAlignment(object):
     res.append((current_start + 1, current_end + 1))
     return res
 
-  def liftover(self, origin, o_start, o_end):
+  def liftover(self, origin, o_start, o_end, trim=False):
     """
     liftover an interval in one sequence of this pairwise alignment to the
     other.
@@ -462,7 +462,8 @@ class PairwiseAlignment(object):
     """
     assert(origin == 1 or origin == 2)
     dest = 1 if origin == 2 else 2
-    alig_cols = self.sequence_to_alignment_coords(origin, o_start, o_end)
+    alig_cols = self.sequence_to_alignment_coords(origin, o_start,
+                                                  o_end, trim=trim)
     res = []
     for s, e in alig_cols:
       t = self.alignment_to_sequence_coords(dest, s, e)
@@ -702,12 +703,19 @@ class TestAlignments(unittest.TestCase):
     #  103 --> CGTAGC---CGC-T   <-- 112
     # 1014 --> CGTAGCTAGCGCG-   <-- 1016
     #  993 -->                  <-- 981
-    #self.assertEqual(self.pa1.liftover(1, 103, 113),
-    #                 [(1004, 1010), (1013, 1016)])
-    #self.assertEqual(self.pa2.liftover(1, 103, 113),
-    #                 [(988, 994), (982, 985)])
-    #self.assertEqual(self.pa1.liftover(2, 1010, 1013), [])
-    #self.assertEqual(self.pa2.liftover(2, 985, 988), [])
+    self.assertEqual(self.pa1.liftover(1, 103, 113),
+                     [(1004, 1010), (1013, 1016)])
+    self.assertEqual(self.pa2.liftover(1, 103, 113),
+                     [(988, 994), (982, 985)])
+    self.assertEqual(self.pa1.liftover(2, 1010, 1013), [])
+    self.assertEqual(self.pa2.liftover(2, 985, 988), [])
+    # should fail if coordinates are outside the bounds of the sequence
+    self.assertRaises(AlignmentError, self.pa1.liftover, 1, 95, 113)
+    # but should be okay if we allow them to be trimmed
+    r = self.pa1.liftover(1, 95, 113, trim=True)
+    self.assertEqual(r, [(1001, 1010), (1013, 1016)])
+    # unless it is entriely outside the sequence
+    self.assertRaises(AlignmentError, self.pa1.liftover, 1, 95, 99, trim=True)
 
 
 ###############################################################################
