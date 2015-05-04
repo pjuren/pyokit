@@ -290,32 +290,53 @@ class PairwiseAlignment(object):
     """
     return self.to_repeat_masker_string()
 
-  def alignment_to_sequence_coords(self, seq_num, start, end):
+  def alignment_to_sequence_coords(self, seq_num, start, end, trim=False):
     """
     convert an interval in the alignmnet into co-ordinates in one of the
-    sequences Alignment intervals are inclusive of start, but not end. They
-    are zero-based. Hence the full alignment has coords [0, N), where N is the
+    sequences. Alignment intervals are inclusive of start, but not end. They
+    are one-based. Hence the full alignment has coords [1, N+1), where N is the
     length of the alignment (number of columns). Sequence coords follow the
-    same conventions: zero-based, inclusive of start but not end.
+    same conventions: one-based, inclusive of start but not end.
 
     :param seq_num: which sequence are the start and end coords for? 1 or 2
-    :param start:   start of the interval in sequence co-ordinates
-    :param end:     end of the interval in sequence co-ordinates
-
-    :return: a tuple with the start and end sequence coords; None if the
-             interval in the alignment defined by (start, end) contains only
-             gaps in the specified sequence. Not inclusive of end. If sequence
-             is reverse complement (negative strand) then coords are
-             [end, start); in any case, start < end.
+    :param start:   start of the interval in alignment co-ordinates
+    :param end:     end of the interval in alignment co-ordinates
+    :param trim:    if true, trim coordinates that fall partially outside
+                    the sequence
+    :return: a tuple with the start and end sequence coords, in that order;
+             None if the interval in the alignment defined by (start, end)
+             contains only gaps in the specified sequence. start < end always,
+             even if the sequence is reverse complement.
+    :raises AlignmentError: if the sequence number specifies a sequence not
+                            in this alignment, or the coordinates fall
+                            entirely outside the alignment (or partially
+                            outside and trim == false), or they are not a valid
+                            interval (start >= end)
     """
-    assert(seq_num == 1 or seq_num == 2)
-    assert(0 <= start < end < self.size())
+    if seq_num != 1 and seq_num != 2:
+      raise AlignmentError("No such sequence number in alignemnt: " +
+                           str(seq_num))
+    if (start < 1 or end > (self.size() + 1)) and not trim:
+      raise AlignmentError("Coordinates fall partially outside alignemnt: " +
+                           str(start) + ", " + str(end))
+    if (end < 1 or start > self.size() + 1):
+      raise AlignmentError("Coordinates fall entirely outside alignment: " +
+                           str(start) + ", " + str(end))
+    if (end <= start):
+      raise AlignmentError("Invalid alignment coordinates: " +
+                           str(start) + ", " + str(end))
+
     seq = self.s1 if seq_num == 1 else self.s2
     try:
       s_start = (self.meta[S1_START_KEY] if seq_num == 1
                  else self.meta[S2_START_KEY])
     except KeyError:
       s_start = 0
+
+    if start < 1 and trim:
+      start = 1
+    if (end > self.size() + 1):
+      end = self.size() + 1
 
     pos_strand = True
     if ((seq_num == 1 and self.s1_is_reverse_comp()) or
@@ -326,14 +347,13 @@ class PairwiseAlignment(object):
     r_start = None
     r_end = None
     l_start = 0 if pos_strand else self.size() - 1
-    l_end = end if pos_strand else start - 1
+    l_end = end - 1 if pos_strand else start - 2
     l_step = 1 if pos_strand else -1
     for i in range(l_start, l_end, l_step):
       if seq[i] != GAP_CHAR:
         non_gaps += 1
-      if seq[i] != GAP_CHAR:
-        if ((pos_strand and r_start is None and i >= start) or
-           (not pos_strand and r_start is None and i < end)):
+        if ((pos_strand and r_start is None and (i + 1) >= start) or
+           (not pos_strand and r_start is None and (i + 1) < end)):
           r_start = non_gaps + s_start - 1
     if r_start is None:
       # we went through the whole region and didn't find a single non-gap char
@@ -341,7 +361,7 @@ class PairwiseAlignment(object):
     r_end = non_gaps + s_start
     return (r_start, r_end)
 
-  def sequence_to_alignment_coords(self, seq_num, start, end):
+  def sequence_to_alignment_coords(self, seq_num, start, end, trim=False):
     """
     convert an interval in one of the sequences into an interval in the
     alignment. Alignment intervals are inclusive of start, but not end. They
@@ -352,6 +372,10 @@ class PairwiseAlignment(object):
     :param seq_num: which sequence are the start and end coords for? 1 or 2
     :param start:   start of the interval in sequence co-ordinates
     :param end:     end of the interval in sequence co-ordinates
+    :param trim:    if true, trim coordinates that fall partially outside
+                    the sequence
+    :raises AlignmentError: if coordinates fall entirely outside the
+                            sequence, or partially outside and trim == false
     """
     assert(seq_num == 1 or seq_num == 2)
     seq = self.s1 if seq_num == 1 else self.s2
@@ -370,9 +394,25 @@ class PairwiseAlignment(object):
        self.meta[S2_REVERSE_COMP_KEY])):
       pos_strand = False
 
-    assert(s_start <= start < s_end)
-    assert(s_start < end <= s_end)
-    assert(end > start)
+    # sanity check on start and end coords
+    if end < start:
+      raise AlignmentError("invalid region: " + str(start) + ", " + str(end))
+    # check that the start and end coords are at least partially in the seq
+    if start > s_end or end < s_start:
+      raise AlignmentError("Cannot convert " + str(start) + ", " +
+                           str(end) + " to alignment coordinates; falls "
+                           "fully outside of sequence " + str(s_start) + ", "
+                           + str(s_end))
+    # trim them if they exceed
+    if not trim and (start < s_start or end > s_end):
+      raise AlignmentError("Cannot convert " + str(start) + ", " +
+                           str(end) + " to alignment coordinates; falls "
+                           "partially outside of seq. " + str(s_start) + ", "
+                           + str(s_end))
+    if trim and start < s_start:
+      start = s_start
+    if trim and end > s_end:
+      end = s_end
 
     num_gaps = 0
     num_non_gaps = 0
@@ -600,32 +640,60 @@ class TestAlignments(unittest.TestCase):
     # 977 --> G---CGAT <-- 972
     self.assertEqual(self.pa2.sequence_to_alignment_coords(2, 972, 977),
                      [(26, 30), (22, 23)])
+    # should throw an exception if we give coordinates that extend outside the
+    # sequence...
+    self.assertRaises(AlignmentError, self.pa1.sequence_to_alignment_coords,
+                      1, 95, 111)
+    # .. but not if we ask them to be trimmed ...
+    #r = self.pa1.sequence_to_alignment_coords(1, 103, 111, trim=True)
+    #self.assertEqual(r,
+    #                 [(4, 10), (13, 15)])
+    # .. but still if they fall entirely outside the sequence ..
 
   def test_alig_to_sequence_coords(self):
     """
     test converting co-ordinates within an alignment into co-ordinates within
     one of the sequences.
     """
-    #  index 8 --> GC---CGC-T <-- index 17 (intervals are half closed)
+    #  index 9 --> GC---CGC-T <-- index 18 (intervals are half closed)
     #              GCTAGCGCG- <-- the G is index 981
-    self.assertEqual(self.pa1.alignment_to_sequence_coords(1, 8, 18),
+    self.assertEqual(self.pa1.alignment_to_sequence_coords(1, 9, 19),
                      (107, 113))
-    self.assertEqual(self.pa2.alignment_to_sequence_coords(2, 8, 18),
+    self.assertEqual(self.pa2.alignment_to_sequence_coords(2, 9, 19),
                      (981, 990))
-    #  index 11 --> --CGC <-- index 15 (intervals are half closed)
-    self.assertEqual(self.pa1.alignment_to_sequence_coords(1, 11, 16),
+    #  index 12 --> --CGC <-- index 16 (intervals are half closed)
+    self.assertEqual(self.pa1.alignment_to_sequence_coords(1, 12, 17),
                      (109, 112))
-    self.assertEqual(self.pa2.alignment_to_sequence_coords(2, 11, 16),
+    self.assertEqual(self.pa2.alignment_to_sequence_coords(2, 12, 17),
                      (982, 987))
-    #  index 8 --> GC-- <-- index 11 (intervals are half closed)
-    self.assertEqual(self.pa1.alignment_to_sequence_coords(1, 8, 12),
+    #  index 9 --> GC-- <-- index 12 (intervals are half closed)
+    self.assertEqual(self.pa1.alignment_to_sequence_coords(1, 9, 13),
                      (107, 109))
-    self.assertEqual(self.pa2.alignment_to_sequence_coords(2, 8, 12),
+    self.assertEqual(self.pa2.alignment_to_sequence_coords(2, 9, 13),
                      (986, 990))
-    #  index 23 --> --- <-- index 25 (intervals are half closed)
-    self.assertEqual(self.pa1.alignment_to_sequence_coords(2, 23, 26), None)
-    self.assertEqual(self.pa2.alignment_to_sequence_coords(2, 23, 26), None)
-    pass
+    #  index 24 --> --- <-- index 26 (intervals are half closed)
+    self.assertEqual(self.pa1.alignment_to_sequence_coords(2, 24, 27), None)
+    self.assertEqual(self.pa2.alignment_to_sequence_coords(2, 24, 27), None)
+    # raise exception if invalid seq number
+    self.assertRaises(AlignmentError, self.pa1.alignment_to_sequence_coords,
+                      3, 9, 19)
+    # raise exception if start is greater than or equal to end
+    self.assertRaises(AlignmentError, self.pa1.alignment_to_sequence_coords,
+                      2, 15, 9)
+    self.assertRaises(AlignmentError, self.pa1.alignment_to_sequence_coords,
+                      2, 9, 9)
+    # raise exception if coordinates are fuly outside alignemnt, ragrdless of
+    # the trim option
+    self.assertRaises(AlignmentError, self.pa1.alignment_to_sequence_coords,
+                      2, 100, 150)
+    self.assertRaises(AlignmentError, self.pa1.alignment_to_sequence_coords,
+                      2, 100, 150, trim=True)
+    # raise exception when coordinates are prtially outside the alignment, but
+    # not if the trim option is given.
+    self.assertRaises(AlignmentError, self.pa1.alignment_to_sequence_coords,
+                      1, 33, 40)
+    r = self.pa1.alignment_to_sequence_coords(1, 33, 40, trim=True)
+    self.assertEqual(r, (126, 129))
 
   def test_liftover_coords(self):
     """
@@ -635,13 +703,12 @@ class TestAlignments(unittest.TestCase):
     #  103 --> CGTAGC---CGC-T   <-- 112
     # 1014 --> CGTAGCTAGCGCG-   <-- 1016
     #  993 -->                  <-- 981
-    self.assertEqual(self.pa1.liftover(1, 103, 113),
-                     [(1004, 1010), (1013, 1016)])
-    self.assertEqual(self.pa2.liftover(1, 103, 113),
-                     [(988, 994), (982, 985)])
-    self.assertEqual(self.pa1.liftover(2, 1010, 1013), [])
-    self.assertEqual(self.pa2.liftover(2, 985, 988), [])
-    pass
+    #self.assertEqual(self.pa1.liftover(1, 103, 113),
+    #                 [(1004, 1010), (1013, 1016)])
+    #self.assertEqual(self.pa2.liftover(1, 103, 113),
+    #                 [(988, 994), (982, 985)])
+    #self.assertEqual(self.pa1.liftover(2, 1010, 1013), [])
+    #self.assertEqual(self.pa2.liftover(2, 985, 988), [])
 
 
 ###############################################################################
