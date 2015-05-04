@@ -365,9 +365,9 @@ class PairwiseAlignment(object):
     """
     convert an interval in one of the sequences into an interval in the
     alignment. Alignment intervals are inclusive of start, but not end. They
-    are zero-based. Hence the full alignment has coords [0, N), where N is the
+    are one-based. Hence the full alignment has coords [1, N+1), where N is the
     length of the alignment (number of columns). Sequence coords follow the
-    same conventions: zero-based, inclusive of start but not end.
+    same conventions: one-based, inclusive of start but not end.
 
     :param seq_num: which sequence are the start and end coords for? 1 or 2
     :param start:   start of the interval in sequence co-ordinates
@@ -428,11 +428,9 @@ class PairwiseAlignment(object):
       else:
         num_non_gaps += 1
 
-      if num_non_gaps > end - s_start:
-        # we're done, gone past the end of the ROI
+      if num_non_gaps > end - s_start:    # done, past the end of the ROI
         break
-      if num_non_gaps > start - s_start:
-        # within ROI
+      if num_non_gaps > start - s_start:  # within ROI still
         if seq[i] != GAP_CHAR:
           if current_start == None and current_end == None:
             current_start = i
@@ -441,7 +439,7 @@ class PairwiseAlignment(object):
             if ((pos_strand and seq[i - 1] == GAP_CHAR) or
                 (not pos_strand and seq[i + 1] == GAP_CHAR)):
               # is the start of a new non-gapped region...
-              res.append((current_start, current_end))
+              res.append((current_start + 1, current_end + 1))
               current_start = i
               current_end = i + 1
             if pos_strand and seq[i - 1] != GAP_CHAR:
@@ -450,7 +448,7 @@ class PairwiseAlignment(object):
             if not pos_strand and seq[i + 1] != GAP_CHAR:
               # is continuation of non-gapped region
               current_start -= 1
-    res.append((current_start, current_end))
+    res.append((current_start + 1, current_end + 1))
     return res
 
   def liftover(self, origin, o_start, o_end):
@@ -635,20 +633,21 @@ class TestAlignments(unittest.TestCase):
     """
     # CGTAGC---CGC
     # CGTAGCTAGCGC
-    self.assertEqual(self.pa1.sequence_to_alignment_coords(1, 103, 111),
-                     [(4, 10), (13, 15)])
+    self.assertEqual(self.pa1.sequence_to_alignment_coords(1, 103, 112),
+                     [(5, 11), (14, 17)])
     # 977 --> G---CGAT <-- 972
     self.assertEqual(self.pa2.sequence_to_alignment_coords(2, 972, 977),
-                     [(26, 30), (22, 23)])
+                     [(27, 31), (23, 24)])
     # should throw an exception if we give coordinates that extend outside the
     # sequence...
     self.assertRaises(AlignmentError, self.pa1.sequence_to_alignment_coords,
-                      1, 95, 111)
+                      1, 95, 112)
     # .. but not if we ask them to be trimmed ...
-    #r = self.pa1.sequence_to_alignment_coords(1, 103, 111, trim=True)
-    #self.assertEqual(r,
-    #                 [(4, 10), (13, 15)])
+    r = self.pa1.sequence_to_alignment_coords(1, 95, 112, trim=True)
+    self.assertEqual(r, [(2, 11), (14, 17)])
     # .. but still if they fall entirely outside the sequence ..
+    self.assertRaises(AlignmentError, self.pa1.sequence_to_alignment_coords,
+                      1, 95, 99)
 
   def test_alig_to_sequence_coords(self):
     """
