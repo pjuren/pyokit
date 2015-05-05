@@ -887,28 +887,37 @@ about this alignment.</li>
 </table>
 <dl class="method">
 <dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.alignment_to_sequence_coords">
-<code class="descname">alignment_to_sequence_coords</code><span class="sig-paren">(</span><em>seq_num</em>, <em>start</em>, <em>end</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.alignment_to_sequence_coords" title="Permalink to this definition">¶</a></dt>
+<code class="descname">alignment_to_sequence_coords</code><span class="sig-paren">(</span><em>seq_num</em>, <em>start</em>, <em>end</em>, <em>trim=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.alignment_to_sequence_coords" title="Permalink to this definition">¶</a></dt>
 <dd><p>convert an interval in the alignmnet into co-ordinates in one of the
-sequences Alignment intervals are inclusive of start, but not end. They
-are zero-based. Hence the full alignment has coords [0, N), where N is the
+sequences. Alignment intervals are inclusive of start, but not end. They
+are one-based. Hence the full alignment has coords [1, N+1), where N is the
 length of the alignment (number of columns). Sequence coords follow the
-same conventions: zero-based, inclusive of start but not end.</p>
+same conventions: one-based, inclusive of start but not end.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>seq_num</strong> &#8211; which sequence are the start and end coords for? 1 or 2</li>
-<li><strong>start</strong> &#8211; start of the interval in sequence co-ordinates</li>
-<li><strong>end</strong> &#8211; end of the interval in sequence co-ordinates</li>
+<li><strong>start</strong> &#8211; start of the interval in alignment co-ordinates</li>
+<li><strong>end</strong> &#8211; end of the interval in alignment co-ordinates</li>
+<li><strong>trim</strong> &#8211; if true, trim coordinates that fall partially outside
+the sequence</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">a tuple with the start and end sequence coords; None if the
-interval in the alignment defined by (start, end) contains only
-gaps in the specified sequence. Not inclusive of end. If sequence
-is reverse complement (negative strand) then coords are
-[end, start); in any case, start &lt; end.</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">a tuple with the start and end sequence coords, in that order;
+None if the interval in the alignment defined by (start, end)
+contains only gaps in the specified sequence. start &lt; end always,
+even if the sequence is reverse complement.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name" colspan="2">Raises AlignmentError:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first last">if the sequence number specifies a sequence not
+in this alignment, or the coordinates fall
+entirely outside the alignment (or partially
+outside and trim == false), or they are not a valid
+interval (start &gt;= end)</p>
 </td>
 </tr>
 </tbody>
@@ -917,7 +926,7 @@ is reverse complement (negative strand) then coords are
 
 <dl class="method">
 <dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.liftover">
-<code class="descname">liftover</code><span class="sig-paren">(</span><em>origin</em>, <em>o_start</em>, <em>o_end</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.liftover" title="Permalink to this definition">¶</a></dt>
+<code class="descname">liftover</code><span class="sig-paren">(</span><em>origin</em>, <em>o_start</em>, <em>o_end</em>, <em>trim=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.liftover" title="Permalink to this definition">¶</a></dt>
 <dd><p>liftover an interval in one sequence of this pairwise alignment to the
 other.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -984,21 +993,28 @@ strand, False otherwise</td>
 
 <dl class="method">
 <dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.sequence_to_alignment_coords">
-<code class="descname">sequence_to_alignment_coords</code><span class="sig-paren">(</span><em>seq_num</em>, <em>start</em>, <em>end</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.sequence_to_alignment_coords" title="Permalink to this definition">¶</a></dt>
+<code class="descname">sequence_to_alignment_coords</code><span class="sig-paren">(</span><em>seq_num</em>, <em>start</em>, <em>end</em>, <em>trim=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.sequence_to_alignment_coords" title="Permalink to this definition">¶</a></dt>
 <dd><p>convert an interval in one of the sequences into an interval in the
 alignment. Alignment intervals are inclusive of start, but not end. They
-are zero-based. Hence the full alignment has coords [0, N), where N is the
+are one-based. Hence the full alignment has coords [1, N+1), where N is the
 length of the alignment (number of columns). Sequence coords follow the
-same conventions: zero-based, inclusive of start but not end.</p>
+same conventions: one-based, inclusive of start but not end.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>seq_num</strong> &#8211; which sequence are the start and end coords for? 1 or 2</li>
 <li><strong>start</strong> &#8211; start of the interval in sequence co-ordinates</li>
 <li><strong>end</strong> &#8211; end of the interval in sequence co-ordinates</li>
+<li><strong>trim</strong> &#8211; if true, trim coordinates that fall partially outside
+the sequence</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Raises AlignmentError:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first last">if coordinates fall entirely outside the
+sequence, or partially outside and trim == false</p>
 </td>
 </tr>
 </tbody>
