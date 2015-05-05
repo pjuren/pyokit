@@ -107,7 +107,10 @@ def from_repeat_masker_string(s):
   | consensus match start  | int   |   45      | awlays pos strand           |
   +------------------------+-------+-----------+-----------------------------+
   | consensus match end    | int   |   60      | always pos strand;          |
-  |                        |       |           | end >= start                |
+  |                        |       |           | end >= start; it is         |
+  |                        |       |           | inclusive of the final      |
+  |                        |       |           | coordinate (unlike e.g.     |
+  |                        |       |           | UCSC coords)                |
   +------------------------+-------+-----------+-----------------------------+
   | consensus match remain | (int) |  (40)     | for '+' match, always       |
   |                        |       |           | negative strand coords. Num |
@@ -168,7 +171,7 @@ def from_repeat_masker_string(s):
   # p_ins = float(parts[3])  -- we don't use this
   q_seq = parts[4].strip()
   q_seq_start = int(parts[5])
-  q_seq_end = int(parts[6])
+  q_seq_end = int(parts[6]) + 1
   # left_qseq = parts[7].strip() -- we don't use this
   strand = "-" if parts[8].strip() in COMPLEMENT_CHARS else "+"
   repeat_name = parts[9].strip()
@@ -176,11 +179,11 @@ def from_repeat_masker_string(s):
 
   # the three columns the define match location in the consensus
   con_pos_start = int(parts[11]) if strand is "+" else int(parts[13])
-  con_pos_end = int(parts[12])
+  con_pos_end = int(parts[12]) + 1
   con_pos_left = int(parts[13]) if strand is "+" else int(parts[11])
 
   # might get ID, mgiht not -- its sometimes missing.
-  repeat_id = parts[14].strip() if len(parts) == 15 else None
+  repeat_id = int(parts[14].strip()) if len(parts) == 15 else None
 
   # we can compute the length of the consensus using the 'leftover' index
   con_seq_len = con_pos_end + con_pos_left
@@ -298,8 +301,9 @@ class RetrotransposonOccurrence(GenomicInterval):
                                  "intersect!")
 
     if self.pairwise_alignment is not None:
-      return self.pairwise_alignment.liftover(intersecting_region.start,
-                                              intersecting_region.end)
+      return self.pairwise_alignment.liftover(1, intersecting_region.start,
+                                              intersecting_region.end,
+                                              trim=True)
     return self.liftover_coordinates(intersecting_region)
 
   def liftover_coordinates(self, intersecting_region):
@@ -537,20 +541,20 @@ class TestRetrotransposon(unittest.TestCase):
     self.rto7 = RetrotransposonOccurrence("chr5", 10, 18, '+',
                                           110, 121, 196, self.rt3, uniq_id=7)
 
-    self.rm_0 = ("463   1.3  0.6  1.7  chr1      10001   10468 (249240153) +  "
-                 + "(TAACCC)n      Simple_repeat          1  468    (0)     1")
-    self.rm_1 = ("463   1.3  0.6  1.7  chr1      10001   10468 (249240153) +  "
-                 + "(TAACCC)n      Simple_repeat          1  463    (0)     1")
-    self.rm_2 = ("3612  11.4 21.5  1.3  chr14    10469   11447 (249239174) C  "
-                 + "TAR1           Satellite/telo     (399) 1712    483     2")
-    self.rm_3 = ("484  25.1 13.2  0.0  chrX      11505   11675 (249238946) C  "
-                 + "L1MC5a         LINE/L1           (2382) 5648   5452     3")
+    self.rm_0 = ("463   1.3  0.6  1.7  chr1      10001   10467 (249240153) +  "
+                 + "(TAACCC)n      Simple_repeat          1  467    (0)     1")
+    self.rm_1 = ("463   1.3  0.6  1.7  chr1      10001   10467 (249240153) +  "
+                 + "(TAACCC)n      Simple_repeat          1  462    (0)     1")
+    self.rm_2 = ("3612  11.4 21.5  1.3  chr14    10469   11446 (249239174) C  "
+                 + "TAR1           Satellite/telo     (399) 1711    483     2")
+    self.rm_3 = ("484  25.1 13.2  0.0  chrX      11505   11674 (249238946) C  "
+                 + "L1MC5a         LINE/L1           (2382) 5647   5452     3")
     self.rm_4 = ("3612  11.4 21.5  1.3  chr14    10469   11447 (249239174) C  "
-                 + "TAR1           Satellite/telo     (399) 1447    469     2")
+                 + "TAR1           Satellite/telo     (399) 1447    467     2")
     self.rm_5 = ("484  25.1 13.2  0.0  chrX      11505   11675 (249238946) C  "
-                 + "L1MC5a         LINE/L1           (2382) 675   505     3")
-    self.rm_6 = ("146  25.6 14.9  0.0  chr5      10 50 (249238946) C " +
-                 "L1MC5a         LINE/L1             (2382) 10    40      6")
+                 + "L1MC5a         LINE/L1           (2382) 675   503     3")
+    self.rm_6 = ("146  25.6 14.9  0.0  chr5      10 49 (249238946) C " +
+                 "L1MC5a         LINE/L1             (2382) 10    39      6")
 
   def test_from_rm_string(self):
     """
