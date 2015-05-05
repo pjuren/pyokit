@@ -268,7 +268,7 @@ class PairwiseAlignment(object):
     res += (self.meta[S1_NAME_KEY] if S1_NAME_KEY in self.meta
             else UNKOWN_SEQ_NAME) + " "
     res += str(self.meta[S1_START_KEY]) + " "
-    res += str(self.meta[S1_END_KEY]) + " "
+    res += str(self.meta[S1_END_KEY] - 1) + " "
     res += "(" + str(self.meta[S1_END_NEG_STRAND_KEY]) + ") "
     res += ("C " if self.s2_is_reverse_comp() else "")
     res += (self.meta[S2_NAME_KEY] if S2_NAME_KEY in self.meta
@@ -276,9 +276,15 @@ class PairwiseAlignment(object):
     res += ("(" + str(self.meta[S2_START_NEG_STRAND_KEY]) + ")"
             if self.s2_is_reverse_comp() else str(self.meta[S2_START_KEY]))
     res += " "
+    # Note here that we need to convert between our internal representation
+    # for coordinates and the repeat-masker one; internally, we always store
+    # coordinates as exclusive of the final value with start < end;
+    # repeatmasker gives the larger coordinate as the 'start' when the match
+    # is to the reverse complement, so we have to swap start/end, and its
+    # coordinates are inclusive of end, so we have to subtract 1 from end.
+    res += (str(self.meta[S2_END_KEY] - 1) if self.s2_is_reverse_comp()
+            else str(self.meta[S2_END_KEY] - 1)) + " "
     res += (str(self.meta[S2_START_KEY]) if self.s2_is_reverse_comp()
-            else str(self.meta[S2_END_KEY])) + " "
-    res += (str(self.meta[S2_END_KEY]) if self.s2_is_reverse_comp()
             else "(" + str(self.meta[S2_END_NEG_STRAND_KEY]) + ")") + " "
     res += self.meta[UNKNOWN_RM_HEADER_FIELD_KEY] + " "
     res += str(self.meta[RM_ID_KEY])
@@ -498,9 +504,9 @@ class PairwiseAlignment(object):
     # figure out the max width for the coordinates column; we use size of the
     # alignment here rather than ungapped coordinates because its an upper
     # bound and easier to compute (i.e. for sure already know).
-    s1_line_end_num = (self.meta[S1_START_KEY] + 1 if self.s1_is_reverse_comp()
+    s1_line_end_num = (self.meta[S1_END_KEY] if self.s1_is_reverse_comp()
                        else self.meta[S1_START_KEY] - 1)
-    s2_line_end_num = (self.meta[S2_START_KEY] + 1 if self.s2_is_reverse_comp()
+    s2_line_end_num = (self.meta[S2_END_KEY] if self.s2_is_reverse_comp()
                        else self.meta[S2_START_KEY] - 1)
     max_num_len = max(len(str(self.meta[S1_START_KEY] + self.size())),
                       len(str(self.meta[S2_START_KEY] + self.size())))
@@ -649,6 +655,9 @@ class TestAlignments(unittest.TestCase):
     # .. but still if they fall entirely outside the sequence ..
     self.assertRaises(AlignmentError, self.pa1.sequence_to_alignment_coords,
                       1, 95, 99)
+    # test lifting over coordinates that overlaps the end of the alignement
+    r = self.pa1.sequence_to_alignment_coords(1, 124, 130, trim=True)
+    self.assertEqual(r, [(30, 31), (32, 36)])
 
   def test_alig_to_sequence_coords(self):
     """
