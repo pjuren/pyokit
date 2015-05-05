@@ -170,6 +170,11 @@ def _rm_parse_header_line(parts, meta_data):
   13/14  4           unique ID
   =====  ========    ==========================================================
 
+  Note that repeat-masker calls the larger coordinate the start when the match
+  is to the reverse complement; we swap these internally so start < end always,
+  regardless of whether the match is to the consensus or the reverse complement
+  of the consensus
+
   Each field is mapped to a key as follows
 
   =====  =================================================================
@@ -202,24 +207,30 @@ def _rm_parse_header_line(parts, meta_data):
   meta_data[multipleAlignment.ANNOTATION_KEY] = ""
   meta_data[multipleAlignment.S1_NAME_KEY] = parts[4]
   meta_data[multipleAlignment.S1_START_KEY] = int(parts[5])
-  meta_data[multipleAlignment.S1_END_KEY] = int(parts[6])
+  meta_data[multipleAlignment.S1_END_KEY] = int(parts[6]) + 1
   meta_data[multipleAlignment.S1_END_NEG_STRAND_KEY] = int(parts[7][1:-1])
 
   if parts[8] == "C" :
     meta_data[multipleAlignment.S2_REVERSE_COMP_KEY] = True
     meta_data[multipleAlignment.S2_NAME_KEY] = parts[9]
     meta_data[multipleAlignment.S2_START_NEG_STRAND_KEY] = int(parts[10][1:-1])
-    meta_data[multipleAlignment.S2_START_KEY] = int(parts[11])
-    meta_data[multipleAlignment.S2_END_KEY] = int(parts[12])
+    meta_data[multipleAlignment.S2_START_KEY] = int(parts[12])
+    meta_data[multipleAlignment.S2_END_KEY] = int(parts[11]) + 1
     meta_data[multipleAlignment.UNKNOWN_RM_HEADER_FIELD_KEY] = parts[13]
     meta_data[multipleAlignment.RM_ID_KEY] = int(parts[14])
   else:
     meta_data[multipleAlignment.S2_NAME_KEY] = parts[8]
     meta_data[multipleAlignment.S2_START_KEY] = int(parts[9])
-    meta_data[multipleAlignment.S2_END_KEY] = int(parts[10])
+    meta_data[multipleAlignment.S2_END_KEY] = int(parts[10]) + 1
     meta_data[multipleAlignment.S2_END_NEG_STRAND_KEY] = int(parts[11][1:-1])
     meta_data[multipleAlignment.UNKNOWN_RM_HEADER_FIELD_KEY] = parts[12]
     meta_data[multipleAlignment.RM_ID_KEY] = int(parts[13])
+
+  # internally, we always require start < end
+  assert(meta_data[multipleAlignment.S1_START_KEY] <
+         meta_data[multipleAlignment.S1_END_KEY])
+  assert(meta_data[multipleAlignment.S2_START_KEY] <
+         meta_data[multipleAlignment.S2_END_KEY])
 
 
 def _rm_name_match(s1, s2):
