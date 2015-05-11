@@ -29,6 +29,11 @@
 # standard python imports
 import StringIO
 import unittest
+import os
+import sys
+
+# pyokit imports
+from pyokit.util.progressIndicator import ProgressIndicator
 
 
 ###############################################################################
@@ -85,6 +90,7 @@ class IndexedFile(object):
     self._index = {}
     self._indexed_filename = None
     self._indexed_file_handle = None
+    self._no_reindex = False
     try:
       # try treating this as a filename
       self.indexed_file = (indexed_file, None)
@@ -162,6 +168,8 @@ class IndexedFile(object):
     """
     # if we haven't seen this one yet, expand the index until we do..
     if hash_value not in self._index:
+      if self._no_reindex:
+        raise IndexError("No such hash value in index: " + str(hash_value))
       self.__build_index(until=hash_value)
 
     # if we still haven't seen it, fail; it cannot be retrieved (at least,
@@ -240,8 +248,9 @@ class IndexedFile(object):
     for key in self._index:
       handle.write(to_str_func(key) + "\t" + str(self._index[key]) + "\n")
 
-  def read_index(self, fh, indexed_fh, record_iterator=None,
-                 record_hash_function=None, parse_hash=str, flush=True):
+  def read_index(self, fh, indexed_fh, rec_iterator=None,
+                 rec_hash_func=None, parse_hash=str, flush=True,
+                 no_reindex=True, verbose=False):
     """
     Populate this index from a file. Input format is just a tab-separated file,
     one record per line. The last column is the file location for the record
@@ -249,45 +258,52 @@ class IndexedFile(object):
     for that record (which is probably only 1 column, but this allows us to
     permit tabs in hash keys). Lines consisting only of whitespace are skipped.
 
-    :param fh:                   filename or stream-like object to read from.
-    :param indexed_fh:           either the filename of the indexed file or
-                                 handle to it.
-    :param record_iterator:      a function that will return an interator for
-                                 the indexed file type (not the iterator for
-                                 the file itself). This function must take a
-                                 single argument which is the name the file to
-                                 iterate over, or a stream like object similar
-                                 to a filestream.
-    :param record_hash_function: a function that accepts the record type
-                                 produced by the iterator and produces a
-                                 unique hash for each record.
-    :param parse_hash:           a function to convert the string
-                                 representation of the hash into whatever type
-                                 is needed. By default, we just leave these as
-                                 strings.
-    :param flush:                remove everything currently in the index and
-                                 discard any details about a file that is
-                                 already fully/partially indexed by this
-                                 object. This is the default behavior.
-                                 If False, then data from <fh> is just added
-                                 to the existing index data (potentially
-                                 overwriting some of it) and the existing
-                                 index can continue to be used as before.
+    :param fh:            filename or stream-like object to read from.
+    :param indexed_fh:    either the filename of the indexed file or handle to
+                          it.
+    :param rec_iterator:  a function that will return an interator for the
+                          indexed file type (not the iterator for the file
+                          itself). This function must take a single argument
+                          which is the name the file to iterate over, or a
+                          stream like object similar to a filestream.
+    :param rec_hash_func: a function that accepts the record type produced by
+                          the iterator and produces a unique hash for each
+                          record.
+    :param parse_hash:    a function to convert the string representation of
+                          the hash into whatever type is needed. By default,
+                          we just leave these as strings.
+    :param flush:         remove everything currently in the index and discard
+                          any details about a file that is already
+                          fully/partially indexed by this object. This is the
+                          default behavior. If False, then data from <fh> is
+                          just added to the existing index data (potentially
+                          overwriting some of it) and the existing index can
+                          continue to be used as before.
+    :param no_reindex:    if True, after loading the index, a missing key will
+                          cause an exception, rather than trigger re-scanning
+                          the indexed file for the associated record. The only
+                          reason to set this to False would be if your index
+                          was incomplete.
+    :param verbose:       output status message to STDERR about progress
+                          reading the index (if possible).
 
     :raise IndexError: on malformed line in input file/stream
     """
     # set the record iterator and hash functions, if they were given
-    if record_iterator != None:
-      self.record_iterator = record_iterator
-    if record_hash_function != None:
-      self.record_hash_function = record_hash_function
+    if rec_iterator != None:
+      self.record_iterator = rec_iterator
+    if rec_hash_func != None:
+      self.record_hash_function = rec_hash_func
+
+    # disable re-indexing?
+    self._no_reindex = no_reindex
 
     # figure out what kind of index identifier we got: handle or filename?
     handle = fh
     try:
       handle = open(fh)
     except TypeError:
-      # okay, not a filename, try to treat it as a stream to read from.
+      # okay, not a filename, we'll try treating it as a stream to read from.
       pass
 
     # clear this index?
@@ -312,9 +328,25 @@ class IndexedFile(object):
                          "reason: expected indexed filename or stream-like "
                          "object, got " + str(type(indexed_fh)))
 
+    # try to get an idea of how much data we have...
+    if verbose :
+      try :
+        total = os.path.getsize(handle.name)
+        pind = ProgressIndicator(totalToDo=total, messagePrefix="completed",
+                                 messageSuffix="of loading " + handle.name)
+      except AttributeError as e:
+        sys.stderr.write(str(e))
+        sys.stderr.write("completed [unknown] of loading index")
+        verbose = False
+
     # read the index file and populate this object
     for line in handle:
       line = line.rstrip()
+
+      if verbose :
+        pind.done = handle.tell()
+        pind.showProgress()
+
       if line.isspace():
         continue
       parts = line.split("\t")
