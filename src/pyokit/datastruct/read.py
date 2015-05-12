@@ -202,9 +202,13 @@ class NGSRead(Sequence):
 
   def __str__(self):
     """
-      Get a string representation of this FastQSequence.
+    :return: string representation of this NGS read
+    """
+    return self.to_fastq_str()
 
-      :return: String that represents this FastQSequence.
+  def to_fastq_str(self):
+    """
+    :return: string representation of this NGS read in FastQ format
     """
     return "@" + self.sequenceName + "\n" + self.sequenceData +\
            "\n" + "+" + self.sequenceName + "\n" + self.sequenceQual

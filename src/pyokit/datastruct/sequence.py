@@ -52,6 +52,7 @@ class SequenceError(Exception):
   def __str__(self):
     return repr(self.value)
 
+
 ###############################################################################
 #                            MUTABLE STRING CLASS                             #
 ###############################################################################
@@ -375,10 +376,8 @@ class Sequence(object):
     if point is None :
       point = len(self) / 2
 
-    r1 = FastqSequence(self.sequenceName + ".1",
-                       self.sequenceData[:point])
-    r2 = FastqSequence(self.sequenceName + ".2",
-                       self.sequenceData[point:])
+    r1 = Sequence(self.sequenceName + ".1", self.sequenceData[:point])
+    r2 = Sequence(self.sequenceName + ".2", self.sequenceData[point:])
 
     return r1, r2
 
@@ -498,54 +497,20 @@ class Sequence(object):
         return False
     return True
 
-
-###############################################################################
-#                           FASTA SEQUENCE CLASS                              #
-###############################################################################
-
-class FastaSequence(Sequence):
-  """
-    Data-structure for holding information about a Fasta-formatted sequence.
-    This is basically just a wrapper around a regular Sequence object which
-    provides the neccessary formatting for output.
-
-    :param seqName:           the name of the sequence
-    :param seqData:           the actual nucleotide sequence
-    :param lineWidth:         width of sequence data lines for output. If None,
-                              all sequence data will be output on a single line
-    :param useMustableString:
-  """
-
-  def __init__(self, seqName, seqData="", lineWidth=None,
-               useMutableString=False):
-    Sequence.__init__(self, seqName, seqData, useMutableString)
-    self.lineWidth = lineWidth
-
   def __str__(self):
     """
-      Get a string representation of this fasta sequence. If line width was
-      specifified when the object was created, it is respected. Otherwise, all
-      sequence data is printed to a single line.
+    :return: string representation of this sequence object
     """
-    if self.lineWidth is None :
-      return ">" + self.sequenceName + "\n" + str(self.sequenceData)
-    else :
-      return self.formattedString()
+    return self.to_fasta_str(self)
 
-  def formattedString(self):
+  def to_fastq_str(self, line_width=50):
     """
-      Get a formatted version of the seq where no row of sequence data exceeds
-      the line length for this object.
-
-      :raise: SequenceError if this object has no line width specified.
+    :return: string representation of this sequence object in fasta format
     """
-    if self.lineWidth is None :
-      raise SequenceError("No line width for fasta formatted read specified")
-
     res = ">" + self.sequenceName + "\n"
-    for i in range(0, len(self.sequenceData), self.lineWidth) :
-      res += self.sequenceData[i:i + self.lineWidth]
-      if i + self.lineWidth < len(self.sequenceData):
+    for i in range(0, len(self.sequenceData), line_width) :
+      res += self.sequenceData[i:i + line_width]
+      if i + line_width < len(self.sequenceData):
         res += "\n"
     return res
 
@@ -615,24 +580,23 @@ class SequenceUnitTests(unittest.TestCase):
     """
       test that string formatting works correctly for fasta sequences
     """
-    r = FastaSequence("name", "ATCGATCGATCGATCTCGA", lineWidth=5)
+    r = Sequence("name", "ATCGATCGATCGATCTCGA")
     expect = ">name\n" +\
              "ATCGA\n" +\
              "TCGAT\n" +\
              "CGATC\n" +\
              "TCGA"
-    got = r.formattedString()
+    got = r.to_fastq_str(line_width=5)
     self.assertTrue(got == expect)
 
     # make sure this also works with a mutable underlying sequence
-    r = FastaSequence("name", "ATCGATCGATCGATCTCGA", lineWidth=5,
-                      useMutableString=True)
+    r = Sequence("name", "ATCGATCGATCGATCTCGA", useMutableString=True)
     expect = ">name\n" +\
              "ATCGA\n" +\
              "TCGAT\n" +\
              "CGATC\n" +\
              "TCGA"
-    got = r.formattedString()
+    got = r.to_fastq_str(line_width=5)
     self.assertTrue(got == expect)
 
 

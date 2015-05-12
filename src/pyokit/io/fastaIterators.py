@@ -29,7 +29,7 @@ import os
 import unittest
 
 # pyokit imports
-from pyokit.datastruct.sequence import FastaSequence
+from pyokit.datastruct.sequence import Sequence
 from pyokit.util.progressIndicator import ProgressIndicator
 
 
@@ -138,7 +138,6 @@ def fastaIterator(fn, useMutableString=False, verbose=False):
     # now we need to read lines until we hit another sequence header, or we
     # run out of lines.. this is our sequence data
     line = None
-    lineWidth = None
     seqdata = ""
     while line == None or not _isSequenceHead(line) :
       line = fh.readline()
@@ -146,14 +145,12 @@ def fastaIterator(fn, useMutableString=False, verbose=False):
         break  # file is finished...
       if not _isSequenceHead(line) :
         seqdata += line.strip()
-        if lineWidth == None :
-          lineWidth = len(line.strip())
 
     # package it all up..
     if verbose :
       pind.done = fh.tell()
       pind.showProgress()
-    yield FastaSequence(name, seqdata, lineWidth, useMutableString)
+    yield Sequence(name, seqdata, useMutableString)
 
     # remember where we stopped for next call, or finish
     prevLine = line

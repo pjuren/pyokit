@@ -291,7 +291,7 @@ def fastqIteratorComplex(fn, useMutableString=False, verbose=False,
       raise FastqFileFormatError("missing quality data..")
 
     # package it all up..
-    yield FastqSequence(name, seqdata, qualdata, useMutableString)
+    yield NGSRead(name, seqdata, qualdata, useMutableString)
     if verbose:
       pind.showProgress()
 
@@ -348,7 +348,6 @@ class FastQUintTests(unittest.TestCase):
         sys.stderr.write(str(seq) + "\n" + "----------------\n")
 
     self.assertTrue(seqs == expect)
-
 
   def testSangerQual2(self):
     """
