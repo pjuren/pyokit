@@ -30,7 +30,7 @@ import unittest
 
 # pyokit imports
 from pyokit.testing.dummyfiles import DummyInputStream
-from pyokit.datastruct.sequence import FastqSequence
+from pyokit.datastruct.read import NGSRead
 from pyokit.util.progressIndicator import ProgressIndicator
 from pyokit.util.fileUtils import linesInFile
 
@@ -157,7 +157,7 @@ def fastqIteratorSimple(fn, verbose=False, allowNameMissmatch=False):
     name = lines[0][1:]
     seq = lines[1]
     qual = lines[3]
-    yield FastqSequence(name, seq, qual)
+    yield NGSRead(seq, name, qual)
 
 
 def fastqIterator(fn, useMutableString=False, verbose=False, debug=False,
@@ -327,8 +327,8 @@ class FastQUintTests(unittest.TestCase):
             "" + seq2Data + "\n" +\
             "+" + seq2Name + "\n" +\
             "" + seq2Qual + ""
-    expect = [FastqSequence(seq1Name, seq1Data, seq1Qual),
-              FastqSequence(seq2Name, seq2Data, seq2Qual)]
+    expect = [NGSRead(seq1Data, seq1Name, seq1Qual),
+              NGSRead(seq2Data, seq2Name, seq2Qual)]
 
     ins = DummyInputStream(instr)
 
@@ -373,8 +373,8 @@ class FastQUintTests(unittest.TestCase):
             "" + seq2Data + "\n" +\
             "+" + seq2Name + "\n" +\
             "" + seq2Qual + ""
-    expect = [FastqSequence(seq1Name, seq1Data, seq1Qual),
-              FastqSequence(seq2Name, seq2Data, seq2Qual)]
+    expect = [NGSRead(seq1Data, seq1Name, seq1Qual),
+              NGSRead(seq2Data, seq2Name, seq2Qual)]
 
     ins = DummyInputStream(instr)
 
