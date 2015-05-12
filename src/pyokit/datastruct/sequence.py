@@ -26,6 +26,16 @@
 import unittest
 from pyokit.util.progressIndicator import ProgressIndicator
 
+###############################################################################
+#                             MODULE CONSTANTS                                #
+###############################################################################
+
+DNA_COMPLEMENTS = {"A":"T", "T":"A", "C":"G", "G":"C", "N":"N",
+                   "a":"t", "t":"a", "c":"g", "g":"c", "n":"n"}
+RNA_COMPLEMENTS = {"A":"U", "U":"A", "C":"G", "G":"C", "N":"N",
+                   "a":"u", "u":"a", "c":"g", "g":"c", "n":"n"}
+GAP_CHAR = "-"
+
 
 ###############################################################################
 #                             EXCEPTION CLASSES                               #
@@ -127,12 +137,8 @@ class Sequence(object):
                              is mutable.)
   """
 
-  DNA_COMPLEMENTS = {"A":"T", "T":"A", "C":"G", "G":"C", "N":"N",
-                     "a":"t", "t":"a", "c":"g", "g":"c", "n":"n"}
-  RNA_COMPLEMENTS = {"A":"U", "U":"A", "C":"G", "G":"C", "N":"N",
-                     "a":"u", "u":"a", "c":"g", "g":"c", "n":"n"}
-
-  def __init__(self, seqName, seqData, useMutableString=False):
+  def __init__(self, seqName, seqData, start_coord=None, end_coord=None,
+               useMutableString=False):
     """
       Constructor for Sequence objects. See class level documentation for
       parameter descriptions.
@@ -143,12 +149,62 @@ class Sequence(object):
     else :
       self.sequenceData = seqData
     self.mutableString = useMutableString
+    self._start_coord = start_coord
+    self._end_coord = end_coord
+    self._ungapped_len = None   # we compute this just-in-time..
+    self._effective_len = None  # .. and this
 
   def copy(self):
     """
-      Copy constructor for Sequence objects.
+    Copy constructor for Sequence objects.
     """
     return Sequence(self.sequenceName, self.sequenceData, self.mutableString)
+
+  @property
+  def start(self):
+    """
+    TODO
+    """
+    if self._start_coord is None:
+      return 1
+    return self._start_coord
+
+  @property
+  def end(self):
+    if self._end_coord is None:
+      return self.ungapped_len + 1
+    return self._end_coord
+
+  @property
+  def ungapped_len(self):
+    if self._ungapped_len is None:
+      self._ungapped_len = 0
+      for nuc in self.sequenceData:
+        if nuc != GAP_CHAR:
+          self._ungapped_len += 1
+    # take this oportunity to check that coords match ungapped sequence len
+    e_ok = self._end_coord is not None
+    if e_ok and self._ungapped_len != self.end - self.start:
+      raise SequenceError("ungapped length of sequence doesn't match " +
+                          "start and end coordinates")
+    return self._ungapped_len
+
+  @property
+  def effective_len(self):
+    """
+    Get the length of the sequence if N's are disregarded.
+    """
+    if self._effective_len is None:
+      self._effective_len = len([nuc for nuc in self.sequenceData
+                                 if nuc != "N" and nuc != "n"])
+    return self._effective_len
+
+  def __len__(self):
+    """
+    Get the length of the sequence, defined as the length of its sequence
+    data
+    """
+    return len(self.sequenceData)
 
   def percentNuc(self, nuc):
     """
@@ -158,7 +214,7 @@ class Sequence(object):
                   is no check to make sure this is a valid nucleotide.
       :return: the percentage of the sequence that is <nuc>
     """
-    count = reduce(lambda x, y: x+1 if y == nuc else x, self.sequenceData, 0)
+    count = reduce(lambda x, y: x + 1 if y == nuc else x, self.sequenceData, 0)
     return count / float(len(self.sequenceData))
 
   def similarity(self, self_start, self_end, other_start, other_end, other):
@@ -194,24 +250,10 @@ class Sequence(object):
     tmp = ""
     for n in self.sequenceData :
       if isRNA_l:
-        tmp += Sequence.RNA_COMPLEMENTS[n]
+        tmp += RNA_COMPLEMENTS[n]
       else:
-        tmp += Sequence.DNA_COMPLEMENTS[n]
+        tmp += DNA_COMPLEMENTS[n]
     self.sequenceData = tmp[::-1]
-
-  def __len__(self):
-    """
-      Get the length of the sequence, defined as the length of its sequence
-      data
-    """
-    return len(self.sequenceData)
-
-  def effectiveLength(self):
-    """
-      Get the length of the sequence if N's are disregarded.
-    """
-    return len([nuc for nuc in self.sequenceData
-                if nuc != "N" and nuc != "n"])
 
   def __eq__(self, seq):
     """
@@ -737,7 +779,7 @@ class SequenceUnitTests(unittest.TestCase):
   def testLengths(self):
     input_seq = Sequence("name", "ACTNCTANCGATNNACT")
     self.assertTrue(len(input_seq) == 17)
-    self.assertTrue(input_seq.effectiveLength() == 13)
+    self.assertTrue(input_seq.effective_len == 13)
 
   def testMaskRegion(self):
     class TestRegion:
