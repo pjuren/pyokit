@@ -25,6 +25,7 @@
 
 import unittest
 from pyokit.util.progressIndicator import ProgressIndicator
+from pyokit.util.mutableString import MutableString
 
 ###############################################################################
 #                             MODULE CONSTANTS                                #
@@ -35,6 +36,8 @@ DNA_COMPLEMENTS = {"A":"T", "T":"A", "C":"G", "G":"C", "N":"N",
 RNA_COMPLEMENTS = {"A":"U", "U":"A", "C":"G", "G":"C", "N":"N",
                    "a":"u", "u":"a", "c":"g", "g":"c", "n":"n"}
 GAP_CHAR = "-"
+RNA_NUCS = "ACGUNacgun"
+DNA_NUCS = "ACGTNacgtn"
 
 
 ###############################################################################
@@ -51,57 +54,6 @@ class SequenceError(Exception):
 
   def __str__(self):
     return repr(self.value)
-
-
-###############################################################################
-#                            MUTABLE STRING CLASS                             #
-###############################################################################
-
-class MutableString(object) :
-  """
-    Strings in python are immutable. That brings a number of advantages, but
-    one problem is that they are expensive to edit. This class implements a
-    string as a list of char, which is cheaper to edit, but cannot be used for
-    things like dictionary keys due to it's mutability.
-  """
-  def __init__(self, strng):
-    self.list = []
-    for ch in strng :
-      self.list.append(ch)
-
-  def __getitem__(self, indx):
-    if isinstance(indx, slice):
-      return "".join(self.list.__getitem__(indx))
-    return self.list[indx]
-
-  def __setitem__(self, k, v):
-    self.list[k] = v
-
-  def __len__(self):
-    return len(self.list)
-
-  def __eq__(self, other):
-    if type(other).__name__ == "str" :
-      other = [x for x in other]
-    else :
-      try :
-        other = other.list
-      except:
-        return False
-    return self.list == other
-
-  def __ne__(self, other):
-    if type(other).__name__ == "str" :
-      other = [x for x in other]
-    else :
-      try :
-        other = other.list
-      except:
-        return False
-    return self.list != other
-
-  def __str__(self):
-    return "".join(self.list)
 
 
 ###############################################################################
@@ -301,7 +253,8 @@ class Sequence(object):
                           + str(len(self)))
 
     if self.mutableString :
-      for i in range(region.start, region.end + 1) : self.sequenceData[i] = 'N'
+      for i in range(region.start, region.end + 1):
+        self.sequenceData[i] = 'N'
     else :
       self.sequenceData = "".join([self.sequenceData[:region.start],
                                   ("N" * (region.end - region.start + 1)),
@@ -336,7 +289,7 @@ class Sequence(object):
       :return: True if contains only DNA nucleotides, False otherwise
     """
     for nuc in self.sequenceData :
-      if nuc not in "ACGTacgtn":
+      if nuc not in DNA_NUCS:
         return False
     return True
 
@@ -348,7 +301,7 @@ class Sequence(object):
       :return: True if contains only RNA nucleotides, False otherwise
     """
     for nuc in self.sequenceData :
-      if nuc not in "ACGUacgun":
+      if nuc not in RNA_NUCS:
         return False
     return True
 
@@ -457,7 +410,7 @@ class Sequence(object):
     if len(mask) > len(self.sequenceData):
       return False
     lim = len(mask)
-    for i in range(0,lim):
+    for i in range(0, lim):
       if mask[i] == "N" or mask[i] == "n":
         continue
       if mask[i] != self.sequenceData[i]:
