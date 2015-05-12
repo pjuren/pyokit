@@ -176,7 +176,7 @@ class NGSRead(Sequence):
 
   def merge(self, other, forceMerge=False):
     """
-      Merge two fastqSequences by concatenating their sequence data and their
+      Merge two reads by concatenating their sequence data and their
       quality data (<self> first, then <other>); <self> and <other> must have
       the same sequence name. A new merged FastqSequence object is returned;
       <Self> and <other> are left unaltered.
@@ -212,6 +212,45 @@ class NGSRead(Sequence):
     """
     return "@" + self.sequenceName + "\n" + self.sequenceData +\
            "\n" + "+" + self.sequenceName + "\n" + self.sequenceQual
+
+
+###############################################################################
+#                  HELPER FUNCTIONS FOR PROCESSING NGS READS                  #
+###############################################################################
+
+def clip_adaptor(read, adaptor):
+  """
+  Clip an adaptor sequence from this sequence. We assume it's in the 3'
+  end. This is basically a convenience wrapper for clipThreePrime. It
+  requires 8 out of 10 of the first bases in the adaptor sequence to match
+  for clipping to occur.
+
+  :param adaptor: sequence to look for. We only use the first 10 bases;
+                  must be a full Sequence object, not just a string.
+  """
+  missmatches = 2
+  adaptor = adaptor.truncate(10)
+  read.clip_end(adaptor, len(adaptor) - missmatches)
+
+
+def contains_adaptor(read, adaptor):
+  """
+  Check whether this sequence contains adaptor contamination. If it exists,
+  we assume it's in the 3' end. This function requires 8 out of 10 of the
+  first bases in the adaptor sequence to match for an occurrence to be
+  reported.
+
+  :param adaptor: sequence to look for. We only use first 10 bases; must be
+                  a full Sequence object, not just string.
+  :return: True if there is an occurence of <adaptor>, False otherwise
+  """
+  origSeq = read.sequenceData
+  clip_adaptor(read, adaptor)
+  res = False
+  if read.sequenceData != origSeq:
+    res = True
+  read.sequenceData = origSeq
+  return res
 
 
 ###############################################################################
@@ -253,6 +292,14 @@ class NGSReadUnitTests(unittest.TestCase):
     self.assertTrue((r5 != r6) == True)   # diff name, diff seq, same qual
     self.assertTrue((r6 != r7) == True)   # diff name, same seq, diff qual
     self.assertTrue((r3 != r4) == True)   # diff name, same seq, same qual
+
+  def testClipadaptor(self):
+    input_seq = NGSRead("ACTGCTAGCGATCGACT", "n1", "QQQQQQQQQQQQQQQQQ")
+    adaptor = Sequence("adap", "AGCGATAGACT")
+    expect = NGSRead("ACTGCTNNNNNNNNNNN", "n1", "QQQQQQQQQQQQQQQQQ")
+    clip_adaptor(input_seq, adaptor)
+    got = input_seq
+    self.assertTrue(expect == got)
 
 
 ###############################################################################

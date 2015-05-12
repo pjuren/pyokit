@@ -390,9 +390,9 @@ class Sequence(object):
     """
     return Sequence(self.sequenceName, self.sequenceData[:newLength])
 
-  def clipThreePrime(self, seq, mm_score):
+  def clip_end(self, seq, mm_score):
     """
-      Clip a sequence from the 3' end of the sequence -- we assume the sequence
+      Clip a sequence from the end of this sequence -- we assume the sequence
       to be clipped will always begin somewhere in this sequence, but may not
       be fully contained. If found, replaced with Ns.
 
@@ -417,39 +417,6 @@ class Sequence(object):
       if (score >= mm_score) :
         self.nsRight(len(seq) + (len(self) - i) - 1)
         break
-
-  def clipAdaptor(self, adaptor):
-    """
-      Clip an adaptor sequence from this sequence. We assume it's in the 3'
-      end. This is basically a convenience wrapper for clipThreePrime. It
-      requires 8 out of 10 of the first bases in the adaptor sequence to match
-      for clipping to occur.
-
-      :param adaptor: sequence to look for. We only use the first 10 bases;
-                      must be a full Sequence object, not just a string.
-    """
-    missmatches = 2
-    adaptor = adaptor.truncate(10)
-    self.clipThreePrime(adaptor, len(adaptor) - missmatches)
-
-  def containsAdaptor(self, adaptor):
-    """
-      Check whether this sequence contains adaptor contamination. If it exists,
-      we assume it's in the 3' end. This function requires 8 out of 10 of the
-      first bases in the adaptor sequence to match for an occurrence to be
-      reported.
-
-      :param adaptor: sequence to look for. We only use first 10 bases; must be
-                      a full Sequence object, not just string.
-      :return: True if there is an occurence of <adaptor>, False otherwise
-    """
-    origSeq = self.sequenceData
-    self.clipAdaptor(adaptor)
-    res = False
-    if self.sequenceData != origSeq:
-      res = True
-    self.sequenceData = origSeq
-    return res
 
   def isPolyA(self):
     """
@@ -523,14 +490,6 @@ class SequenceUnitTests(unittest.TestCase):
   """
     Unit tests for sequence classes
   """
-
-  def testClipadaptor(self):
-    input_seq = Sequence("name", "ACTGCTAGCGATCGACT")
-    adaptor = Sequence("adap", "AGCGATAGACT")
-    expect = Sequence("name", "ACTGCTNNNNNNNNNNN")
-    input_seq.clipAdaptor(adaptor)
-    got = input_seq
-    self.assertTrue(expect == got)
 
   def testNsLeft(self):
     input_seq = Sequence("name", "ACTGCTAGCGATCGACT")
