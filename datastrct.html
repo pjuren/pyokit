@@ -327,7 +327,7 @@ manipulating sequence data, see <a class="reference internal" href="sequences.ht
 <span id="sequenceclasssection"></span><h3>The Sequence class<a class="headerlink" href="#the-sequence-class" title="Permalink to this headline">¶</a></h3>
 <dl class="class">
 <dt id="pyokit.datastruct.sequence.Sequence">
-<em class="property">class </em><code class="descclassname">pyokit.datastruct.sequence.</code><code class="descname">Sequence</code><span class="sig-paren">(</span><em>seqName</em>, <em>seqData</em>, <em>useMutableString=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pyokit.datastruct.sequence.</code><code class="descname">Sequence</code><span class="sig-paren">(</span><em>seqName</em>, <em>seqData</em>, <em>start_coord=None</em>, <em>end_coord=None</em>, <em>useMutableString=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the base class for all sequences in Pyokit. Objects from this class
 will have only a sequence name and actual nucleotide sequence data.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -352,27 +352,9 @@ is mutable.)</li>
 </tbody>
 </table>
 <dl class="method">
-<dt id="pyokit.datastruct.sequence.Sequence.clipAdaptor">
-<code class="descname">clipAdaptor</code><span class="sig-paren">(</span><em>adaptor</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.clipAdaptor" title="Permalink to this definition">¶</a></dt>
-<dd><p>Clip an adaptor sequence from this sequence. We assume it&#8217;s in the 3&#8217;
-end. This is basically a convenience wrapper for clipThreePrime. It
-requires 8 out of 10 of the first bases in the adaptor sequence to match
-for clipping to occur.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>adaptor</strong> &#8211; sequence to look for. We only use the first 10 bases;
-must be a full Sequence object, not just a string.</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyokit.datastruct.sequence.Sequence.clipThreePrime">
-<code class="descname">clipThreePrime</code><span class="sig-paren">(</span><em>seq</em>, <em>mm_score</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.clipThreePrime" title="Permalink to this definition">¶</a></dt>
-<dd><p>Clip a sequence from the 3&#8217; end of the sequence &#8211; we assume the sequence
+<dt id="pyokit.datastruct.sequence.Sequence.clip_end">
+<code class="descname">clip_end</code><span class="sig-paren">(</span><em>seq</em>, <em>mm_score</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.clip_end" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clip a sequence from the end of this sequence &#8211; we assume the sequence
 to be clipped will always begin somewhere in this sequence, but may not
 be fully contained. If found, replaced with Ns.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -391,34 +373,14 @@ mm_score = len(seq) would be 100% match</li>
 </dd></dl>
 
 <dl class="method">
-<dt id="pyokit.datastruct.sequence.Sequence.containsAdaptor">
-<code class="descname">containsAdaptor</code><span class="sig-paren">(</span><em>adaptor</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.containsAdaptor" title="Permalink to this definition">¶</a></dt>
-<dd><p>Check whether this sequence contains adaptor contamination. If it exists,
-we assume it&#8217;s in the 3&#8217; end. This function requires 8 out of 10 of the
-first bases in the adaptor sequence to match for an occurrence to be
-reported.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>adaptor</strong> &#8211; sequence to look for. We only use first 10 bases; must be
-a full Sequence object, not just string.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True if there is an occurence of &lt;adaptor&gt;, False otherwise</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
 <dt id="pyokit.datastruct.sequence.Sequence.copy">
 <code class="descname">copy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.copy" title="Permalink to this definition">¶</a></dt>
 <dd><p>Copy constructor for Sequence objects.</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="pyokit.datastruct.sequence.Sequence.effectiveLength">
-<code class="descname">effectiveLength</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.effectiveLength" title="Permalink to this definition">¶</a></dt>
+<dl class="attribute">
+<dt id="pyokit.datastruct.sequence.Sequence.effective_len">
+<code class="descname">effective_len</code><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.effective_len" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the length of the sequence if N&#8217;s are disregarded.</p>
 </dd></dl>
 
@@ -641,6 +603,12 @@ sequence remains unmodified.</p>
 </table>
 </dd></dl>
 
+<dl class="attribute">
+<dt id="pyokit.datastruct.sequence.Sequence.start">
+<code class="descname">start</code><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>TODO</p>
+</dd></dl>
+
 <dl class="method">
 <dt id="pyokit.datastruct.sequence.Sequence.toDNA">
 <code class="descname">toDNA</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.toDNA" title="Permalink to this definition">¶</a></dt>
@@ -652,6 +620,19 @@ sequence remains unmodified.</p>
 <code class="descname">toRNA</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.toRNA" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert this sequence in-place to an RNA sequence by changing any Ts
 to Us</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.to_fastq_str">
+<code class="descname">to_fastq_str</code><span class="sig-paren">(</span><em>line_width=50</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.to_fastq_str" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">string representation of this sequence object in fasta format</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -674,193 +655,9 @@ long.</p>
 </div>
 <div class="section" id="the-fastasequence-class">
 <span id="fastasequenceclasssection"></span><h3>The FastaSequence class<a class="headerlink" href="#the-fastasequence-class" title="Permalink to this headline">¶</a></h3>
-<dl class="class">
-<dt id="pyokit.datastruct.sequence.FastaSequence">
-<em class="property">class </em><code class="descclassname">pyokit.datastruct.sequence.</code><code class="descname">FastaSequence</code><span class="sig-paren">(</span><em>seqName</em>, <em>seqData=''</em>, <em>lineWidth=None</em>, <em>useMutableString=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.FastaSequence" title="Permalink to this definition">¶</a></dt>
-<dd><p>Data-structure for holding information about a Fasta-formatted sequence.
-This is basically just a wrapper around a regular Sequence object which
-provides the neccessary formatting for output.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>seqName</strong> &#8211; the name of the sequence</li>
-<li><strong>seqData</strong> &#8211; the actual nucleotide sequence</li>
-<li><strong>lineWidth</strong> &#8211; width of sequence data lines for output. If None,
-all sequence data will be output on a single line</li>
-<li><strong>useMustableString</strong> &#8211; </li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-<dl class="method">
-<dt id="pyokit.datastruct.sequence.FastaSequence.formattedString">
-<code class="descname">formattedString</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.FastaSequence.formattedString" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get a formatted version of the seq where no row of sequence data exceeds
-the line length for this object.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Raise:</th><td class="field-body">SequenceError if this object has no line width specified.</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 <div class="section" id="the-fastqsequence-class">
 <span id="fastqsequenceclasssection"></span><h3>The FastqSequence class<a class="headerlink" href="#the-fastqsequence-class" title="Permalink to this headline">¶</a></h3>
-<dl class="class">
-<dt id="pyokit.datastruct.sequence.FastqSequence">
-<em class="property">class </em><code class="descclassname">pyokit.datastruct.sequence.</code><code class="descname">FastqSequence</code><span class="sig-paren">(</span><em>seqName</em>, <em>seqData=None</em>, <em>seqQual=None</em>, <em>useMutableString=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence" title="Permalink to this definition">¶</a></dt>
-<dd><p>Data structure fo holding informaton about a Fastq-formatted sequence.
-Fastq-formatted sequences differ from regular sequences by the inclusion of
-a quality score for each nucleotide in the sequence, encoded as a string.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>seqName</strong> &#8211; A name describing the sequence. Can be any string.</li>
-<li><strong>seqData</strong> &#8211; The nucleotide sequence data. Can be DNA or RNA.
-Note that there is no check to make sure the
-sequence data is valid, that&#8217;s the responsibility
-of the caller.</li>
-<li><strong>seqQual</strong> &#8211; The quality string for this sequence &#8211; must be
-the same length as the nucleotide sequence.</li>
-<li><strong>useMutableString</strong> &#8211; Store the sequence data as a mutable string,
-rather than a regular python string. This should
-make editing operations much faster, but it comes
-at the expense of less flexibility (e.g. the
-object can not be used as a hash key because it
-is mutable.)</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name" colspan="2">Raises SequenceError:</th></tr>
-<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first last">if the sequence data is not the same length as the
-quality data.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<dl class="method">
-<dt id="pyokit.datastruct.sequence.FastqSequence.merge">
-<code class="descname">merge</code><span class="sig-paren">(</span><em>other</em>, <em>forceMerge=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.merge" title="Permalink to this definition">¶</a></dt>
-<dd><p>Merge two fastqSequences by concatenating their sequence data and their
-quality data (&lt;self&gt; first, then &lt;other&gt;); &lt;self&gt; and &lt;other&gt; must have
-the same sequence name. A new merged FastqSequence object is returned;
-&lt;Self&gt; and &lt;other&gt; are left unaltered.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>other</strong> &#8211; the other sequence to merge with self.</li>
-<li><strong>forceMerge</strong> &#8211; force the merge to occur, even if sequences names
-don&#8217;t match. In this case, &lt;self&gt; takes precedence.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A new FastqSequence that represents the merging of &lt;self&gt; and
-&lt;other&gt;</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Raise:</th><td class="field-body"><p class="first last">FastqSequenceError if the sequences names do not match, and the
-forceMerge parameter is not set.</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyokit.datastruct.sequence.FastqSequence.qualityToSolexa">
-<code class="descname">qualityToSolexa</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.qualityToSolexa" title="Permalink to this definition">¶</a></dt>
-<dd><p>Convert the quality data for this fastqSequence in-place, from sanger to
-solexa format. Note that no checking is done to make sure the data was
-originally in sanger format; if it wasn&#8217;t, the result will be junk.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyokit.datastruct.sequence.FastqSequence.reverseComplement">
-<code class="descname">reverseComplement</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.reverseComplement" title="Permalink to this definition">¶</a></dt>
-<dd><p>Reverse complement this fastq sequence in-place.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyokit.datastruct.sequence.FastqSequence.split">
-<code class="descname">split</code><span class="sig-paren">(</span><em>point=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.split" title="Permalink to this definition">¶</a></dt>
-<dd><p>Split this fastq sequence into two halves. The original sequence is left
-unaltered.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>point</strong> &#8211; the point (index) at which to split this sequence. If None
-(the default), then we split in the middle.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">two FastqSequence objects which correspond to the split of this
-sequence.</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyokit.datastruct.sequence.FastqSequence.trimLeft">
-<code class="descname">trimLeft</code><span class="sig-paren">(</span><em>amount</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.trimLeft" title="Permalink to this definition">¶</a></dt>
-<dd><p>Trim this fastqSequence in-place by removing &lt;amount&gt; nucleotides from
-the 5&#8217; end (left end).</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>amount</strong> &#8211; the number of nucleotides to trim from the left-side of
-this sequence.</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyokit.datastruct.sequence.FastqSequence.trimRight">
-<code class="descname">trimRight</code><span class="sig-paren">(</span><em>amount</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.trimRight" title="Permalink to this definition">¶</a></dt>
-<dd><p>Trim this fastqSequence in-place by removing &lt;amount&gt; nucleotides from
-the 3&#8217; end (right end).</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>amount</strong> &#8211; the number of nucleotides to trim from the right-side of
-this sequence.</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyokit.datastruct.sequence.FastqSequence.truncate">
-<code class="descname">truncate</code><span class="sig-paren">(</span><em>size</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.FastqSequence.truncate" title="Permalink to this definition">¶</a></dt>
-<dd><p>truncate this fastqSequence in-place so it is only &lt;size&gt; nucleotides
-long</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>size</strong> &#8211; the number of nucleotides to truncate to.</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 </div>
 <div class="section" id="sequence-alignments">
