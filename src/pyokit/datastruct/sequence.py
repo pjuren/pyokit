@@ -246,11 +246,11 @@ class Sequence(object):
     """
     if region.start < 0 or region.end < 0 or \
        region.start > len(self) or region.end > len(self) :
-      raise SequenceError("cannot mask region " + str(region.start) + " to "
-                          + str(region.end) + " in " + self.sequenceName + ". "
-                          + "Region specifies nucleotides not present in "
-                          + "this read. Valid range would have been 0 -- "
-                          + str(len(self)))
+      raise SequenceError("cannot mask region " + str(region.start) + " to " +
+                          str(region.end) + " in " + self.sequenceName + ". " +
+                          "Region specifies nucleotides not present in " +
+                          "this read. Valid range would have been 0 -- " +
+                          str(len(self)))
 
     if self.mutableString :
       for i in range(region.start, region.end + 1):
@@ -273,8 +273,8 @@ class Sequence(object):
     if verbose:
       pind = ProgressIndicator(totalToDo=len(regions),
                                messagePrefix="completed",
-                               messageSuffix="of masking regions in "
-                                             + self.sequenceName)
+                               messageSuffix="of masking regions in " +
+                                             self.sequenceName)
     for region in regions :
       self.maskRegion(region)
       if verbose :

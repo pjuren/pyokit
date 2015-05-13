@@ -148,11 +148,11 @@ class NGSRead(Sequence):
     return (ord(val) - self.LOWSET_SCORE) / float(self.HIGHEST_SCORE -
                                                   self.LOWSET_SCORE)
 
-  def reverseComplement(self):
+  def reverseComplement(self, is_RNA=None):
     """
       Reverse complement this fastq sequence in-place.
     """
-    Sequence.reverseComplement(self)
+    Sequence.reverseComplement(self, is_RNA)
     self.sequenceQual = self.sequenceQual[::-1]
 
   def split(self, point=None):
