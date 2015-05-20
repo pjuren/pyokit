@@ -26,6 +26,8 @@
 # Standard imports
 import unittest
 import StringIO
+import os
+import sys
 
 # pyokit imports
 from pyokit.datastruct import retrotransposon
@@ -35,6 +37,7 @@ from pyokit.datastruct.genomicInterval import GenomicInterval
 from pyokit.io.alignmentIterators import repeat_masker_alignment_iterator
 from pyokit.io.indexedFile import IndexedFile
 from pyokit.io.indexedFile import IndexError
+from pyokit.util.progressIndicator import ProgressIndicator
 
 
 def repeat_masker_iterator(fh, alignment_index=None,
@@ -60,12 +63,27 @@ def repeat_masker_iterator(fh, alignment_index=None,
   if type(fh).__name__ == "str":
     strm = open(fh)
 
+  # try to get an idea of how much data we have...
+  if verbose :
+    try :
+      total = os.path.getsize(strm.name)
+      pind = ProgressIndicator(totalToDo=total, messagePrefix="completed",
+                               messageSuffix="of processing " + strm.name)
+    except AttributeError as e:
+      sys.stderr.write(str(e))
+      sys.stderr.write("completed [unknown] of processing index")
+      verbose = False
+
   if header:
     # chomp first 2 lines
     next(strm)
     next(strm)
 
   for line in strm:
+    if verbose :
+      pind.done = strm.tell()
+      pind.showProgress()
+
     line = line.strip()
     if line == "":
       continue
