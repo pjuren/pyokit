@@ -153,6 +153,9 @@ def from_repeat_masker_string(s):
   """
   parts = s.split()
 
+  if len(parts) != 15 and len(parts) != 14:
+    raise RetrotransposonError("incorrectly formated RepeatMasker entry: " + s)
+
   # get rid of those pesky parentheses
   for i in [11, 12, 13]:
     parts[i] = parts[i].strip()
@@ -160,9 +163,6 @@ def from_repeat_masker_string(s):
       parts[i] = parts[i][1:]
     if parts[i][-1] == ")":
       parts[i] = parts[i][0:-1]
-
-  if len(parts) != 15 and len(parts) != 14:
-    raise RetrotransposonError("incorrectly formated RepeatMasker entry: " + s)
 
   # the first 11, invariant columns...
   # score = float(parts[0])  -- we don't use this
@@ -301,7 +301,8 @@ class RetrotransposonOccurrence(GenomicInterval):
                                  "intersect!")
 
     if self.pairwise_alignment is not None:
-      return self.pairwise_alignment.liftover(1, intersecting_region.start,
+      return self.pairwise_alignment.liftover(self.chrom, self.repeat_name(),
+                                              intersecting_region.start,
                                               intersecting_region.end,
                                               trim=True)
     return self.liftover_coordinates(intersecting_region)

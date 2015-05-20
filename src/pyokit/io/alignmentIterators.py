@@ -30,6 +30,7 @@ import unittest
 import re
 
 # Pyokit imports
+from pyokit.datastruct.sequence import Sequence
 from pyokit.util.progressIndicator import ProgressIndicator
 from pyokit.datastruct.multipleAlignment import PairwiseAlignment
 from pyokit.datastruct import multipleAlignment
@@ -139,6 +140,127 @@ def _rm_compute_leading_space(space_s_pres_split):
   return c
 
 
+def _rm_get_names_from_header(parts):
+  """
+  extract the name of the name of the repeat and the sequence that it occurred
+  in from a repeatmasker alignment header line. An example header line is::
+
+    239 29.42 1.92 0.97 chr1 11 17 (41) C XX#YY (74) 104 1 m_b1s502i1 4
+
+  the genomic sequence name is always at position 4 (zero-based index); the
+  name of the repeat is at position 9 if matching the reverse complement of
+  the consensus sequence for the repeat and position 8 otherwise
+
+  :param parts: the header line, as a tokenized list.
+  :return: tuple of (name of genomic sequence, name of repeat sequence)
+  """
+  assert((parts[8] == "C" and len(parts) == 15) or (len(parts) == 14))
+  return (parts[4], parts[8]) if len(parts) == 14 else (parts[4], parts[9])
+
+
+def _rm_get_reference_coords_from_header(parts):
+  """
+  extract the reference (genomic sequence match) coordinates of a repeat
+  occurrence from a repeatmakser header line. An example header line is::
+
+    239 29.42 1.92 0.97 chr1 11 17 (41) C XX#YY (74) 104 1 m_b1s502i1 4
+
+  the genomic start and end are always at positions 5 and 6 resepctively. In
+  the repeatmasker format, the end is inclusive, but in pyokit end coordinates
+  are exclusive, so we adjust it when we parse here.
+
+  :param parts: the header line, as a tokenized list.
+  :return: tuple of (start, end)
+  """
+  s = int(parts[5])
+  e = int(parts[6]) + 1
+  if (s >= e):
+    raise AlignmentIteratorError("invalid repeatmakser header: " +
+                                 " ".join(parts))
+  return (s, e)
+
+
+def _rm_get_repeat_coords_from_header(parts):
+  """
+  extract the repeat coordinates of a repeat masker match from a header line
+  An example header line is::
+
+    239 29.42 1.92 0.97 chr1 11 17 (41) C XX#YY (74) 104 1 m_b1s502i1 4
+    239 29.42 1.92 0.97 chr1 11 17 (41) XX#YY 1 104 (74) m_b1s502i1 4
+
+  if the match is to the reverse complement, the start and end coordinates are
+  at positions 11 and 12 (zero-based indexes), otherwise they're at positions
+  9 and 10. In the later case, the 'start' is the earlier number and the end
+  is the larger one. In reverse complement matches, RM lists the 'start' as the
+  larger number and the end as the smaller one. We swap these around to match
+  the Pyokit convention of start < end always and also adjust the end so it is
+  not inclusive of the last position
+
+  :param parts: the header line, as a tokenized list.
+  :return: tuple of (start, end)
+  """
+  assert((parts[8] == "C" and len(parts) == 15) or (len(parts) == 14))
+  if len(parts) == 14:
+    s = int(parts[9])
+    e = int(parts[10]) + 1
+  else:
+    s = int(parts[12])
+    e = int(parts[11]) + 1
+  if (s >= e):
+    raise AlignmentIteratorError("invalid repeatmakser header: " +
+                                 " ".join(parts))
+  return (s, e)
+
+
+def _rm_is_reverse_comp_match(parts):
+  """
+  determine whether a repeat occurrence is a match to the reverse complement
+  of the concensus. Headers look like this::
+
+    239 29.42 1.92 0.97 chr1 11 17 (41) C XX#YY (74) 104 1 m_b1s502i1 4
+
+  If the match is to the reverse complement, then there is a "C" at position
+  8 (zero-based index) and a total of 15 fields; otherwise the "C" is missing
+  and there are only 14 fields.
+
+  :param parts: the header line, as a tokenized list.
+  """
+  assert((parts[8] == "C" and len(parts) == 15) or (len(parts) == 14))
+  return len(parts) == 15
+
+
+def _rm_get_remaining_genomic_from_header(parts):
+  """
+  get the remaining number of bases that are on the genomic sequence after
+  the match from the header line of a repeatmasker alignment. An example header
+  line is::
+
+    239 29.42 1.92 0.97 chr1 11 17 (41) C XX#YY (74) 104 1 m_b1s502i1 4
+
+  The remaining genomic bases are always at position 7 (zero-based index)
+  """
+  return int(parts[7][1:-1])
+
+
+def _rm_get_remaining_repeat_from_header(parts):
+  """
+  get the remaining number of bases that are on the repeat consensus after
+  the match from the header line of a repeatmasker alignment. An example header
+  line is::
+
+    239 29.42 1.92 0.97 chr1 11 17 (41) XX#YY 1 104 (74) m_b1s502i1 4
+    239 29.42 1.92 0.97 chr1 11 17 (41) C XX#YY (74) 104 1 m_b1s502i1 4
+
+  If the match is to the consensus, this number is at position 11 (zero-based
+  index), while a match to the reverse complement places it at position 10.
+  The parenthese indicate it is a negative strand coordinate.
+  """
+  if _rm_is_reverse_comp_match(parts):
+    return int(parts[10][1:-1])
+  else:
+    return int(parts[11][1:-1])
+
+
 def _rm_parse_header_line(parts, meta_data):
   """
   parse a repeatmasker alignment header line and place the extracted meta-data
@@ -205,32 +327,13 @@ def _rm_parse_header_line(parts, meta_data):
   meta_data[multipleAlignment.PCENT_S1_INDELS_KEY] = float(parts[2])
   meta_data[multipleAlignment.PCENT_S2_INDELS_KEY] = float(parts[3])
   meta_data[multipleAlignment.ANNOTATION_KEY] = ""
-  meta_data[multipleAlignment.S1_NAME_KEY] = parts[4]
-  meta_data[multipleAlignment.S1_START_KEY] = int(parts[5])
-  meta_data[multipleAlignment.S1_END_KEY] = int(parts[6]) + 1
-  meta_data[multipleAlignment.S1_END_NEG_STRAND_KEY] = int(parts[7][1:-1])
 
   if parts[8] == "C" :
-    meta_data[multipleAlignment.S2_REVERSE_COMP_KEY] = True
-    meta_data[multipleAlignment.S2_NAME_KEY] = parts[9]
-    meta_data[multipleAlignment.S2_START_NEG_STRAND_KEY] = int(parts[10][1:-1])
-    meta_data[multipleAlignment.S2_START_KEY] = int(parts[12])
-    meta_data[multipleAlignment.S2_END_KEY] = int(parts[11]) + 1
     meta_data[multipleAlignment.UNKNOWN_RM_HEADER_FIELD_KEY] = parts[13]
     meta_data[multipleAlignment.RM_ID_KEY] = int(parts[14])
   else:
-    meta_data[multipleAlignment.S2_NAME_KEY] = parts[8]
-    meta_data[multipleAlignment.S2_START_KEY] = int(parts[9])
-    meta_data[multipleAlignment.S2_END_KEY] = int(parts[10]) + 1
-    meta_data[multipleAlignment.S2_END_NEG_STRAND_KEY] = int(parts[11][1:-1])
     meta_data[multipleAlignment.UNKNOWN_RM_HEADER_FIELD_KEY] = parts[12]
     meta_data[multipleAlignment.RM_ID_KEY] = int(parts[13])
-
-  # internally, we always require start < end
-  assert(meta_data[multipleAlignment.S1_START_KEY] <
-         meta_data[multipleAlignment.S1_END_KEY])
-  assert(meta_data[multipleAlignment.S2_START_KEY] <
-         meta_data[multipleAlignment.S2_END_KEY])
 
 
 def _rm_name_match(s1, s2):
@@ -369,10 +472,19 @@ def repeat_masker_alignment_iterator(fn, index_friendly=True, verbose=False):
 
   s1 = None
   s2 = None
+  s1_name = None
+  s2_name = None
+  s1_start = None
+  s1_end = None
+  s2_start = None
+  s2_end = None
   meta_data = None
   alignment_line_counter = 0
   alig_l_space = 0
   prev_seq_len = 0
+  rev_comp_match = None
+  remaining_repeat = None
+  remaining_genomic = None
 
   for line in iterable:
     if verbose and pind != None :
@@ -413,23 +525,30 @@ def repeat_masker_alignment_iterator(fn, index_friendly=True, verbose=False):
               meta_data[multipleAlignment.ANNOTATION_KEY].rstrip()
         if index_friendly:
           fh.seek(old_fh_pos)
-        yield PairwiseAlignment(s1, s2, meta_data)
+        ss1 = Sequence(s1_name, s1, s1_start, s1_end, "+", remaining_genomic)
+        s2s = "-" if rev_comp_match else "+"
+        ss2 = Sequence(s2_name, s2, s2_start, s2_end, s2s, remaining_repeat)
+        yield PairwiseAlignment(ss1, ss2, meta_data)
         if index_friendly:
           fh.seek(new_fh_pos)
       meta_data = {}
       s1 = ""
       s2 = ""
+      s1_name, s2_name = _rm_get_names_from_header(parts)
+      s1_start, s1_end = _rm_get_reference_coords_from_header(parts)
+      s2_start, s2_end = _rm_get_repeat_coords_from_header(parts)
+      rev_comp_match = _rm_is_reverse_comp_match(parts)
+      remaining_repeat = _rm_get_remaining_repeat_from_header(parts)
+      remaining_genomic = _rm_get_remaining_genomic_from_header(parts)
+
       _rm_parse_header_line(parts, meta_data)
       alignment_line_counter = 0
-    elif _rm_is_alignment_line(parts, meta_data[multipleAlignment.S1_NAME_KEY],
-                               meta_data[multipleAlignment.S2_NAME_KEY]):
+    elif _rm_is_alignment_line(parts, s1_name, s2_name):
       alignment_line_counter += 1
-      s1_n = meta_data[multipleAlignment.S1_NAME_KEY]
-      s2_n = meta_data[multipleAlignment.S2_NAME_KEY]
-      name, seq = _rm_extract_sequence_and_name(parts, s1_n, s2_n)
-      if name == s1_n:
+      name, seq = _rm_extract_sequence_and_name(parts, s1_name, s2_name)
+      if name == s1_name:
         s1 += seq
-      elif name == s2_n:
+      elif name == s2_name:
         s2 += seq
       alig_l_space = _rm_compute_leading_space_alig(s_pres_split, seq)
       prev_seq_len = len(seq)
@@ -438,7 +557,10 @@ def repeat_masker_alignment_iterator(fn, index_friendly=True, verbose=False):
       meta_data[k] = v
   if index_friendly:
     fh.seek(old_fh_pos)
-  yield PairwiseAlignment(s1, s2, meta_data)
+  ss1 = Sequence(s1_name, s1, s1_start, s1_end, "+", remaining_genomic)
+  s2s = "-" if rev_comp_match else "+"
+  ss2 = Sequence(s2_name, s2, s2_start, s2_end, s2s, remaining_repeat)
+  yield PairwiseAlignment(ss1, ss2, meta_data)
   if index_friendly:
     fh.seek(new_fh_pos)
 

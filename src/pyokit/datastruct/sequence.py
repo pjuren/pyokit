@@ -56,6 +56,17 @@ class SequenceError(Exception):
     return repr(self.value)
 
 
+class InvalidSequenceCoordinatesError(SequenceError):
+  """
+  Thrown when invalid values are given to index into a sequence.
+  """
+  def __init__(self, msg):
+    self.value = msg
+
+  def __str__(self):
+    return repr(self.value)
+
+
 ###############################################################################
 #                               SEQUENCE CLASS                                #
 ###############################################################################
@@ -70,6 +81,15 @@ class Sequence(object):
                              Note that there is no check to make sure the
                              sequence data is valid, that's the responsibility
                              of the caller.
+    :param start_coord:      TODO
+    :param end_coord:        TODO
+    :param strand:           By default, this is +, but can also be set to -
+                             to indicate that this sequence is a reverse
+                             complement.
+    :param remaining:        the amount of sequence that comes after this; 0 if
+                             this is the whole sequence. Alterntively, you
+                             might think of this as the negative strand
+                             coordinates of the end of this sequence.
     :param useMutableString: Store the sequence data as a mutable string,
                              rather than a regular python string. This should
                              make editing operations must faster, but it comes
@@ -79,19 +99,24 @@ class Sequence(object):
   """
 
   def __init__(self, seqName, seqData, start_coord=None, end_coord=None,
-               useMutableString=False):
+               strand="+", remaining=0, useMutableString=False):
     """
       Constructor for Sequence objects. See class level documentation for
       parameter descriptions.
     """
-    self.sequenceName = seqName
+    if strand != "+" and strand != "-":
+      raise ValueError("Sequence strand must be either + or -, found " +
+                       strand + " instead")
+    self.name = seqName
     if useMutableString :
       self.sequenceData = MutableString(seqData)
     else :
       self.sequenceData = seqData
     self.mutableString = useMutableString
+    self.remaining = remaining
     self._start_coord = start_coord
     self._end_coord = end_coord
+    self.strand = strand
     self._ungapped_len = None   # we compute this just-in-time..
     self._effective_len = None  # .. and this
 
@@ -99,12 +124,13 @@ class Sequence(object):
     """
     Copy constructor for Sequence objects.
     """
-    return Sequence(self.sequenceName, self.sequenceData, self.mutableString)
+    return Sequence(self.name, self.sequenceData, self.mutableString)
 
   @property
   def start(self):
     """
-    TODO
+    :return: The coordinate of the first nucleotide in this sequence; by
+    convention, we call this coordinate 1 if no other value was provided.
     """
     if self._start_coord is None:
       return 1
@@ -112,6 +138,12 @@ class Sequence(object):
 
   @property
   def end(self):
+    """
+    :return: The coordinate of the end of this sequence; as with all other
+    indexing of sequences in pyokit, sequences are not inclusive of their last
+    index. Computed just-in-time from the ungapped sequence length if it
+    wasn't provided at construction time.
+    """
     if self._end_coord is None:
       return self.ungapped_len + 1
     return self._end_coord
@@ -146,6 +178,14 @@ class Sequence(object):
     data
     """
     return len(self.sequenceData)
+
+  def __getitem__(self, i):
+    return self.sequenceData[i]
+
+  def is_positive_strand(self):
+    """
+    """
+    return self.strand == "+"
 
   def percentNuc(self, nuc):
     """
@@ -207,7 +247,7 @@ class Sequence(object):
     if seq is None:
       return False
     return (self.sequenceData == seq.sequenceData and
-            self.sequenceName == seq.sequenceName)
+            self.name == seq.name)
 
   def __ne__(self, read):
     """
@@ -220,7 +260,7 @@ class Sequence(object):
     if read is None:
       return True
     return (self.sequenceData != read.sequenceData or
-            self.sequenceName != read.sequenceName)
+            self.name != read.name)
 
   def nsLeft(self, amount):
     """
@@ -247,7 +287,7 @@ class Sequence(object):
     if region.start < 0 or region.end < 0 or \
        region.start > len(self) or region.end > len(self) :
       raise SequenceError("cannot mask region " + str(region.start) + " to " +
-                          str(region.end) + " in " + self.sequenceName + ". " +
+                          str(region.end) + " in " + self.name + ". " +
                           "Region specifies nucleotides not present in " +
                           "this read. Valid range would have been 0 -- " +
                           str(len(self)))
@@ -274,7 +314,7 @@ class Sequence(object):
       pind = ProgressIndicator(totalToDo=len(regions),
                                messagePrefix="completed",
                                messageSuffix="of masking regions in " +
-                                             self.sequenceName)
+                                             self.name)
     for region in regions :
       self.maskRegion(region)
       if verbose :
@@ -329,8 +369,8 @@ class Sequence(object):
     if point is None :
       point = len(self) / 2
 
-    r1 = Sequence(self.sequenceName + ".1", self.sequenceData[:point])
-    r2 = Sequence(self.sequenceName + ".2", self.sequenceData[point:])
+    r1 = Sequence(self.name + ".1", self.sequenceData[:point])
+    r2 = Sequence(self.name + ".2", self.sequenceData[point:])
 
     return r1, r2
 
@@ -341,7 +381,7 @@ class Sequence(object):
 
       :param newLength: the length to truncate this sequence to.
     """
-    return Sequence(self.sequenceName, self.sequenceData[:newLength])
+    return Sequence(self.name, self.sequenceData[:newLength])
 
   def clip_end(self, seq, mm_score):
     """
@@ -427,7 +467,7 @@ class Sequence(object):
     """
     :return: string representation of this sequence object in fasta format
     """
-    res = ">" + self.sequenceName + "\n"
+    res = ">" + self.name + "\n"
     for i in range(0, len(self.sequenceData), line_width) :
       res += self.sequenceData[i:i + line_width]
       if i + line_width < len(self.sequenceData):
@@ -479,7 +519,7 @@ class SequenceUnitTests(unittest.TestCase):
     one = Sequence("name", "ACTNCTANCGATNNACT")
     two = one.copy()
     self.assertTrue(one == two)
-    one.sequenceName = "old"
+    one.name = "old"
     self.assertTrue(one != two)
 
   def testReverseComplement(self):

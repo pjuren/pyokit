@@ -336,8 +336,8 @@ class FastQUintTests(unittest.TestCase):
     for seq in fastqIterator(ins):
       seqs.append(seq)
 
-    seqs.sort(key=lambda x: x.sequenceName)
-    expect.sort(key=lambda x: x.sequenceName)
+    seqs.sort(key=lambda x: x.name)
+    expect.sort(key=lambda x: x.name)
 
     if debug :
       sys.stderr.write("expect\n")
@@ -381,8 +381,8 @@ class FastQUintTests(unittest.TestCase):
     for seq in fastqIterator(ins, debug=debug):
       seqs.append(seq)
 
-    seqs.sort(key=lambda x: x.sequenceName)
-    expect.sort(key=lambda x: x.sequenceName)
+    seqs.sort(key=lambda x: x.name)
+    expect.sort(key=lambda x: x.name)
 
     if debug :
       sys.stderr.write("expect\n")
