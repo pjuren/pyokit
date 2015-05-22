@@ -34,10 +34,10 @@ import sys
 from pyokit.datastruct import retrotransposon
 from pyokit.datastruct.multipleAlignment import JustInTimePairwiseAlignment
 from pyokit.datastruct.genomicInterval import GenomicInterval
-from pyokit.io.alignmentIterators import repeat_masker_alignment_iterator
+from pyokit.io.repeatmaskerAlignments import repeat_masker_alignment_iterator
 from pyokit.io.indexedFile import IndexedFile
 from pyokit.io.indexedFile import IndexError
-from pyokit.io import alignmentIterators
+from pyokit.io import repeatmaskerAlignments
 from pyokit.util.progressIndicator import ProgressIndicator
 
 
@@ -200,7 +200,7 @@ class TestRepMaskerIterators(unittest.TestCase):
 
   def test_iterator_with_alignment_index(self):
     def extract_UID(rm_alignment):
-      return rm_alignment.meta[alignmentIterators.RM_ID_KEY]
+      return rm_alignment.meta[repeatmaskerAlignments.RM_ID_KEY]
 
     s_io = StringIO.StringIO(self.rm_rc_1_input)
     index = IndexedFile(s_io, repeat_masker_alignment_iterator, extract_UID)

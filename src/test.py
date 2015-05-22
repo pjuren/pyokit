@@ -37,9 +37,9 @@ from pyokit.statistics.fisher import FisherTests
 from pyokit.io.bedIterators import BEDIteratorUnitTests
 from pyokit.io.fastqIterators import FastQUintTests
 from pyokit.io.fastaIterators import TestFastaIterators
-from pyokit.io.alignmentIterators import TestAlignmentIterators
+from pyokit.io.repeatmaskerAlignments import TestAlignmentIterators
 from pyokit.io.indexedFile import TestIndexedFile
-from pyokit.io.repeatMaskerIterators import TestRepMaskerIterators
+from pyokit.io.repeatmaskerAnnotations import TestRepMaskerIterators
 
 from pyokit.io.wigDir import *
 from pyokit.io.wigFile import *
