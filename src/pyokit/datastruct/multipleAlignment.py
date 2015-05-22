@@ -29,66 +29,9 @@ import unittest
 # pyokit imports
 from pyokit.datastruct.sequence import Sequence
 from pyokit.datastruct.sequence import InvalidSequenceCoordinatesError
-from pyokit.util.meta import decorate_all_methods
-from pyokit.util.meta import just_in_time
-
-
-###############################################################################
-#                                 CONSTANTS                                   #
-###############################################################################
-
-GAP_CHAR = '-'
-UNKOWN_SEQ_NAME = "UNKNOWN_SEQUENCE"
-
-# dafults values for reepatmasker formatting variables
-DEFAULT_MAX_NAME_WIDTH = None
-DEFAULT_COL_WIDTH = 50
-
-
-###############################################################################
-#                   KEYS FOR META-DATA DICTIONARY; GENERAL                    #
-###############################################################################
-
-#: score for the alignment; no requirement on how this is computed.
-ALIG_SCORE_KEY = "alig_score"
-
-#: annotation for each column of the alignment; no requirements on format.
-ANNOTATION_KEY = "annotation"
-
-#: percentage of substitutions (i.e. columns that have no gaps, not matches)
-PCENT_SUBS_KEY = "pcnt_subs"
-
-#: the percentage of the first sequence which is gaps. This is not computed
-#: from the sequence itself, so may not be accurate.
-PCENT_S1_INDELS_KEY = "pcnt_s1_indels"
-
-#: the percentage of the second sequence which is gaps. This is not computed
-#: from the sequence itself, so may not be accurate.
-PCENT_S2_INDELS_KEY = "pcnt_s2_indels"
-
-#:
-ROUNDTRIP_KEY = "roundtrip"
-
-###############################################################################
-#          KEYS FOR META-DATA DICTIONARY; SEPCIFIC TO REPEAT-MASKER           #
-###############################################################################
-
-#: If this is a repeat-masker alignment, this stores the value of the
-#: second-last token from the header of the alignment; its meaning is unknown.
-UNKNOWN_RM_HEADER_FIELD_KEY = "unknown_rm_header_field"
-
-#: If this is a repeat-masker alignment, this stores the unique ID assigned
-#: to it by repeat-masker
-RM_ID_KEY = "rm_id"
-
-###############################################################################
-#                               FULL KEY LIST                                 #
-###############################################################################
-
-#: The full set of meta-data keys that have special meaning
-KNOWN_KEYS = set([ANNOTATION_KEY, RM_ID_KEY, UNKNOWN_RM_HEADER_FIELD_KEY,
-                  PCENT_SUBS_KEY, PCENT_S1_INDELS_KEY, PCENT_S2_INDELS_KEY,
-                  ALIG_SCORE_KEY])
+from pyokit.datastruct.sequence import GAP_CHAR
+from pyokit.util.meta import decorate_all_methods_and_properties
+from pyokit.util.meta import just_in_time_method, just_in_time_property
 
 
 ###############################################################################
@@ -131,26 +74,9 @@ class InvalidAlignmentCoordinatesError(MultipleAlignmentError):
 
 
 ###############################################################################
-#                              HELPER FUNCTIONS                               #
-###############################################################################
-
-def ungapped_length(s):
-  """
-  compute the length of a sequence without counting gap characters.
-
-  :param s: the sequence to compute the lenght of
-  :return: integer, the number of non-gap characters in the sequence
-  """
-  res = 0
-  for c in s:
-    if c != GAP_CHAR:
-      res += 1
-  return res
-
-
-###############################################################################
 #                          MULTIPLE ALIGNMENT CLASS                           #
 ###############################################################################
+
 class MultipleSequenceAlignment(object):
   """
   An alignment of two or more sequences
@@ -182,7 +108,7 @@ class MultipleSequenceAlignment(object):
     for s in sequences:
       self.sequences[s.name] = s
 
-    self.meta = meta_data
+    self._meta = meta_data
 
   def __getitem__(self, seq_name):
     """
@@ -195,12 +121,11 @@ class MultipleSequenceAlignment(object):
                                  ", ".join(self.sequences.keys()))
 
   @property
-  def ungapped_len(self, seq_name):
+  def meta(self):
     """
-    The length of the a sequence in this alignment, not counting gaps
-    :param seq_name: name of te sequence to retrieve the ungapped length for
+    ...
     """
-    return self[seq_name].ungapped_len
+    return self._meta
 
   def size(self):
     """
@@ -398,148 +323,19 @@ class PairwiseAlignment(MultipleSequenceAlignment):
   def s2(self):
     return self[self.s2_name]
 
-  def repeat_masker_header(self):
-    """
-    generate the header string of a repeatmasker formated representation of
-    this pairwise alignment.
-    """
-
-    res = ""
-    res += str(self.meta[ALIG_SCORE_KEY]) + " "
-    res += "{:.2f}".format(self.meta[PCENT_SUBS_KEY]) + " "
-    res += "{:.2f}".format(self.meta[PCENT_S1_INDELS_KEY]) + " "
-    res += "{:.2f}".format(self.meta[PCENT_S2_INDELS_KEY]) + " "
-    res += (self.s1.name if (self.s1.name != "" and self.s1.name is not None)
-            else UNKOWN_SEQ_NAME) + " "
-    res += str(self.s1.start) + " "
-    res += str(self.s1.end - 1) + " "
-    res += "(" + str(self.s1.remaining) + ") "
-    res += ("C " if not self.s2.is_positive_strand() else "")
-    res += (self.s2.name if (self.s2.name != "" and self.s2.name is not None)
-            else UNKOWN_SEQ_NAME) + " "
-    res += ("(" + str(self.s2.remaining) + ")"
-            if not self.s2.is_positive_strand() else str(self.s2.start))
-    res += " "
-    # Note here that we need to convert between our internal representation
-    # for coordinates and the repeat-masker one; internally, we always store
-    # coordinates as exclusive of the final value with start < end;
-    # repeatmasker gives the larger coordinate as the 'start' when the match
-    # is to the reverse complement, so we have to swap start/end, and its
-    # coordinates are inclusive of end, so we have to subtract 1 from end.
-    res += str(self.s2.end - 1) + " "
-    res += (str(self.s2.start) if not self.s2.is_positive_strand()
-            else "(" + str(self.s2.remaining) + ")") + " "
-    res += self.meta[UNKNOWN_RM_HEADER_FIELD_KEY] + " "
-    res += str(self.meta[RM_ID_KEY])
-    return res
-
   def __str__(self):
     """
     return a string representation of this pairwise alignment
     """
     return self.to_repeat_masker_string()
 
-  def to_repeat_masker_string(self, column_width=DEFAULT_COL_WIDTH,
-                              m_name_width=DEFAULT_MAX_NAME_WIDTH):
-    """
-    generate a repeatmasker formated representation of this pairwise alignment.
-
-    :param column_width: number of characters to output per line of alignment
-    :param m_name_width: truncate names on alignment lines to this length
-                         (set to None for no truncation)
-    """
-    # figure out the complement column
-    s1_comp = "C" if not self.s1.is_positive_strand() else " "
-    s2_comp = "C" if not self.s2.is_positive_strand() else " "
-
-    # figure out the maximum name length, so we can size that column properly;
-    # pre-compute the space-padded names too
-    s1_len = len(self.s1.name)
-    s2_len = len(self.s2.name)
-    f_len = max(s1_len, s2_len)
-    if m_name_width != None:
-      f_len = min(f_len, m_name_width)
-    s1_n = self.s1.name[:f_len] + (' ' * (f_len - s1_len))
-    s2_n = self.s2.name[:f_len] + (' ' * (f_len - s2_len))
-
-    # figure out the max width for the coordinates column; we use size of the
-    # alignment here rather than ungapped coordinates because its an upper
-    # bound and easier to compute (i.e. for sure already know).
-    s1_line_end_num = (self.s1.end if not self.s1.is_positive_strand()
-                       else self.s1.start - 1)
-    s2_line_end_num = (self.s2.end if not self.s2.is_positive_strand()
-                       else self.s2.start - 1)
-    max_num_len = max(len(str(self.s1.start + self.size())),
-                      len(str(self.s2.start + self.size())))
-
-    res = ""  # our result
-    i = 0     # how much of the full, gapped alignment, has been output so far?
-    res += self.repeat_masker_header() + "\n\n"
-    while i < len(self.s1):
-      # keep track of how much of each sequence we've output
-      s1_line_start_num = (s1_line_end_num - 1
-                           if not self.s1.is_positive_strand()
-                           else s1_line_end_num + 1)
-      s1_line_end_num = (s1_line_start_num
-                         - ungapped_length(self.s1[i:i + column_width]) + 1
-                         if not self.s1.is_positive_strand()
-                         else s1_line_start_num
-                         + ungapped_length(self.s1[i:i + column_width]) - 1)
-      s2_line_start_num = (s2_line_end_num - 1
-                           if not self.s2.is_positive_strand()
-                           else s2_line_end_num + 1)
-      s2_line_end_num = (s2_line_start_num
-                         - ungapped_length(self.s2[i:i + column_width]) + 1
-                         if not self.s2.is_positive_strand()
-                         else s2_line_start_num
-                         + ungapped_length(self.s2[i:i + column_width]) - 1)
-
-      # output sequence one
-      res += (s1_comp + " " + s1_n + " ")
-      s1_line_start_num_str = str(s1_line_start_num)
-      s1_num_padding = max_num_len - len(s1_line_start_num_str)
-      res += (' ' * s1_num_padding) + s1_line_start_num_str + " "
-      res += self.s1[i:i + column_width] + " "
-      res += str(s1_line_end_num) + "\n"
-
-      # output the annotation string, if we have one; needs to be padded by the
-      # number of char in the name col (f_len), the number in the coordinate
-      # col (max_num_len), the one char in the complement columns, and the
-      # three spaces that are used as column seperators for those.
-      if ANNOTATION_KEY in self.meta :
-        res += (((f_len + max_num_len) * ' ') + "    " +
-                self.meta[ANNOTATION_KEY][i:i + column_width] + "\n")
-
-      # output sequence two
-      res += (s2_comp + " " + s2_n + " ")
-      s2_line_start_num_str = str(s2_line_start_num)
-      s2_num_padding = max_num_len - len(s2_line_start_num_str)
-      res += (' ' * s2_num_padding) + s2_line_start_num_str + " "
-      res += self.s2[i:i + column_width] + " "
-      res += str(s2_line_end_num) + "\n"
-
-      res += "\n"
-      i += column_width
-
-    # otuput any meta data key-value pairs that aren't known to us.
-    if self.meta != None:
-      for k in self.meta:
-        if k not in KNOWN_KEYS:
-          if k is ROUNDTRIP_KEY:
-            res += (self.meta[k] + "\n")
-          else:
-            res += (k + " = " + str(self.meta[k]) + "\n")
-
-    # remove any trailing whitespace
-    res = res.strip()
-    return res
-
 
 ###############################################################################
 #         ON-DEMAND LOADING OF PAIRWISE ALIGNMENTS FROM INDEXED FILE          #
 ###############################################################################
 
-@decorate_all_methods(just_in_time)
+@decorate_all_methods_and_properties(just_in_time_method,
+                                     just_in_time_property)
 class JustInTimePairwiseAlignment(PairwiseAlignment):
   """
   A pairwise alignment that is loaded just-in-time from some factory object; a

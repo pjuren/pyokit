@@ -2,7 +2,8 @@
 
 """
   Date of Creation: 11th Dec 2014
-  Description:      Iterators for processing RepeatMasker files
+  Description:      Functions and iterators for processing RepeatMasker
+                    annotation file
 
   Copyright (C) 2010-2014
   Philip J. Uren,
@@ -32,13 +33,17 @@ import sys
 # pyokit imports
 from pyokit.datastruct import retrotransposon
 from pyokit.datastruct.multipleAlignment import JustInTimePairwiseAlignment
-from pyokit.datastruct import multipleAlignment
 from pyokit.datastruct.genomicInterval import GenomicInterval
 from pyokit.io.alignmentIterators import repeat_masker_alignment_iterator
 from pyokit.io.indexedFile import IndexedFile
 from pyokit.io.indexedFile import IndexError
+from pyokit.io import alignmentIterators
 from pyokit.util.progressIndicator import ProgressIndicator
 
+
+###############################################################################
+#                               FILE ITERATORS                                #
+###############################################################################
 
 def repeat_masker_iterator(fh, alignment_index=None,
                            header=True, verbose=False):
@@ -195,7 +200,7 @@ class TestRepMaskerIterators(unittest.TestCase):
 
   def test_iterator_with_alignment_index(self):
     def extract_UID(rm_alignment):
-      return rm_alignment.meta[multipleAlignment.RM_ID_KEY]
+      return rm_alignment.meta[alignmentIterators.RM_ID_KEY]
 
     s_io = StringIO.StringIO(self.rm_rc_1_input)
     index = IndexedFile(s_io, repeat_masker_alignment_iterator, extract_UID)

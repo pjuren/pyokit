@@ -28,6 +28,21 @@ import unittest
 
 
 ###############################################################################
+#                             EXCEPTION CLASSES                               #
+###############################################################################
+
+class MetaError(Exception):
+  """
+  ...
+  """
+  def __init__(self, msg):
+    self.value = msg
+
+  def __str__(self):
+    return repr(self.value)
+
+
+###############################################################################
 #                                  DECORATORS                                 #
 ###############################################################################
 
@@ -46,7 +61,22 @@ def decorate_all_methods(decorator):
   return decorate_class
 
 
-def just_in_time(func):
+def decorate_all_methods_and_properties(method_decorator, property_decorator):
+  """
+  ...
+  """
+  def decorate_class(cls):
+    for name, m in inspect.getmembers(cls, inspect.ismethod):
+      if name != "__init__":
+        setattr(cls, name, method_decorator(m))
+    for name, p in inspect.getmembers(cls, lambda x: isinstance(x, property)):
+      if name != "__init__":
+        setattr(cls, name, property_decorator(name, p))
+    return cls
+  return decorate_class
+
+
+def just_in_time_method(func):
   """
   This is a dcorator for methods. It redirect calls to the decorated method
   to the equivalent method in a class member called 'item'. 'item' is expected
@@ -77,11 +107,34 @@ def just_in_time(func):
   inherited from A. If 'item' is an object of type A, then this pattern makes
   B behave exactly like A, but with just-in-time construction.
   """
+
+  if not inspect.ismethod:
+    raise MetaError("oops")
+
   def wrapper(self, *args, **kwargs):
     if self.item is None:
       self.item = self.factory[self.key]
     return getattr(self.item, func.__name__)(*args, **kwargs)
   return wrapper
+
+
+def just_in_time_property(name, prop):
+  """
+  """
+  if not isinstance(prop, property):
+    raise MetaError("oops")
+
+  def fget(self):
+    if self.item is None:
+      self.item = self.factory[self.key]
+    return getattr(self.item, name)
+
+  return property(fget)
+
+
+
+
+
 
 
 ###############################################################################
@@ -125,7 +178,7 @@ class TestMeta(unittest.TestCase):
     def dummy_hash_2(item):
       return item.id
 
-    @decorate_all_methods(just_in_time)
+    @decorate_all_methods(just_in_time_method)
     class B(Record):
       def __init__(self, factory, key):
         self.factory = factory
