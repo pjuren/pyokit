@@ -36,6 +36,7 @@ DNA_COMPLEMENTS = {"A":"T", "T":"A", "C":"G", "G":"C", "N":"N",
 RNA_COMPLEMENTS = {"A":"U", "U":"A", "C":"G", "G":"C", "N":"N",
                    "a":"u", "u":"a", "c":"g", "g":"c", "n":"n"}
 GAP_CHAR = "-"
+UNKOWN_SEQ_NAME = "UNKNOWN_SEQUENCE"
 RNA_NUCS = "ACGUNacgun"
 DNA_NUCS = "ACGTNacgtn"
 
@@ -158,8 +159,10 @@ class Sequence(object):
     # take this oportunity to check that coords match ungapped sequence len
     e_ok = self._end_coord is not None
     if e_ok and self._ungapped_len != self.end - self.start:
-      raise SequenceError("ungapped length of sequence doesn't match " +
-                          "start and end coordinates")
+      msg = ("ungapped length (" + str(self._ungapped_len) + ") of sequence " +
+             "doesn't match start (" + str(self.start) + ") and end (" +
+             str(self.end) + ") coordinates")
+      raise SequenceError(msg)
     return self._ungapped_len
 
   @property
@@ -181,6 +184,100 @@ class Sequence(object):
 
   def __getitem__(self, i):
     return self.sequenceData[i]
+
+  def subsequence(self, start, end):
+    """
+    Extract a subsequence from this sequence object using absolute coordinates
+    that exist in the same coordinate space as the sequence itself. For
+    example:
+
+      46  --> A--CTGC-TAGC-GATCGACT <--  62      subsequence(47,52) == CTGC-T
+
+    :param start:      the index marking the start (inclusive) of the
+                       subsequence. This is a one-based index, and is in the
+                       same coordinate space as this sequence object.
+    :param end:        the index marking the end (exclusive) of the
+                       subsequence. This is a one-based index, and is in the
+                       same coordinate space as this sequence object.
+
+    :return: a new sequence object that represents the subsequence of this from
+             position start (indexed from 1, inclusive) to end (indexed from
+             1, exclusive). Ungapped length of this will always be equal to
+             end - start
+    :rasie SequenceError: if the coordinates given fall outside of the start
+                          and end indices of this sequence object.
+    """
+    if (start < self.start or start >= self.end or end <= self.start or
+       end > self.end or start >= end):
+      raise SequenceError("invalid subsequence coordinates (" + str(start) +
+                          " ," + str(end) + ") for sequence " + str(self))
+
+    rel_start_string_coord = self.start - start - 1
+    rel_end_string_coord = self.end - end - 1
+    seq = self.sequenceData[rel_start_string_coord:rel_end_string_coord]
+    return Sequence(self.name, seq, start, end, self.strand,
+                    self.remaining + self.end - end, self.mutableString)
+
+  def relative_subsequence(self, start, end):
+    """
+    Extract a subsequence from this sequence using coordinates that are
+    relative to the start (relative position 1) and end coordinates of the
+    sequence. For example:
+
+      46  --> A--CTGC-TAGC-GATCGACT <--  62      subsequence(2,7) == CTGC-T
+
+    :param start:      the index marking the start (inclusive) of the
+                       subsequence. This is a one-based index, and is in the
+                       coordinate space of the sequence (i.e. from 1 to N,
+                       where N is the number of non-gap nucleotides in the
+                       sequence)
+    :param end:        the index marking the end (exclusive) of the
+                       subsequence. This is a one-based index, and is in the
+                       coordinate space of the sequence (i.e. from 1 to N,
+                       where N is the number of non-gap nucleotides in the
+                       sequence)
+
+    :return: a new sequence object that represents the subsequence
+    :rasie SequenceError: if the start coordinate is less than 1 or the end
+                          coordinate is greater than the ungapped length of
+                          this sequence.
+    """
+    if start < 1:
+      raise SequenceError("invalid start coordinate for subsequence: " +
+                          str(start))
+    if end > self.ungapped_len:
+      raise SequenceError("invalid end coordinate for subsequence: " +
+                          str(end) + " greater than number of non-gap " +
+                          "nucleotides in sequence (" + self.ungapped_len +
+                          ")")
+    raise SequenceError("method not implemented")
+
+  def gapped_relative_subsequence(self, start, end):
+    """
+    Extract a subsequence from this sequence using coordinates that are
+    relative to the start of the sequence (relative position 1) and the number
+    of nuceltodies in the sequence, including gaps. For example:
+
+      46  --> A--CTGC-TAGC-GATCGACT <--  62      subsequence(2,7) == --CTG
+    """
+    if start < 1:
+      msg = "invalid start coordinate for subsequence: " + str(start)
+      raise InvalidSequenceCoordinatesError(msg)
+    if end > len(self.sequenceData) + 1:
+      msg = "invalid end coordinate for subsequence: " + str(end) +\
+            " greater than length of sequence (" + str(len(self)) + ")"
+      raise InvalidSequenceCoordinatesError(msg)
+
+    non_gaps_before = start - 1 - self.sequenceData[:start - 1].count(GAP_CHAR)
+    seq = self.sequenceData[start - 1:end - 1]
+    non_gaps_in = len(seq) - seq.count(GAP_CHAR)
+    non_gaps_after = self.ungapped_len - non_gaps_before - non_gaps_in
+    new_start = self.start + non_gaps_before
+    new_end = new_start + non_gaps_in
+    new_remaining = self.remaining - non_gaps_after
+
+    return Sequence(self.name, seq, new_start, new_end, self.strand,
+                    new_remaining, self.mutableString)
 
   def is_positive_strand(self):
     """
@@ -461,9 +558,9 @@ class Sequence(object):
     """
     :return: string representation of this sequence object
     """
-    return self.to_fasta_str(self)
+    return self.to_fasta_str()
 
-  def to_fastq_str(self, line_width=50):
+  def to_fasta_str(self, line_width=50):
     """
     :return: string representation of this sequence object in fasta format
     """
@@ -481,8 +578,20 @@ class Sequence(object):
 
 class SequenceUnitTests(unittest.TestCase):
   """
-    Unit tests for sequence classes
+    Unit tests for sequence class
   """
+
+  def test_gapped_relative_subsequence(self):
+    """
+      46 -->  A--CTGC-TAGC-GATCGACT  <-- 62   **  subsequence(2,7) == --CTG
+
+      def __init__(self, seqName, seqData, start_coord=None, end_coord=None,
+                   strand="+", remaining=0, useMutableString=False):
+    """
+    s1 = Sequence("s1", "A--CTGC-TAGC-GATCGACT", 46, 63, "+", 10)
+    r1 = s1.gapped_relative_subsequence(2, 7)
+    self.assertEqual(r1, Sequence("s1", "--CTG", 47, 50, "+", 23))
+    self.assertEqual(r1.ungapped_len, 3)
 
   def testNsLeft(self):
     input_seq = Sequence("name", "ACTGCTAGCGATCGACT")
@@ -538,7 +647,7 @@ class SequenceUnitTests(unittest.TestCase):
              "TCGAT\n" +\
              "CGATC\n" +\
              "TCGA"
-    got = r.to_fastq_str(line_width=5)
+    got = r.to_fasta_str(line_width=5)
     self.assertTrue(got == expect)
 
     # make sure this also works with a mutable underlying sequence
@@ -548,7 +657,7 @@ class SequenceUnitTests(unittest.TestCase):
              "TCGAT\n" +\
              "CGATC\n" +\
              "TCGA"
-    got = r.to_fastq_str(line_width=5)
+    got = r.to_fasta_str(line_width=5)
     self.assertTrue(got == expect)
 
 
