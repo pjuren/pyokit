@@ -327,7 +327,7 @@ manipulating sequence data, see <a class="reference internal" href="sequences.ht
 <span id="sequenceclasssection"></span><h3>The Sequence class<a class="headerlink" href="#the-sequence-class" title="Permalink to this headline">¶</a></h3>
 <dl class="class">
 <dt id="pyokit.datastruct.sequence.Sequence">
-<em class="property">class </em><code class="descclassname">pyokit.datastruct.sequence.</code><code class="descname">Sequence</code><span class="sig-paren">(</span><em>seqName</em>, <em>seqData</em>, <em>start_coord=None</em>, <em>end_coord=None</em>, <em>useMutableString=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pyokit.datastruct.sequence.</code><code class="descname">Sequence</code><span class="sig-paren">(</span><em>seqName</em>, <em>seqData</em>, <em>start_coord=None</em>, <em>end_coord=None</em>, <em>strand='+'</em>, <em>remaining=0</em>, <em>useMutableString=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the base class for all sequences in Pyokit. Objects from this class
 will have only a sequence name and actual nucleotide sequence data.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -340,6 +340,15 @@ will have only a sequence name and actual nucleotide sequence data.</p>
 Note that there is no check to make sure the
 sequence data is valid, that&#8217;s the responsibility
 of the caller.</li>
+<li><strong>start_coord</strong> &#8211; TODO</li>
+<li><strong>end_coord</strong> &#8211; TODO</li>
+<li><strong>strand</strong> &#8211; By default, this is +, but can also be set to -
+to indicate that this sequence is a reverse
+complement.</li>
+<li><strong>remaining</strong> &#8211; the amount of sequence that comes after this; 0 if
+this is the whole sequence. Alterntively, you
+might think of this as the negative strand
+coordinates of the end of this sequence.</li>
 <li><strong>useMutableString</strong> &#8211; Store the sequence data as a mutable string,
 rather than a regular python string. This should
 make editing operations must faster, but it comes
@@ -382,6 +391,32 @@ mm_score = len(seq) would be 100% match</li>
 <dt id="pyokit.datastruct.sequence.Sequence.effective_len">
 <code class="descname">effective_len</code><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.effective_len" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the length of the sequence if N&#8217;s are disregarded.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyokit.datastruct.sequence.Sequence.end">
+<code class="descname">end</code><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.end" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">The coordinate of the end of this sequence; as with all other</td>
+</tr>
+</tbody>
+</table>
+<p>indexing of sequences in pyokit, sequences are not inclusive of their last
+index. Computed just-in-time from the ungapped sequence length if it
+wasn&#8217;t provided at construction time.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.gapped_relative_subsequence">
+<code class="descname">gapped_relative_subsequence</code><span class="sig-paren">(</span><em>start</em>, <em>end</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.gapped_relative_subsequence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract a subsequence from this sequence using coordinates that are
+relative to the start of the sequence (relative position 1) and the number
+of nuceltodies in the sequence, including gaps. For example:</p>
+<blockquote>
+<div>46  &#8211;&gt; A&#8211;CTGC-TAGC-GATCGACT &lt;&#8211;  62      subsequence(2,7) == &#8211;CTG</div></blockquote>
 </dd></dl>
 
 <dl class="method">
@@ -458,6 +493,11 @@ looking at the symbols it contains.</p>
 </tbody>
 </table>
 </dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.is_positive_strand">
+<code class="descname">is_positive_strand</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.is_positive_strand" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="method">
 <dt id="pyokit.datastruct.sequence.Sequence.maskMatch">
@@ -548,6 +588,45 @@ is no check to make sure this is a valid nucleotide.</td>
 </dd></dl>
 
 <dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.relative_subsequence">
+<code class="descname">relative_subsequence</code><span class="sig-paren">(</span><em>start</em>, <em>end</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.relative_subsequence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract a subsequence from this sequence using coordinates that are
+relative to the start (relative position 1) and end coordinates of the
+sequence. For example:</p>
+<blockquote>
+<div>46  &#8211;&gt; A&#8211;CTGC-TAGC-GATCGACT &lt;&#8211;  62      subsequence(2,7) == CTGC-T</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>start</strong> &#8211; the index marking the start (inclusive) of the
+subsequence. This is a one-based index, and is in the
+coordinate space of the sequence (i.e. from 1 to N,
+where N is the number of non-gap nucleotides in the
+sequence)</li>
+<li><strong>end</strong> &#8211; the index marking the end (exclusive) of the
+subsequence. This is a one-based index, and is in the
+coordinate space of the sequence (i.e. from 1 to N,
+where N is the number of non-gap nucleotides in the
+sequence)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">a new sequence object that represents the subsequence</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name" colspan="2">Rasie SequenceError:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first last">if the start coordinate is less than 1 or the end
+coordinate is greater than the ungapped length of
+this sequence.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="pyokit.datastruct.sequence.Sequence.reverseComplement">
 <code class="descname">reverseComplement</code><span class="sig-paren">(</span><em>isRNA=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.reverseComplement" title="Permalink to this definition">¶</a></dt>
 <dd><p>Reverse complement this sequence in-place.</p>
@@ -606,7 +685,52 @@ sequence remains unmodified.</p>
 <dl class="attribute">
 <dt id="pyokit.datastruct.sequence.Sequence.start">
 <code class="descname">start</code><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.start" title="Permalink to this definition">¶</a></dt>
-<dd><p>TODO</p>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">The coordinate of the first nucleotide in this sequence; by</td>
+</tr>
+</tbody>
+</table>
+<p>convention, we call this coordinate 1 if no other value was provided.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.subsequence">
+<code class="descname">subsequence</code><span class="sig-paren">(</span><em>start</em>, <em>end</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.subsequence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract a subsequence from this sequence object using absolute coordinates
+that exist in the same coordinate space as the sequence itself. For
+example:</p>
+<blockquote>
+<div>46  &#8211;&gt; A&#8211;CTGC-TAGC-GATCGACT &lt;&#8211;  62      subsequence(47,52) == CTGC-T</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>start</strong> &#8211; the index marking the start (inclusive) of the
+subsequence. This is a one-based index, and is in the
+same coordinate space as this sequence object.</li>
+<li><strong>end</strong> &#8211; the index marking the end (exclusive) of the
+subsequence. This is a one-based index, and is in the
+same coordinate space as this sequence object.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">a new sequence object that represents the subsequence of this from
+position start (indexed from 1, inclusive) to end (indexed from
+1, exclusive). Ungapped length of this will always be equal to
+end - start</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name" colspan="2">Rasie SequenceError:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first last">if the coordinates given fall outside of the start
+and end indices of this sequence object.</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -623,8 +747,8 @@ to Us</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="pyokit.datastruct.sequence.Sequence.to_fastq_str">
-<code class="descname">to_fastq_str</code><span class="sig-paren">(</span><em>line_width=50</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.to_fastq_str" title="Permalink to this definition">¶</a></dt>
+<dt id="pyokit.datastruct.sequence.Sequence.to_fasta_str">
+<code class="descname">to_fasta_str</code><span class="sig-paren">(</span><em>line_width=50</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.to_fasta_str" title="Permalink to this definition">¶</a></dt>
 <dd><table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -682,168 +806,6 @@ about this alignment.</li>
 </tr>
 </tbody>
 </table>
-<dl class="method">
-<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.alignment_to_sequence_coords">
-<code class="descname">alignment_to_sequence_coords</code><span class="sig-paren">(</span><em>seq_num</em>, <em>start</em>, <em>end</em>, <em>trim=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.alignment_to_sequence_coords" title="Permalink to this definition">¶</a></dt>
-<dd><p>convert an interval in the alignmnet into co-ordinates in one of the
-sequences. Alignment intervals are inclusive of start, but not end. They
-are one-based. Hence the full alignment has coords [1, N+1), where N is the
-length of the alignment (number of columns). Sequence coords follow the
-same conventions: one-based, inclusive of start but not end.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>seq_num</strong> &#8211; which sequence are the start and end coords for? 1 or 2</li>
-<li><strong>start</strong> &#8211; start of the interval in alignment co-ordinates</li>
-<li><strong>end</strong> &#8211; end of the interval in alignment co-ordinates</li>
-<li><strong>trim</strong> &#8211; if true, trim coordinates that fall partially outside
-the sequence</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">a tuple with the start and end sequence coords, in that order;
-None if the interval in the alignment defined by (start, end)
-contains only gaps in the specified sequence. start &lt; end always,
-even if the sequence is reverse complement.</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name" colspan="2">Raises AlignmentError:</th></tr>
-<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first last">if the sequence number specifies a sequence not
-in this alignment, or the coordinates fall
-entirely outside the alignment (or partially
-outside and trim == false), or they are not a valid
-interval (start &gt;= end)</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.liftover">
-<code class="descname">liftover</code><span class="sig-paren">(</span><em>origin</em>, <em>o_start</em>, <em>o_end</em>, <em>trim=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.liftover" title="Permalink to this definition">¶</a></dt>
-<dd><p>liftover an interval in one sequence of this pairwise alignment to the
-other.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>origin</strong> &#8211; which sequence (1 or 2) are the input coordinates for?</li>
-<li><strong>o_start</strong> &#8211; start of the interval (in sequence co-ordinates) to lift.</li>
-<li><strong>o_end</strong> &#8211; end of the interval (in seq. coords) to lift.</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.repeat_masker_header">
-<code class="descname">repeat_masker_header</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.repeat_masker_header" title="Permalink to this definition">¶</a></dt>
-<dd><p>generate the header string of a repeatmasker formated representation of
-this pairwise alignment.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.s1_is_reverse_comp">
-<code class="descname">s1_is_reverse_comp</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.s1_is_reverse_comp" title="Permalink to this definition">¶</a></dt>
-<dd><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if the first sequence in this alignment is on the negative
-strand, False otherwise</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.s1_ungapped_len">
-<code class="descname">s1_ungapped_len</code><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.s1_ungapped_len" title="Permalink to this definition">¶</a></dt>
-<dd><p>The length of the first sequence in this alignment, not counting gaps</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.s2_is_reverse_comp">
-<code class="descname">s2_is_reverse_comp</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.s2_is_reverse_comp" title="Permalink to this definition">¶</a></dt>
-<dd><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if the second sequence in this alignment is on the negative
-strand, False otherwise</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.s2_ungapped_len">
-<code class="descname">s2_ungapped_len</code><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.s2_ungapped_len" title="Permalink to this definition">¶</a></dt>
-<dd><p>The length of the second sequence in this alignment, not counting gaps</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.sequence_to_alignment_coords">
-<code class="descname">sequence_to_alignment_coords</code><span class="sig-paren">(</span><em>seq_num</em>, <em>start</em>, <em>end</em>, <em>trim=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.sequence_to_alignment_coords" title="Permalink to this definition">¶</a></dt>
-<dd><p>convert an interval in one of the sequences into an interval in the
-alignment. Alignment intervals are inclusive of start, but not end. They
-are one-based. Hence the full alignment has coords [1, N+1), where N is the
-length of the alignment (number of columns). Sequence coords follow the
-same conventions: one-based, inclusive of start but not end.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>seq_num</strong> &#8211; which sequence are the start and end coords for? 1 or 2</li>
-<li><strong>start</strong> &#8211; start of the interval in sequence co-ordinates</li>
-<li><strong>end</strong> &#8211; end of the interval in sequence co-ordinates</li>
-<li><strong>trim</strong> &#8211; if true, trim coordinates that fall partially outside
-the sequence</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name" colspan="2">Raises AlignmentError:</th></tr>
-<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first last">if coordinates fall entirely outside the
-sequence, or partially outside and trim == false</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.size">
-<code class="descname">size</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.size" title="Permalink to this definition">¶</a></dt>
-<dd><p>return the size of this alignment (defined as the number of columns in the
-alignemnt).</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyokit.datastruct.multipleAlignment.PairwiseAlignment.to_repeat_masker_string">
-<code class="descname">to_repeat_masker_string</code><span class="sig-paren">(</span><em>column_width=50</em>, <em>m_name_width=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.multipleAlignment.PairwiseAlignment.to_repeat_masker_string" title="Permalink to this definition">¶</a></dt>
-<dd><p>generate a repeatmasker formated representation of this pairwise alignment.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>column_width</strong> &#8211; number of characters to output per line of alignment</li>
-<li><strong>m_name_width</strong> &#8211; truncate names on alignment lines to this length
-(set to None for no truncation)</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
 </dd></dl>
 
 </div>
