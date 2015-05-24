@@ -1,7 +1,7 @@
 """
   Date of Creation: 11th Dec 2014
 
-  Description:   Classes and for representing pairwise and multiple sequence
+  Description:   Classes and functions for IO of repeatmasker pairwise
                  alignments.
 
   Copyright (C) 2010-2015
