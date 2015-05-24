@@ -91,6 +91,7 @@ class Sequence(object):
                              this is the whole sequence. Alterntively, you
                              might think of this as the negative strand
                              coordinates of the end of this sequence.
+    :param meta_data:        dictionary containing meta-data key-value pairs
     :param useMutableString: Store the sequence data as a mutable string,
                              rather than a regular python string. This should
                              make editing operations must faster, but it comes
@@ -100,7 +101,8 @@ class Sequence(object):
   """
 
   def __init__(self, seqName, seqData, start_coord=None, end_coord=None,
-               strand="+", remaining=0, useMutableString=False):
+               strand="+", remaining=0, meta_data=None,
+               useMutableString=False):
     """
       Constructor for Sequence objects. See class level documentation for
       parameter descriptions.
@@ -120,12 +122,15 @@ class Sequence(object):
     self.strand = strand
     self._ungapped_len = None   # we compute this just-in-time..
     self._effective_len = None  # .. and this
+    self.meta_data = meta_data if meta_data is not None else {}
 
   def copy(self):
     """
     Copy constructor for Sequence objects.
     """
-    return Sequence(self.name, self.sequenceData, self.mutableString)
+    return Sequence(self.name, self.sequenceData, self.start, self.end,
+                    self.strand, self.remaining, self.meta_data,
+                    self.mutableString)
 
   @property
   def start(self):
@@ -274,10 +279,10 @@ class Sequence(object):
     non_gaps_after = self.ungapped_len - non_gaps_before - non_gaps_in
     new_start = self.start + non_gaps_before
     new_end = new_start + non_gaps_in
-    new_remaining = self.remaining - non_gaps_after
+    new_remaining = self.remaining + non_gaps_after
 
     return Sequence(self.name, seq, new_start, new_end, self.strand,
-                    new_remaining, self.mutableString)
+                    new_remaining, self.meta_data, self.mutableString)
 
   def is_positive_strand(self):
     """
@@ -336,7 +341,8 @@ class Sequence(object):
   def __eq__(self, seq):
     """
       Check wheter this sequence is equal to another sequence. Sequences are
-      equal if they have the same name and nucleotide sequence.
+      equal if they have the same name, nucleotide sequence, coordinates,
+      strand and meta data.
 
       :param seq: the other sequence to compare against.
       :return: true if this sequence is equal to passed parameter, else false.
@@ -344,7 +350,11 @@ class Sequence(object):
     if seq is None:
       return False
     return (self.sequenceData == seq.sequenceData and
-            self.name == seq.name)
+            self.name == seq.name and
+            self.meta_data == seq.meta_data and
+            self.start == seq.start and
+            self.end == seq.end and
+            self.remaining == seq.remaining)
 
   def __ne__(self, read):
     """
@@ -560,16 +570,75 @@ class Sequence(object):
     """
     return self.to_fasta_str()
 
+  def meta_data_to_string(self):
+    """
+    """
+    res = ""
+    for k in self.meta_data:
+      res += (str(k) + "=" + str(self.meta_data[k]))
+    return res
+
   def to_fasta_str(self, line_width=50):
     """
     :return: string representation of this sequence object in fasta format
     """
-    res = ">" + self.name + "\n"
+    res = ">" + self.name + ":" + str(self.start) + "-" + str(self.end)
+    res += " (" + str(self.remaining) + ")"
+    m_str = self.meta_data_to_string()
+    if m_str:
+      res += (" " + m_str)
+    res += "\n"
     for i in range(0, len(self.sequenceData), line_width) :
       res += self.sequenceData[i:i + line_width]
       if i + line_width < len(self.sequenceData):
         res += "\n"
     return res
+
+
+###############################################################################
+#                              UNKNOWN SEQUENCE                               #
+###############################################################################
+class UnknownSequence(Sequence):
+  """
+  Represents a sequence where meta data about the sequence is known, but the
+  actual sequence data is unknown. Behaves much like a regular Sequence, but
+  any attempts to access the actual sequence data results in exceptions.
+  """
+  def __init__(self, seqName, start_coord=None, end_coord=None,
+               strand="+", remaining=0, meta_data=None,
+               useMutableString=False):
+    Sequence.__init__(self, seqName, "", start_coord, end_coord, strand,
+                      remaining, meta_data, useMutableString)
+
+  @property
+  def ungapped_len(self):
+    return len(self)
+
+  @property
+  def effective_len(self):
+    """
+    Get the length of the sequence if N's are disregarded.
+    """
+    return len(self)
+
+  def __len__(self):
+    """
+    Get the length of the sequence, defined as the length of its sequence
+    data
+    """
+    return self.end - self.start
+
+  def __getitem__(self, i):
+    raise SequenceError("No sequence data")
+
+  def subsequence(self, start, end):
+    raise SequenceError("No sequence data")
+
+  def relative_subsequence(self, start, end):
+    raise SequenceError("No sequence data")
+
+  def gapped_relative_subsequence(self, start, end):
+    raise SequenceError("No sequence data")
 
 
 ###############################################################################
@@ -642,23 +711,23 @@ class SequenceUnitTests(unittest.TestCase):
       test that string formatting works correctly for fasta sequences
     """
     r = Sequence("name", "ATCGATCGATCGATCTCGA")
-    expect = ">name\n" +\
+    expect = ">name:1-20 (0)\n" +\
              "ATCGA\n" +\
              "TCGAT\n" +\
              "CGATC\n" +\
              "TCGA"
     got = r.to_fasta_str(line_width=5)
-    self.assertTrue(got == expect)
+    self.assertEqual(got, expect)
 
     # make sure this also works with a mutable underlying sequence
     r = Sequence("name", "ATCGATCGATCGATCTCGA", useMutableString=True)
-    expect = ">name\n" +\
+    expect = ">name:1-20 (0)\n" +\
              "ATCGA\n" +\
              "TCGAT\n" +\
              "CGATC\n" +\
              "TCGA"
     got = r.to_fasta_str(line_width=5)
-    self.assertTrue(got == expect)
+    self.assertEqual(got, expect)
 
 
 ###############################################################################
