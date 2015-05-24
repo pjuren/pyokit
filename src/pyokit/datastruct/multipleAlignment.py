@@ -127,6 +127,12 @@ class MultipleSequenceAlignment(object):
     """
     return self._meta
 
+  def __str__(self):
+    res = ""
+    for k in self.sequences:
+      res += str(self.sequences[k])
+    return res
+
   def size(self):
     """
     Get the length (number of columns) in this multiple alignment.
