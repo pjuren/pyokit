@@ -29,6 +29,7 @@ import StringIO
 
 # pyokit imports
 from pyokit.datastruct.sequence import Sequence
+from pyokit.datastruct.sequence import UnknownSequence
 from pyokit.datastruct.multipleAlignment import MultipleSequenceAlignment
 
 
@@ -43,6 +44,14 @@ S_LINE = "s"
 I_LINE = "i"
 E_LINE = "e"
 Q_LINE = "q"
+
+# keys for placing meta data into Sequence meta-data dictionaries
+QUALITY_META_KEY = "QL"
+EMPTY_ALIGNMENT_STATUS_KEY = "EMPTY_STATUS"
+LEFT_STATUS_KEY = "LEFT_STATUS"
+LEFT_COUNT_KEY = "LEFT_COUNT"
+RIGHT_STATUS_KEY = "RIGHT_STATUS"
+RIGHT_COUNT_KEY = "RIGHT_COUNT"
 
 
 ###############################################################################
@@ -88,7 +97,7 @@ def maf_iterator(fn):
           * left count; num of bases in source sequence between start of the
             block and end of previous block (0 if this is the first)
           * right status (see below)
-          * left count; num of bases in source after end of this block before
+          * right count; num of bases in source after end of this block before
             start of next
        status (left/right) is a single char and can be:
           * C -- the sequence before or after is contiguous with this block.
@@ -153,11 +162,39 @@ def maf_iterator(fn):
       sequences.append(Sequence(parts[1], parts[6], start, end,
                                 strand, remain))
     elif line_type == I_LINE:
-      pass
+      if len(sequences) < 1:
+        raise MAFError("found information line with no preceeding sequence " +
+                       "in block")
+      if parts[1] != sequences[-1].name:
+        raise MAFError("found information line for sequence " + str(parts[1]) +
+                       " after sequence " + sequences[-1].name)
+      if len(parts) != 6:
+        raise MAFError("insufficient items on information line '" + line +
+                       "'. Found " + str(len(parts)) + "; expected 6")
+      sequences[-1].meta_data[LEFT_STATUS_KEY] = parts[2]
+      sequences[-1].meta_data[LEFT_COUNT_KEY] = int(parts[3])
+      sequences[-1].meta_data[RIGHT_STATUS_KEY] = parts[4]
+      sequences[-1].meta_data[RIGHT_COUNT_KEY] = int(parts[5])
     elif line_type == E_LINE:
-      pass
+      strand = parts[4]
+      total_seq_len = int(parts[5])
+      start = int(parts[2]) if strand == "+" else total_seq_len - int(parts[2])
+      end = start + int(parts[3])
+      remain = total_seq_len - end
+      sequences.append(UnknownSequence(parts[1], start, end, strand, remain,
+                                       {EMPTY_ALIGNMENT_STATUS_KEY: parts[6]}))
     elif line_type == Q_LINE:
-      pass
+      if len(sequences) < 1:
+        raise MAFError("found quality line with no preceeding sequence in " +
+                       " block")
+      if parts[1] != sequences[-1].name:
+        raise MAFError("found quality line for sequence " + str(parts[1]) +
+                       " after sequence " + sequences[-1].name)
+      if len(parts[2]) != len(sequences[-1]):
+        raise MAFError("found quality line with length " + str(len(parts[2])) +
+                       " but previous sequence has length " +
+                       str(len(sequences[-1])))
+      sequences[-1].meta_data[QUALITY_META_KEY] = parts[2]
     else:
       raise MAFError("Unknown type of MAF line: " + line)
 
@@ -189,7 +226,16 @@ class TestMAF(unittest.TestCase):
          "i tarSyr1.scaffold_5923  N 0 C 0                          " + "\n" +\
          "s tupBel1.scaffold_803   33686 61 +   85889 " + b1_tupBel_s + "\n" +\
          "q tupBel1.scaffold_803                      " + b1_tupBel_q + "\n" +\
-         "i tupBel1.scaffold_803   I 1 C 0            "
+         "i tupBel1.scaffold_803   I 1 C 0                          " + "\n" +\
+         "e mm4.chr6            53310102 58 + 151104725 I"
+    self.b1_hg19 = Sequence("hg19.chr22", b1_hg19_seq, 1711, 1768,
+                            "+", 51302798)
+    self.b1_panTro = Sequence("panTro2.chrUn", b1_panTro_s, 1110, 1169, "+",
+                              58616431 - 1169, {QUALITY_META_KEY:b1_panTro_q,
+                                                LEFT_STATUS_KEY:"C",
+                                                LEFT_COUNT_KEY:0,
+                                                RIGHT_STATUS_KEY:"C",
+                                                RIGHT_COUNT_KEY:0})
 
     b2_hg19_seq = "ccttcttttaattaattttgttaagg----gatttcctctagggccactgcacgtca"
     b2_panTro_s = "ccttcttttaattaattttgttatgg----gatttcgtctagggtcactgcacatca"
@@ -210,11 +256,25 @@ class TestMAF(unittest.TestCase):
          "q tupBel1.scaffold_803                      " + b2_tupBel_q + "\n" +\
          "i tupBel1.scaffold_803 C 0 N 0              "
     self.maf1 = b1 + "\n\n" + b2
+    self.b2_hg19 = Sequence("hg19.chr22", b2_hg19_seq, 1772, 1825,
+                            "+", 51302741)
+    self.b2_panTro = Sequence("panTro2.chrUn", b2_panTro_s, 1169, 1169 + 53,
+                              "+", 58616431 - (1169 + 53),
+                              {QUALITY_META_KEY:b2_panTro_q,
+                               LEFT_STATUS_KEY:"C",
+                               LEFT_COUNT_KEY:0,
+                               RIGHT_STATUS_KEY:"C",
+                               RIGHT_COUNT_KEY:0})
 
   def test_maf_iterator(self):
     in_file_contents = StringIO.StringIO(self.maf1)
     blocks = [x for x in maf_iterator(in_file_contents)]
     self.assertEqual(len(blocks), 2)
+    self.assertEqual(blocks[0]["hg19.chr22"], self.b1_hg19)
+    self.assertEqual(blocks[0]["panTro2.chrUn"], self.b1_panTro)
+    self.assertEqual(blocks[1]["hg19.chr22"], self.b2_hg19)
+    self.assertEqual(blocks[1]["panTro2.chrUn"], self.b2_panTro)
+
 
 ###############################################################################
 #              MAIN ENTRY POINT WHEN RUN AS STAND-ALONE MODULE                #
