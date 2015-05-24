@@ -78,34 +78,6 @@ or at the same time.</p>
 <p>Repeatmasker coordinate annotations are loaded using the following function
 from the IO module. alignment_index should be left as None (default) when
 loading only annotations (more details about this below).</p>
-<dl class="function">
-<dt id="pyokit.io.repeatMaskerIterators.repeat_masker_iterator">
-<code class="descclassname">pyokit.io.repeatMaskerIterators.</code><code class="descname">repeat_masker_iterator</code><span class="sig-paren">(</span><em>fh</em>, <em>alignment_index=None</em>, <em>header=True</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.repeatMaskerIterators.repeat_masker_iterator" title="Permalink to this definition">¶</a></dt>
-<dd><p>Iterator for repeatmasker coordinate annotation files. These files describe
-the location of repeat occurrences. There is (optionally) a two-line header
-with the names of the fields (ignored by the iterator, if present). Each line
-is a record of an occurrence. The description of fields for each line is
-given in from_repeat_masker_string.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>fh</strong> &#8211; stream-like object, or string filename, to load the
-annotations from</li>
-<li><strong>alignment_index</strong> &#8211; an IndexedFile for full alignments; keys should be
-repeat-masker IDs</li>
-<li><strong>header</strong> &#8211; if True, expect and discard the two-line header;
-otherwise we will expect there is no header</li>
-<li><strong>verbose</strong> &#8211; if True, output additional status messages about
-progress to stderr.</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
 <p>The description of what each field means is given below</p>
 <dl class="function">
 <dt id="pyokit.datastruct.retrotransposon.from_repeat_masker_string">
