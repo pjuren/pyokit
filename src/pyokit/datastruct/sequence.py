@@ -574,7 +574,12 @@ class Sequence(object):
     """
     """
     res = ""
+    first = True
     for k in self.meta_data:
+      if first:
+        first = False
+      else:
+        res += " "
       res += (str(k) + "=" + str(self.meta_data[k]))
     return res
 
