@@ -120,6 +120,9 @@ class MultipleSequenceAlignment(object):
                                  str(seq_name) + "; sequences in alignment: " +
                                  ", ".join(self.sequences.keys()))
 
+  def __iter__(self):
+    return self.sequences.__iter__()
+
   @property
   def meta(self):
     """
