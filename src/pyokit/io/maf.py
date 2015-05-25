@@ -36,6 +36,9 @@ from pyokit.datastruct.multipleAlignment import MultipleSequenceAlignment
 ###############################################################################
 #                                 CONSTANTS                                   #
 ###############################################################################
+# special meta-data key for alignments that stores the order the sequences
+# were presented in, so the output can reproduce it.
+SEQ_ORDER_KEY = "SEQ_ORDER_KEY"
 
 # the following are the characters that mark the start of certain line types
 # in MAF files. See the header of the MAF iterator below for more details
@@ -146,6 +149,7 @@ def maf_iterator(fn):
     line_type = parts[0].strip()
     if line_type == A_LINE:
       if sequences != []:
+        meta_data[SEQ_ORDER_KEY] = [s.name for s in sequences]
         yield MultipleSequenceAlignment(sequences, meta_data)
       sequences = []
       meta_data = {}
@@ -155,9 +159,11 @@ def maf_iterator(fn):
         meta_data[parts[i][:piv]] = parts[i][piv + 1:]
     elif line_type == S_LINE:
       strand = parts[4]
+      seq_length = int(parts[3])
       total_seq_len = int(parts[5])
-      start = int(parts[2]) if strand == "+" else total_seq_len - int(parts[2])
-      end = start + int(parts[3])
+      start = (int(parts[2]) if strand == "+"
+               else total_seq_len - int(parts[2]) - seq_length)
+      end = start + seq_length
       remain = total_seq_len - end
       sequences.append(Sequence(parts[1], parts[6], start, end,
                                 strand, remain))
@@ -177,9 +183,11 @@ def maf_iterator(fn):
       sequences[-1].meta_data[RIGHT_COUNT_KEY] = int(parts[5])
     elif line_type == E_LINE:
       strand = parts[4]
+      seq_length = int(parts[3])
       total_seq_len = int(parts[5])
-      start = int(parts[2]) if strand == "+" else total_seq_len - int(parts[2])
-      end = start + int(parts[3])
+      start = (int(parts[2]) if strand == "+"
+               else total_seq_len - int(parts[2]) - seq_length)
+      end = start + seq_length
       remain = total_seq_len - end
       sequences.append(UnknownSequence(parts[1], start, end, strand, remain,
                                        {EMPTY_ALIGNMENT_STATUS_KEY: parts[6]}))
@@ -200,7 +208,72 @@ def maf_iterator(fn):
 
   # don't forget to yield the final block
   if sequences != []:
+    meta_data[SEQ_ORDER_KEY] = [s.name for s in sequences]
     yield MultipleSequenceAlignment(sequences, meta_data)
+
+
+###############################################################################
+#                    CONVERTING ALIGNMENTS TO MAF FORMAT                      #
+###############################################################################
+
+def sequence_to_maf_format(seq):
+  res = ""
+
+  if EMPTY_ALIGNMENT_STATUS_KEY in seq.meta_data:
+    res += "e "
+  else:
+    res += "s "
+
+  s = str(seq.start) if seq.is_positive_strand() else str(seq.remaining)
+  res += (seq.name + " " + s + " " + str(seq.end - seq.start) + " " +
+          seq.strand + " " + str(seq.remaining + seq.end) + " ")
+  if EMPTY_ALIGNMENT_STATUS_KEY in seq.meta_data:
+    res += seq.meta_data[EMPTY_ALIGNMENT_STATUS_KEY]
+  else:
+    res += seq.sequenceData
+  if QUALITY_META_KEY in seq.meta_data:
+    res += ("\n" + "q " + seq.name + " " + seq.meta_data[QUALITY_META_KEY])
+  left_partial_present = (LEFT_STATUS_KEY in seq.meta_data or
+                          LEFT_COUNT_KEY in seq.meta_data)
+  right_partial_present = (RIGHT_STATUS_KEY in seq.meta_data or
+                           RIGHT_COUNT_KEY in seq.meta_data)
+  if left_partial_present or right_partial_present:
+    # if one is present, all should be...
+    left_partial_absent = (LEFT_STATUS_KEY not in seq.meta_data or
+                           LEFT_COUNT_KEY not in seq.meta_data)
+    right_partial_absent = (RIGHT_STATUS_KEY not in seq.meta_data or
+                            RIGHT_COUNT_KEY not in seq.meta_data)
+    if left_partial_absent or right_partial_absent:
+      raise MAFError("converting alignment to MAF format string failed; " +
+                     "found partially formed I-line information")
+    res += ("\n" + "i " + seq.name + " ")
+    res += (str(seq.meta_data[LEFT_STATUS_KEY]) + " " +
+            str(seq.meta_data[LEFT_COUNT_KEY]) + " " +
+            str(seq.meta_data[RIGHT_STATUS_KEY]) + " " +
+            str(seq.meta_data[RIGHT_COUNT_KEY]))
+  return res
+
+
+def alignment_to_maf(alignment):
+  res = ""
+
+  # alignment line with meta data key-value pairs
+  res += "a"
+  for k in alignment.meta:
+    if k == SEQ_ORDER_KEY:
+      continue
+    res += (" " + k + "=" + str(alignment.meta[k]))
+  res += "\n"
+
+  for k in alignment.meta[SEQ_ORDER_KEY]:
+    res += (sequence_to_maf_format(alignment[k]) + "\n")
+  return res
+
+
+def write_maf(alig_iterable, output_stream):
+  for alig in alig_iterable:
+    output_stream.write(alignment_to_maf(alig))
+    output_stream.write("\n")
 
 
 ###############################################################################
@@ -236,6 +309,16 @@ class TestMAF(unittest.TestCase):
                                                 LEFT_COUNT_KEY:0,
                                                 RIGHT_STATUS_KEY:"C",
                                                 RIGHT_COUNT_KEY:0})
+    self.b1_tarSyr = Sequence("tarSyr1.scaffold_5923", b1_tarSyr_s,
+                              8928 - 2859 - 50, 8928 - 2859, "-",
+                              2859, {QUALITY_META_KEY:b1_tarSyr_q,
+                                     LEFT_STATUS_KEY:"N",
+                                     LEFT_COUNT_KEY:0,
+                                     RIGHT_STATUS_KEY:"C",
+                                     RIGHT_COUNT_KEY:0})
+    self.b1_mm4 = UnknownSequence("mm4.chr6", 53310102, 53310102 + 58, "+",
+                                  151104725 - (53310102 + 58),
+                                  {EMPTY_ALIGNMENT_STATUS_KEY:"I"})
 
     b2_hg19_seq = "ccttcttttaattaattttgttaagg----gatttcctctagggccactgcacgtca"
     b2_panTro_s = "ccttcttttaattaattttgttatgg----gatttcgtctagggtcactgcacatca"
@@ -265,15 +348,32 @@ class TestMAF(unittest.TestCase):
                                LEFT_COUNT_KEY:0,
                                RIGHT_STATUS_KEY:"C",
                                RIGHT_COUNT_KEY:0})
+    self.b2_tarSyr = Sequence("tarSyr1.scaffold_5923", b2_tarSyr_s,
+                              8928 - 2909 - 124, 8928 - 2909, "-",
+                              2909, {QUALITY_META_KEY:b2_tarSyr_q,
+                                     LEFT_STATUS_KEY:"C",
+                                     LEFT_COUNT_KEY:0,
+                                     RIGHT_STATUS_KEY:"N",
+                                     RIGHT_COUNT_KEY:0})
+    self.b1 = b1
+    self.b2 = b2
 
   def test_maf_iterator(self):
-    in_file_contents = StringIO.StringIO(self.maf1)
-    blocks = [x for x in maf_iterator(in_file_contents)]
+    blocks = [x for x in maf_iterator(StringIO.StringIO(self.maf1))]
     self.assertEqual(len(blocks), 2)
     self.assertEqual(blocks[0]["hg19.chr22"], self.b1_hg19)
     self.assertEqual(blocks[0]["panTro2.chrUn"], self.b1_panTro)
+    self.assertEqual(blocks[0]["tarSyr1.scaffold_5923"], self.b1_tarSyr)
+    self.assertEqual(blocks[0]["mm4.chr6"], self.b1_mm4)
     self.assertEqual(blocks[1]["hg19.chr22"], self.b2_hg19)
     self.assertEqual(blocks[1]["panTro2.chrUn"], self.b2_panTro)
+    self.assertEqual(blocks[1]["tarSyr1.scaffold_5923"], self.b2_tarSyr)
+
+    self.assertEqual(alignment_to_maf(blocks[0]).split(), self.b1.split())
+    self.assertEqual(alignment_to_maf(blocks[1]).split(), self.b2.split())
+    out = StringIO.StringIO()
+    write_maf(maf_iterator(StringIO.StringIO(self.maf1)), out)
+    self.assertEqual(self.maf1.split(), out.getvalue().split())
 
 
 ###############################################################################
