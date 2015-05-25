@@ -327,7 +327,7 @@ manipulating sequence data, see <a class="reference internal" href="sequences.ht
 <span id="sequenceclasssection"></span><h3>The Sequence class<a class="headerlink" href="#the-sequence-class" title="Permalink to this headline">¶</a></h3>
 <dl class="class">
 <dt id="pyokit.datastruct.sequence.Sequence">
-<em class="property">class </em><code class="descclassname">pyokit.datastruct.sequence.</code><code class="descname">Sequence</code><span class="sig-paren">(</span><em>seqName</em>, <em>seqData</em>, <em>start_coord=None</em>, <em>end_coord=None</em>, <em>strand='+'</em>, <em>remaining=0</em>, <em>useMutableString=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pyokit.datastruct.sequence.</code><code class="descname">Sequence</code><span class="sig-paren">(</span><em>seqName</em>, <em>seqData</em>, <em>start_coord=None</em>, <em>end_coord=None</em>, <em>strand='+'</em>, <em>remaining=0</em>, <em>meta_data=None</em>, <em>useMutableString=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the base class for all sequences in Pyokit. Objects from this class
 will have only a sequence name and actual nucleotide sequence data.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -349,6 +349,7 @@ complement.</li>
 this is the whole sequence. Alterntively, you
 might think of this as the negative strand
 coordinates of the end of this sequence.</li>
+<li><strong>meta_data</strong> &#8211; dictionary containing meta-data key-value pairs</li>
 <li><strong>useMutableString</strong> &#8211; Store the sequence data as a mutable string,
 rather than a regular python string. This should
 make editing operations must faster, but it comes
@@ -557,6 +558,11 @@ and inclusive of both end points. Any other attributes
 </tbody>
 </table>
 </dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.sequence.Sequence.meta_data_to_string">
+<code class="descname">meta_data_to_string</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.sequence.Sequence.meta_data_to_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="method">
 <dt id="pyokit.datastruct.sequence.Sequence.nsLeft">
