@@ -41,6 +41,7 @@ from pyokit.io.repeatmaskerAlignments import TestAlignmentIterators
 from pyokit.io.indexedFile import TestIndexedFile
 from pyokit.io.repeatmaskerAnnotations import TestRepMaskerIterators
 from pyokit.io.maf import TestMAF
+from pyokit.io.genomeAlignment import TestGenomeAlignment
 
 from pyokit.io.wigDir import *
 from pyokit.io.wigFile import *
@@ -86,6 +87,7 @@ if __name__ == "__main__":
   sys.stderr.write("  " + str(WigIteratorUnitTests) + "\n")
   sys.stderr.write("  " + str(TestRepMaskerIterators) + "\n\n")
   sys.stderr.write("  " + str(TestMAF) + "\n\n")
+  sys.stderr.write("  " + str(TestGenomeAlignment) + "\n\n")
 
   head = " ------------------------     STATISTICS    --------------------- \n"
   sys.stderr.write(head)

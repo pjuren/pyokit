@@ -74,10 +74,25 @@ class MAFError(Exception):
 
 
 ###############################################################################
+#                             HELPER FUNCTIONS                                #
+###############################################################################
+
+def merge_dictionaries(a, b):
+  """
+  """
+  res = {}
+  for k in a:
+    res[k] = a[k]
+  for k in b:
+    res[k] = b[k]
+  return res
+
+
+###############################################################################
 #                                 ITERATORS                                   #
 ###############################################################################
 
-def maf_iterator(fn):
+def maf_iterator(fn, yield_class=MultipleSequenceAlignment, yield_kw_args={}):
   """
   MAF files are arranged in blocks. Each block is a multiple alignment. Within
   a block, the first character of a line indicates what kind of line it is:
@@ -132,6 +147,12 @@ def maf_iterator(fn):
   q -- quality information about an aligned base in a species. Two fields after
        the 'q': the source name and a single digit for each nucleotide in its
        sequence (0-9 or F, or - to indicate a gap).
+
+  :param yield_class:   yield objects returned by this function/constructor;
+                        must accept key-word args of 'sequences' and
+                        'meta_data' which are list and dictionary respectively.
+                        Default is MultipleSequenceAlignment
+  :param yield_kw_args: extra keyword args to pass to 'yield_class'
   """
 
   try:
@@ -150,7 +171,10 @@ def maf_iterator(fn):
     if line_type == A_LINE:
       if sequences != []:
         meta_data[SEQ_ORDER_KEY] = [s.name for s in sequences]
-        yield MultipleSequenceAlignment(sequences, meta_data)
+        kw_args = merge_dictionaries({"sequences":sequences,
+                                      "meta_data":meta_data},
+                                     yield_kw_args)
+        yield yield_class(**kw_args)
       sequences = []
       meta_data = {}
       for i in range(1, len(parts)):
@@ -209,7 +233,10 @@ def maf_iterator(fn):
   # don't forget to yield the final block
   if sequences != []:
     meta_data[SEQ_ORDER_KEY] = [s.name for s in sequences]
-    yield MultipleSequenceAlignment(sequences, meta_data)
+    kw_args = merge_dictionaries({"sequences":sequences,
+                                  "meta_data":meta_data},
+                                 yield_kw_args)
+    yield yield_class(**kw_args)
 
 
 ###############################################################################
