@@ -39,9 +39,10 @@ from pyokit.datastruct.sequence import UnknownSequence
 from pyokit.io import maf
 
 
-
 def genome_alignment_block_hash(b):
-  return x.chrom + "\t" + str(x.start) + "\t" + str(x.end)
+  """Hash a genome alignment block to unique ID: its location in the genome."""
+  return b.chrom + "\t" + str(b.start) + "\t" + str(b.end)
+
 
 ###############################################################################
 #    CLASSES FOR MANAGING ACCESS TO MULTIPLE GENOME ALIGNMENT FILES ON DISK   #
@@ -49,6 +50,11 @@ def genome_alignment_block_hash(b):
 
 def build_genome_alignment_from_directory(d_name, reference_species):
   """
+  build a genome aligment by loading all files in a directory.
+
+  Not recursive (i.e. subdirectories are not parsed). Will attempt to load all
+  files regardless of extension. Expects all files to be MAF format genome
+  alignment files.
   """
   blocks = []
   for fn in os.listdir(d_name):
@@ -60,29 +66,32 @@ def build_genome_alignment_from_directory(d_name, reference_species):
         blocks.append(b)
   return GenomeAlignment(blocks)
 
+
 ###############################################################################
 #                                ITERATORS                                    #
 ###############################################################################
 
 def genome_alignment_iterator(fn, reference_species):
   """
-  ...
-  """
-  kw_args = {"reference_species":reference_species}
-  for e in maf.maf_iterator(fn, yield_class=GenomeAlignmentBlock,
-                            yield_kw_args = kw_args):
-    yield e
+  build an iterator for an MAF file of genome alignment blocks.
 
+  :return an iterator that yields GenomeAlignment objects
+  """
+  kw_args = {"reference_species": reference_species}
+  for e in maf.maf_iterator(fn, yield_class=GenomeAlignmentBlock,
+                            yield_kw_args=kw_args):
+    yield e
 
 
 def load_jit_genome_alignment(alignment_fn, index_fn):
   """
-  load a genome alignment from an index
+  load a genome alignment from an index.
+
   :return: a just-in-time genome alignment, where access to any of the blocks
            causes them to be loaded from the alignment file
   """
-
-  factory = IndexFile(None, maf_iterator, genome_alignment_block_hash)
+  pass
+  # factory = IndexFile(None, maf_iterator, genome_alignment_block_hash)
 
 
 ###############################################################################
