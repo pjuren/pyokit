@@ -2,7 +2,6 @@ before_install:
   - sudo apt-get update
 install:
   - sudo apt-get install python-rpy2
-  - pip install rpy2
   - pip install sphinx
   - pip install coveralls
   - pip install mock
