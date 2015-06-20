@@ -31,9 +31,9 @@ import re
 
 # Pyokit imports
 from pyokit.datastruct.sequence import Sequence
+from pyokit.datastruct.sequence import UNKNOWN_SEQ_NAME
 from pyokit.util.progressIndicator import ProgressIndicator
 from pyokit.datastruct.multipleAlignment import PairwiseAlignment
-from pyokit.datastruct import multipleAlignment
 from pyokit.datastruct.multipleAlignment import JustInTimePairwiseAlignment
 
 
@@ -100,11 +100,7 @@ KNOWN_KEYS = set([ANNOTATION_KEY, PCENT_SUBS_KEY, PCENT_S1_INDELS_KEY,
 ###############################################################################
 
 def _get_repeat_masker_header(pairwise_alignment):
-  """
-  generate the header string of a repeatmasker formated representation of
-  this pairwise alignment.
-  """
-
+  """generate header string of repeatmasker formated repr of self."""
   res = ""
   res += str(pairwise_alignment.meta[ALIG_SCORE_KEY]) + " "
   res += "{:.2f}".format(pairwise_alignment.meta[PCENT_SUBS_KEY]) + " "
@@ -112,16 +108,16 @@ def _get_repeat_masker_header(pairwise_alignment):
   res += "{:.2f}".format(pairwise_alignment.meta[PCENT_S2_INDELS_KEY]) + " "
   res += (pairwise_alignment.s1.name
           if (pairwise_alignment.s1.name != "" and
-          pairwise_alignment.s1.name is not None)
-          else UNKOWN_SEQ_NAME) + " "
+              pairwise_alignment.s1.name is not None)
+          else UNKNOWN_SEQ_NAME) + " "
   res += str(pairwise_alignment.s1.start) + " "
   res += str(pairwise_alignment.s1.end - 1) + " "
   res += "(" + str(pairwise_alignment.s1.remaining) + ") "
   res += ("C " if not pairwise_alignment.s2.is_positive_strand() else "")
   res += (pairwise_alignment.s2.name
           if (pairwise_alignment.s2.name != "" and
-          pairwise_alignment.s2.name is not None)
-          else UNKOWN_SEQ_NAME) + " "
+              pairwise_alignment.s2.name is not None)
+          else UNKNOWN_SEQ_NAME) + " "
   res += ("(" + str(pairwise_alignment.s2.remaining) + ")"
           if not pairwise_alignment.s2.is_positive_strand()
           else str(pairwise_alignment.s2.start))
@@ -166,7 +162,7 @@ def _to_repeatmasker_string(pairwise_alignment, column_width=DEFAULT_COL_WIDTH,
   s1_len = len(s1.name)
   s2_len = len(s2.name)
   f_len = max(s1_len, s2_len)
-  if m_name_width != None:
+  if m_name_width is not None:
     f_len = min(f_len, m_name_width)
   s1_n = s1.name[:f_len] + (' ' * (f_len - s1_len))
   s2_n = s2.name[:f_len] + (' ' * (f_len - s2_len))
@@ -208,7 +204,7 @@ def _to_repeatmasker_string(pairwise_alignment, column_width=DEFAULT_COL_WIDTH,
     # number of char in the name col (f_len), the number in the coordinate
     # col (max_num_len), the one char in the complement columns, and the
     # three spaces that are used as column seperators for those.
-    if ANNOTATION_KEY in pairwise_alignment.meta :
+    if ANNOTATION_KEY in pairwise_alignment.meta:
       res += (((f_len + max_num_len) * ' ') + "    " +
               pairwise_alignment.meta[ANNOTATION_KEY][i:i + column_width] + "\n")
 
@@ -224,7 +220,7 @@ def _to_repeatmasker_string(pairwise_alignment, column_width=DEFAULT_COL_WIDTH,
     i += column_width
 
   # otuput any meta data key-value pairs that aren't known to us.
-  if pairwise_alignment.meta != None:
+  if pairwise_alignment.meta is not None:
     for k in pairwise_alignment.meta:
       if k not in KNOWN_KEYS:
         if k is ROUNDTRIP_KEY:
@@ -255,7 +251,7 @@ class AlignmentIteratorError(Exception):
 
 def _rm_is_alignment_line(parts, s1_name, s2_name):
   """
-  returns true if the tokenized line is a repeatmasker alignment line
+  return true if the tokenized line is a repeatmasker alignment line.
 
   :param parts:   the line, already split into tokens around whitespace
   :param s1_name: the name of the first sequence, as extracted from the header
@@ -275,7 +271,10 @@ def _rm_is_alignment_line(parts, s1_name, s2_name):
 
 def _rm_is_header_line(parts, n):
   """
-  headers have no special structure or symbol to mark them...
+  determine whether a pre-split string is a repeat-masker alignment header.
+
+  headers have no special structure or symbol to mark them, so this is based
+  only on the number of elements, and what data type they are.
   """
   if (n == 15 and parts[8] == "C"):
     return True
@@ -333,8 +332,9 @@ def _rm_compute_leading_space(space_s_pres_split):
 
 def _rm_get_names_from_header(parts):
   """
-  extract the name of the name of the repeat and the sequence that it occurred
-  in from a repeatmasker alignment header line. An example header line is::
+  get repeat and seq. name from repeatmasker alignment header line.
+
+  An example header line is::
 
     239 29.42 1.92 0.97 chr1 11 17 (41) C XX#YY (74) 104 1 m_b1s502i1 4
 
@@ -373,7 +373,8 @@ def _rm_get_reference_coords_from_header(parts):
 
 def _rm_get_repeat_coords_from_header(parts):
   """
-  extract the repeat coordinates of a repeat masker match from a header line
+  extract the repeat coordinates of a repeat masker match from a header line.
+
   An example header line is::
 
     239 29.42 1.92 0.97 chr1 11 17 (41) C XX#YY (74) 104 1 m_b1s502i1 4
@@ -519,7 +520,7 @@ def _rm_parse_header_line(parts, meta_data):
   meta_data[PCENT_S2_INDELS_KEY] = float(parts[3])
   meta_data[ANNOTATION_KEY] = ""
 
-  if parts[8] == "C" :
+  if parts[8] == "C":
     meta_data[UNKNOWN_RM_HEADER_FIELD_KEY] = parts[13]
     meta_data[RM_ID_KEY] = int(parts[14])
   else:
@@ -541,7 +542,7 @@ def _rm_name_match(s1, s2):
 def _rm_parse_meta_line(parts):
   p_locs = []
   for i in range(0, len(parts)):
-    if parts[i].strip() == "=" :
+    if parts[i].strip() == "=":
       p_locs.append(i)
   if len(p_locs) != 1:
     return ROUNDTRIP_KEY, " ".join(parts)
@@ -578,26 +579,28 @@ def _rm_extract_sequence_and_name(alig_str_parts, s1_name, s2_name):
     nm = alig_str_parts[1]
     seq = alig_str_parts[3]
   else:
-    raise AlignmentIteratorError("failed parsing alignment line '"
-                                 + " ".join(alig_str_parts) + "'; reason: "
-                                 + "expected this line to have 4 or 5 "
-                                 + "elements, but it has "
-                                 + str(len(alig_str_parts)))
+    raise AlignmentIteratorError("failed parsing alignment line '" +
+                                 " ".join(alig_str_parts) + "'; reason: " +
+                                 "expected this line to have 4 or 5 " +
+                                 "elements, but it has " +
+                                 str(len(alig_str_parts)))
   if _rm_name_match(nm, s1_name):
     return s1_name, seq
   elif _rm_name_match(nm, s2_name):
     return s2_name, seq
   else:
-    raise AlignmentIteratorError("failed parsing alignment line '"
-                                 + " ".join(alig_str_parts) + "'; reason: "
-                                 + "extracted alignment name (" + nm + ") "
-                                 + "did not match either sequence name from "
-                                 + "header line (" + s1_name + " or "
-                                 + s2_name + ")")
+    raise AlignmentIteratorError("failed parsing alignment line '" +
+                                 " ".join(alig_str_parts) + "'; reason: " +
+                                 "extracted alignment name (" + nm + ") " +
+                                 "did not match either sequence name from " +
+                                 "header line (" + s1_name + " or " +
+                                 s2_name + ")")
 
 
 def repeat_masker_alignment_iterator(fn, index_friendly=True, verbose=False):
   """
+  Iterator for repeat masker alignment files; yields multiple alignment objects.
+
   Iterate over a file/stream of full repeat alignments in the repeatmasker
   format. Briefly, this format is as follows: each record (alignment) begins
   with a header line (see _rm_parse_header_line documentation for details of
@@ -630,7 +633,6 @@ def repeat_masker_alignment_iterator(fn, index_friendly=True, verbose=False):
                          so a performance hit will be incurred.
   :param verbose:        if true, output progress messages to stderr.
   """
-
   # step 1 -- build our iterator for the stream..
   try:
     fh = open(fn)
@@ -642,11 +644,11 @@ def repeat_masker_alignment_iterator(fn, index_friendly=True, verbose=False):
 
   # build progress indicator, if we want one and we're able to
   if verbose:
-    try :
+    try:
       m_fn = ": " + fh.name
     except TypeError:
       m_fn = ""
-    try :
+    try:
       current = fh.tell()
       fh.seek(0, 2)
       total_progress = fh.tell()
@@ -678,7 +680,7 @@ def repeat_masker_alignment_iterator(fn, index_friendly=True, verbose=False):
   remaining_genomic = None
 
   for line in iterable:
-    if verbose and pind != None :
+    if verbose and pind is not None:
       pind.done = fh.tell()
       pind.showProgress()
 
@@ -709,7 +711,7 @@ def repeat_masker_alignment_iterator(fn, index_friendly=True, verbose=False):
                                     (' ' * pad_right))
       alignment_line_counter += 1
     elif _rm_is_header_line(parts, n):
-      if not (s1 == None and s2 == None and meta_data == None):
+      if not (s1 is None and s2 is None and meta_data is None):
         if ANNOTATION_KEY in meta_data:
           meta_data[ANNOTATION_KEY] = meta_data[ANNOTATION_KEY].rstrip()
         if index_friendly:
@@ -792,12 +794,12 @@ class TestAlignmentIterators(unittest.TestCase):
 
     alig_3_header = "18 23.18 0.00 1.96 chr1 15798 15830 (249234772) " +\
                     "(TGCTCC)n#Simple_repeat 1 32 (0) m_b1s252i0 15"
-    alig_3 = "  chr1          15798 GCTGCTTCTCCAGCTTTCGCTCCTTCATGCT 15828  \n" +\
-             "                         v  v    v   iii      v - v          \n" +\
-             "  (TGCTCC)n#Sim     1 GCTCCTGCTCCTGCTCCTGCTCCTGC-TCCT 30     \n" +\
-             "                                                             \n" +\
-             "  chr1          15829 GC 15830                               \n" +\
-             "                                                             \n" +\
+    alig_3 = "  chr1          15798 GCTGCTTCTCCAGCTTTCGCTCCTTCATGCT 15828 \n" +\
+             "                         v  v    v   iii      v - v         \n" +\
+             "  (TGCTCC)n#Sim     1 GCTCCTGCTCCTGCTCCTGCTCCTGC-TCCT 30    \n" +\
+             "                                                            \n" +\
+             "  chr1          15829 GC 15830                              \n" +\
+             "                                                            \n" +\
              "  (TGCTCC)n#Sim    31 GC 32                                    "
     alig_3_m = "Matrix = Unknown                                   \n" +\
                "Transitions / transversions = 0.43 (3/7)           \n" +\
@@ -850,10 +852,7 @@ class TestAlignmentIterators(unittest.TestCase):
     self.failUnlessEqual(alig_actual, alig_result)
 
   def test_repeat_masker_alignment_iterator(self):
-    """
-    This is a roundtrip test.
-    """
-
+    """Test roundtrip of repeatmasker alignment."""
     debug = False
     s_io = StringIO.StringIO(self.rm_rc_1_input)
     alig_iter = repeat_masker_alignment_iterator(s_io)

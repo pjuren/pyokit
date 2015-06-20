@@ -57,7 +57,6 @@ from pyokit.datastruct.read import NGSReadUnitTests
 from pyokit.datastruct.intervalTree import *
 from pyokit.datastruct.genomicInterval import TestGenomicInterval
 from pyokit.datastruct.sequence import *
-from pyokit.datastruct.maf import *
 
 ###############################################################################
 #                             TESTING AND UTILS                               #

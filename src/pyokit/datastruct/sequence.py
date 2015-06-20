@@ -36,7 +36,7 @@ DNA_COMPLEMENTS = {"A":"T", "T":"A", "C":"G", "G":"C", "N":"N",
 RNA_COMPLEMENTS = {"A":"U", "U":"A", "C":"G", "G":"C", "N":"N",
                    "a":"u", "u":"a", "c":"g", "g":"c", "n":"n"}
 GAP_CHAR = "-"
-UNKOWN_SEQ_NAME = "UNKNOWN_SEQUENCE"
+UNKNOWN_SEQ_NAME = "UNKNOWN_SEQUENCE"
 RNA_NUCS = "ACGUNacgun"
 DNA_NUCS = "ACGTNacgtn"
 
