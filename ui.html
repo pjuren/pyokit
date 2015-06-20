@@ -131,7 +131,7 @@ options.</p>
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.addOption">
 <code class="descname">addOption</code><span class="sig-paren">(</span><em>o</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.addOption" title="Permalink to this definition">¶</a></dt>
-<dd><p>Add a new Option to this CLI</p>
+<dd><p>Add a new Option to this CLI.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -148,8 +148,15 @@ options.</p>
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.getAllArguments">
 <code class="descname">getAllArguments</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.getAllArguments" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get a list of all the arguments.
-:return: a list of all the arguments, each as a string.</p>
+<dd><p>Get a list of all the arguments.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">a list of all the arguments, each as a string.</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -175,7 +182,7 @@ will be a string.</td>
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.getOption">
 <code class="descname">getOption</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.getOption" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get the the Option object associated with the given name</p>
+<dd><p>Get the the Option object associated with the given name.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -192,7 +199,7 @@ will be a string.</td>
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.getValue">
 <code class="descname">getValue</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.getValue" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get the value of the option matching the name given</p>
+<dd><p>Get the value of the option matching the name given.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -227,7 +234,7 @@ so asking for the 0th arg will check to see if the user supplied
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.hasOption">
 <code class="descname">hasOption</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.hasOption" title="Permalink to this definition">¶</a></dt>
-<dd><p>Check whether this CLI has an option with a given name</p>
+<dd><p>Check whether this CLI has an option with a given name.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -243,7 +250,7 @@ so asking for the 0th arg will check to see if the user supplied
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.optionIsSet">
 <code class="descname">optionIsSet</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.optionIsSet" title="Permalink to this definition">¶</a></dt>
-<dd><p>Check whether an option with a given name exists and has been set</p>
+<dd><p>Check whether an option with a given name exists and has been set.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -260,10 +267,11 @@ it&#8217;s value set by the user</td>
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.parseCommandLine">
 <code class="descname">parseCommandLine</code><span class="sig-paren">(</span><em>line</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.parseCommandLine" title="Permalink to this definition">¶</a></dt>
-<dd><p>Parse the given command line and populate this CLI object with the values
-found. If the command line doesn&#8217;t conform to the specification defined
-by this CLI object, this function prints a message to stdout indicating what
-was wrong, prints the program usage instructions and then exists the program</p>
+<dd><p>Parse the given command line and populate self with the values found.</p>
+<p>If the command line doesn&#8217;t conform to the specification defined
+by this CLI object, this function prints a message to stdout indicating
+what was wrong, prints the program usage instructions and then exists
+the program</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -278,7 +286,7 @@ name removed - generally one would do this: sys.argv[1:]</td>
 <dl class="method">
 <dt id="pyokit.interface.cli.CLI.usage">
 <code class="descname">usage</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.CLI.usage" title="Permalink to this definition">¶</a></dt>
-<dd><p>Print the usage description for this program. Output goes to standard out.</p>
+<dd><p>Print usage description for this program. Output is to standard out.</p>
 </dd></dl>
 
 </dd></dl>
@@ -312,16 +320,30 @@ this option is set. Useful for things like help options.</li>
 <dl class="method">
 <dt id="pyokit.interface.cli.Option.isRequired">
 <code class="descname">isRequired</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.Option.isRequired" title="Permalink to this definition">¶</a></dt>
-<dd><p>Check whether this is a required option (i.e. whether parsing a command
-line should fail when it is missing).
-:return: True if this option is required, else false.</p>
+<dd><p>Check whether this is a required option.</p>
+<p>Parsing command lines should fail when required options are missing</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if this option is required, else false.</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyokit.interface.cli.Option.isSet">
 <code class="descname">isSet</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.interface.cli.Option.isSet" title="Permalink to this definition">¶</a></dt>
-<dd><p>Check whether this option has been set by the user or not.
-:return: True if this option has been set by the user, else false.</p>
+<dd><p>Check whether this option has been set by the user or not.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if this option has been set by the user, else false.</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </dd></dl>
