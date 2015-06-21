@@ -58,9 +58,7 @@ def build_genome_alignment_from_directory(d_name, reference_species):
   """
   blocks = []
   for fn in os.listdir(d_name):
-    print fn
     pth = os.path.join(d_name, fn)
-    print pth
     if os.path.isfile(pth):
       for b in genome_alignment_iterator(pth, reference_species):
         blocks.append(b)
