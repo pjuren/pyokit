@@ -27,7 +27,7 @@ uninstall :
 install :
 	rm -rf dist
 	python setup.py sdist
-	pip install --no-index dist/pyokit-?.?.?.tar.gz
+	pip install dist/pyokit-?.?.?.tar.gz
 
 ################################################################################
 ##                              DOCUMENTATION                                 ##
