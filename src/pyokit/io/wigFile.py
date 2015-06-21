@@ -30,14 +30,16 @@ from pyokit.io.wigIterators import wigIterator
 from pyokit.datastruct.intervalTree import IntervalTree
 from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
 
+
 class WigFileError(Exception):
   def __init__(self, msg):
     self.value = msg
+
   def __str__(self):
     return repr(self.value)
 
-class WigFile :
-  def __init__(self, filename, verbose = False):
+class WigFile:
+  def __init__(self, filename, verbose=False):
     """
       @summary: constructor for the WigFile class
       @param filename: can be either a string filename or a
@@ -53,10 +55,11 @@ class WigFile :
       @summary: load the contents of a wig file into this object
     """
     byChrom = {}
-    for e in wigIterator(self.filename, verbose=verbose) :
-      if not e.chrom in byChrom : byChrom[e.chrom] = []
+    for e in wigIterator(self.filename, verbose=verbose):
+      if e.chrom not in byChrom:
+        byChrom[e.chrom] = []
       byChrom[e.chrom].append(e)
-    for chrom in byChrom :
+    for chrom in byChrom:
       self.itrees[chrom] = IntervalTree(byChrom[chrom], openEnded=True)
 
   def contains(self, chrom, point):
@@ -64,7 +67,8 @@ class WigFile :
       @summary: return True if this WigFile has an element covering the
                 given position, False otherwise
     """
-    if not chrom in self.itrees : return False
+    if not chrom in self.itrees:
+      return False
     hits = self.itrees[chrom].intersectingPoint(point)
     return len(hits) > 0
 
@@ -75,11 +79,14 @@ class WigFile :
       @return:  a WigElement
       @raise WigFileError: if more than one element intersects the point
     """
-    if not chrom in self.itrees : return None
+    if chrom not in self.itrees:
+      return None
     hits = self.itrees[chrom].intersectingPoint(point)
-    if len(hits) == 0 : return None
-    if len(hits) > 1  : raise WigFileError("multiple entries intersect " +\
-                                           str(chrom) + " at " + str(point))
+    if len(hits) == 0:
+      return None
+    if len(hits) > 1:
+      raise WigFileError("multiple entries intersect " +
+                         str(chrom) + " at " + str(point))
     return hits[0]
 
   def getScore(self, chrom, point):
@@ -90,7 +97,8 @@ class WigFile :
       @raise WigFileError: if more than one element intersects the point
     """
     e = self.getElement(chrom, point)
-    if e == None : return None
+    if e is None:
+      return None
     return e.score
 
 
@@ -108,15 +116,15 @@ class WigFileUnitTests(unittest.TestCase):
             "chr1" + "\t" + "40" "\t" + "50" + "\t" + "3" + "\n" +\
             "chr2" + "\t" + "30" "\t" + "34" + "\t" + "2" + "\n" +\
             "chr4" + "\t" + "30" "\t" + "60" + "\t" + "6" + "\n"
-    test = [("chr1", 4,5),
-            ("chr2",31,2),
-            ("chr4",40,6),
-            ("chr2",30,2),
-            ("chr1",45,3)]
+    test = [("chr1", 4, 5),
+            ("chr2", 31, 2),
+            ("chr4", 40, 6),
+            ("chr2", 30, 2),
+            ("chr1", 45, 3)]
 
     infh = DummyInputStream(wigIn)
     wf = WigFile(infh)
-    for chrom, point, ans in test :
+    for chrom, point, ans in test:
       self.assertTrue(wf.getScore(chrom, point) == ans)
 
   def testFailOverlap(self):
@@ -128,4 +136,4 @@ class WigFileUnitTests(unittest.TestCase):
     self.assertRaises(WigFileError, wf.getScore, "chr1", 9)
 
 if __name__ == "__main__":
-    unittest.main(argv = [sys.argv[0]])
+    unittest.main(argv=[sys.argv[0]])

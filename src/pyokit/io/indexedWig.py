@@ -38,19 +38,21 @@ from pyokit.datastruct.genomicInterval import parseWigString
 from pyokit.datastruct.intervalTree import IntervalTree
 from pyokit.util.progressIndicator import ProgressIndicator
 
+
 class IndexedWigError(Exception):
   def __init__(self, msg):
     self.value = msg
   def __str__(self):
     return repr(self.value)
 
-class WigBlock :
+
+class WigBlock(object):
   """
     everything in the block is on the same chrom
     it includes all elements between start (inclusive) and end (exclusive)
   """
 
-  def __init__(self, fileLocation, e, blocksize, debug = False):
+  def __init__(self, fileLocation, e, blocksize, debug=False):
     self.fileLocation = fileLocation
     self.capacity = blocksize
     self.chrom = e.chrom
@@ -60,7 +62,6 @@ class WigBlock :
     self.end = e.end
     self.data = []
     self.size = 0
-
 
   def __len__(self):
     """
@@ -85,16 +86,16 @@ class WigBlock :
     self.size += 1
 
   def lookup(self, chrom, point):
-    if chrom != self.chrom :
+    if chrom != self.chrom:
       msg = "looking for value on chrom " + chrom + " in " + str(self) +\
             " failed; chromosomes don't match"
       raise IndexedWigError(msg)
     hits = self.iTree.intersectingPoint(point)
-    if len(hits) == 0 :
+    if len(hits) == 0:
       msg = "lookup for value on chrom " + str(chrom) + " at location " +\
              str(point) + " failed; location not covered in wig file"
       raise IndexedWigError(msg)
-    elif len(hits) > 1 :
+    elif len(hits) > 1:
       msg = "lookup for value on chrom " + str(chrom) + " at location " +\
              str(point) + " failed; multiple entries intersecting this point"
       raise IndexedWigError(msg)
@@ -118,22 +119,27 @@ class WigBlock :
     #print "populating " + str(self)
     #print "seeking to " + str(self.fileLocation)
     filehandle.seek(self.fileLocation)
-    if self.debug : sys.stderr.write("populating " + str(self) + "\n")
-    for line in filehandle :
+    if self.debug:
+      sys.stderr.write("populating " + str(self) + "\n")
+    for line in filehandle:
       # get next element
       line = line.strip()
-      if self.debug :
+      if self.debug:
         sys.stderr.write("\t" + "current line is " + str(line) + "\n")
       line = line.strip()
-      if line == "": continue
+      if line == "":
+        continue
       e = parseWigString(line)
 
       # we're done if we've left this block's chrom, or if we've moved beyond
       # the end of this blocks boundary.
-      if e.chrom != self.chrom or e.start > self.end : break
+      if e.chrom != self.chrom or e.start > self.end:
+        break
       self.data.append(e)
-    if self.debug : sys.stderr.write("built tree for " + str(self) + "\n")
-    if len(self.data) == 0 : print "empty! --> " + str(self)
+    if self.debug:
+      sys.stderr.write("built tree for " + str(self) + "\n")
+    if len(self.data) == 0:
+      print "empty! --> " + str(self)
     self.iTree = IntervalTree(self.data, openEnded=True)
 
   def depopulate(self):
@@ -148,7 +154,7 @@ class WigBlock :
     return res
 
 
-class IndexedWig :
+class IndexedWig(object):
   def __init__(self, filename, blocksize, blockCapacity,
                debug=False, verbose=False):
     """
@@ -177,14 +183,14 @@ class IndexedWig :
     seenChroms = set()
     lastIndexSeen = -1
 
-    if self.verbose :
-      try :
-        pind = ProgressIndicator(totalToDo = os.path.getsize(self.handle.name),
-                                       messagePrefix = "completed",
-                                       messageSuffix = "of building index for " +\
-                                                        self.handle.name)
-      except :
-        sys.stderr.write("IndexedWig -- warning: " +\
+    if self.verbose:
+      try:
+        pind = ProgressIndicator(totalToDo=os.path.getsize(self.handle.name),
+                                 messagePrefix="completed",
+                                 messageSuffix="of building index for " +
+                                               self.handle.name)
+      except:
+        sys.stderr.write("IndexedWig -- warning: " +
                          "unable to show progress for stream\n")
         self.verbose = False
 
@@ -200,41 +206,43 @@ class IndexedWig :
       e = parseWigString(line)
 
       # keep track of what chroms we've seen for checking order
-      if not e.chrom in seenChroms :
+      if not e.chrom in seenChroms:
         seenChroms.add(e.chrom)
         lastIndexSeen = -1
 
       # check chrom order is ok
-      for seenChrom in seenChroms :
-        if seenChrom > e.chrom :
+      for seenChrom in seenChroms:
+        if seenChrom > e.chrom:
           msg = "wig file is not sorted, entry for chrom " + str(seenChrom) +\
                 " appears after entry for " + str(e.chrom)
           raise IndexedWigError(msg)
       # check position order is ok
-      if e.start < lastIndexSeen :
+      if e.start < lastIndexSeen:
         msg = "wig file is not sorted, entry for chrom " + str(e.chrom) +\
-                " at " + str(e.start) + " appears after " + str(lastIndexSeen)
+              " at " + str(e.start) + " appears after " + str(lastIndexSeen)
         raise IndexedWigError(msg)
 
       # update the last index we've seen
       lastIndexSeen = e.end
 
       # debugging message if the current block is full
-      if self.debug == True :
+      if self.debug is True:
         sys.stderr.write("processing " + str(e))
-        if currentBlock != None :
-          sys.stderr.write("; is current block full?" +\
+        if currentBlock is not None:
+          sys.stderr.write("; is current block full?" +
                            str(currentBlock.isfull()) + "\n")
-        else :
+        else:
           sys.stderr.write("\n")
 
       # we might need to make a new block for this element
-      if currentBlock == None or currentBlock.isfull() or \
-         currentBlock.chrom != e.chrom :
-        if self.debug : sys.stderr.write("making new block with " + str(e) + "\n")
-        if currentBlock != None :
-          if self.debug : sys.stderr.write("closed block: " + str(currentBlock) + "\n")
-          if not currentBlock.chrom in self.blocksByChrom :
+      if currentBlock is None or currentBlock.isfull() or \
+         currentBlock.chrom != e.chrom:
+        if self.debug:
+          sys.stderr.write("making new block with " + str(e) + "\n")
+        if currentBlock is not None:
+          if self.debug:
+            sys.stderr.write("closed block: " + str(currentBlock) + "\n")
+          if currentBlock.chrom not in self.blocksByChrom:
             self.blocksByChrom[currentBlock.chrom] = []
           self.blocksByChrom[currentBlock.chrom].append(currentBlock)
         currentBlock = WigBlock(at, e, self.blocksize)
@@ -249,14 +257,15 @@ class IndexedWig :
         pind.showProgress()
 
     # don't forget to add the final block
-    if currentBlock != None :
-      if self.debug : sys.stderr.write("closed block: " + str(currentBlock) + "\n")
-      if not currentBlock.chrom in self.blocksByChrom :
+    if currentBlock != None:
+      if self.debug:
+        sys.stderr.write("closed block: " + str(currentBlock) + "\n")
+      if currentBlock.chrom not in self.blocksByChrom:
         self.blocksByChrom[currentBlock.chrom] = []
       self.blocksByChrom[currentBlock.chrom].append(currentBlock)
 
     # build the interval trees
-    for chrom in self.blocksByChrom :
+    for chrom in self.blocksByChrom:
       self.itrees[chrom] = IntervalTree(self.blocksByChrom[chrom], openEnded=True)
 
 
@@ -265,20 +274,23 @@ class IndexedWig :
       @summary: returns true if the indexed wig contains a value for the
                 given location, false otherwise
     """
-    if not chrom in self.itrees : return False
+    if not chrom in self.itrees:
+      return False
     blocks = self.itrees[chrom].intersectingPoint(point)
-    if len(blocks) == 0 : return False
+    if len(blocks) == 0:
+      return False
 
-    if len(blocks) > 1 :
+    if len(blocks) > 1:
       msg = "lookup for value on chrom " + str(chrom) + " at location " +\
-             str(point) + " failed; multiple entries intersecting this point"
+            str(point) + " failed; multiple entries intersecting this point"
       raise IndexedWigError(msg)
     block = blocks[0]
 
-    if not block.isPopulated() :
+    if not block.isPopulated():
       block.populate(self.handle)
-      if len(self.populatedBlocks) >= self.blockCapacity :
-        if self.debug : sys.stderr.write("popping old block off heap\n")
+      if len(self.populatedBlocks) >= self.blockCapacity:
+        if self.debug:
+          sys.stderr.write("popping old block off heap\n")
         t, o = heappop(self.populatedBlocks)
         o.depopulate()
       heappush(self.populatedBlocks, (time.time, block))
@@ -290,22 +302,22 @@ class IndexedWig :
     """
       @summary: get the wig element which intersects the given point
     """
-    if not chrom in self.itrees :
+    if not chrom in self.itrees:
       msg = "lookup for value on chrom " + str(chrom) + " failed; no such " +\
             "chromosome in wig file"
       raise IndexedWigError(msg)
 
     # get the block that this point is in
     blocks = self.itrees[chrom].intersectingPoint(point)
-    if self.debug :
+    if self.debug:
       sys.stderr.write("lookup for " + str(chrom) + " at " +\
                         str(point) + " got these blocks\n" +\
                        "\n".join([str(x) for x in blocks]) + "\n")
-    if len(blocks) == 0 :
+    if len(blocks) == 0:
       msg = "lookup for value on chrom " + str(chrom) + " at location " +\
              str(point) + " failed; location not covered in wig file"
       raise IndexedWigError(msg)
-    elif len(blocks) > 1 :
+    elif len(blocks) > 1:
       msg = "lookup for value on chrom " + str(chrom) + " at location " +\
              str(point) + " failed; multiple entries intersecting this point"
       raise IndexedWigError(msg)
@@ -315,10 +327,10 @@ class IndexedWig :
 
     # populate the block if it's not already; age out old blocks from
     # our cache if we need to make new space
-    if self.debug :
+    if self.debug:
       sys.stderr.write("block " + str(block) + " is populated? " +\
                         str(block.isPopulated()) + "\n")
-    if not block.isPopulated() :
+    if not block.isPopulated():
       block.populate(self.handle)
       if len(self.populatedBlocks) >= self.blockCapacity :
         if self.debug : sys.stderr.write("popping old block off heap\n")
@@ -335,27 +347,27 @@ class IndexedWig :
                 individual wig elements since these are often not in memory
     """
     res = ""
-    for chrom in self.blocksByChrom :
-      for block in self.blocksByChrom[chrom] :
+    for chrom in self.blocksByChrom:
+      for block in self.blocksByChrom[chrom]:
         res += (str(block) + "\n")
     return res
 
 
 class TestIndexedWig(unittest.TestCase):
   def setUp(self):
-    self.input = ["chr1" + "\t" + "10" + "\t" + "11" + "\t" + "1"  + "\n",
-                  "chr1" + "\t" + "30" + "\t" + "31" + "\t" + "2"  + "\n",
-                  "chr1" + "\t" + "45" + "\t" + "46" + "\t" + "3"  + "\n",
-                  "chr1" + "\t" + "96" + "\t" + "97" + "\t" + "4"  + "\n",
-                  "chr2" + "\t" + "34" + "\t" + "35" + "\t" + "5"  + "\n",
-                  "chr2" + "\t" + "46" + "\t" + "47" + "\t" + "6"  + "\n",
-                  "chr2" + "\t" + "57" + "\t" + "58" + "\t" + "7"  + "\n",
-                  "chr2" + "\t" + "69" + "\t" + "70" + "\t" + "8"  + "\n",
-                  "chr3" + "\t" + "79" + "\t" + "80" + "\t" + "9"  + "\n",
+    self.input = ["chr1" + "\t" + "10" + "\t" + "11" + "\t" + "1" + "\n",
+                  "chr1" + "\t" + "30" + "\t" + "31" + "\t" + "2" + "\n",
+                  "chr1" + "\t" + "45" + "\t" + "46" + "\t" + "3" + "\n",
+                  "chr1" + "\t" + "96" + "\t" + "97" + "\t" + "4" + "\n",
+                  "chr2" + "\t" + "34" + "\t" + "35" + "\t" + "5" + "\n",
+                  "chr2" + "\t" + "46" + "\t" + "47" + "\t" + "6" + "\n",
+                  "chr2" + "\t" + "57" + "\t" + "58" + "\t" + "7" + "\n",
+                  "chr2" + "\t" + "69" + "\t" + "70" + "\t" + "8" + "\n",
+                  "chr3" + "\t" + "79" + "\t" + "80" + "\t" + "9" + "\n",
                   "chr3" + "\t" + "83" + "\t" + "84" + "\t" + "10" + "\n",
                   "chr3" + "\t" + "92" + "\t" + "93" + "\t" + "11" + "\n"]
 
-  def testRecall(self) :
+  def testRecall(self):
     """
       @summary: here we're just testing that we can get back what we put in
                 to the IndexedWig object in a random order
@@ -366,11 +378,12 @@ class TestIndexedWig(unittest.TestCase):
     shuffle(answers)
 
     iwig = IndexedWig(infh, 2, 2, debug, verbose=False)
-    if debug : sys.stderr.write("iwig structure is: \n" + str(iwig) + "\n")
+    if debug:
+      sys.stderr.write("iwig structure is: \n" + str(iwig) + "\n")
     print "done"
-    for e in answers :
+    for e in answers:
       ans = iwig.lookup(e.chrom, e.start)
-      if debug :
+      if debug:
         sys.stderr.write("expect: " + str(e.score) + ", got: " + str(ans) + "\n")
       assert(e.score == ans.score)
 

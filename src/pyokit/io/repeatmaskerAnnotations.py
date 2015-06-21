@@ -69,8 +69,8 @@ def repeat_masker_iterator(fh, alignment_index=None,
     strm = open(fh)
 
   # try to get an idea of how much data we have...
-  if verbose :
-    try :
+  if verbose:
+    try:
       total = os.path.getsize(strm.name)
       pind = ProgressIndicator(totalToDo=total, messagePrefix="completed",
                                messageSuffix="of processing " + strm.name)
@@ -85,7 +85,7 @@ def repeat_masker_iterator(fh, alignment_index=None,
     next(strm)
 
   for line in strm:
-    if verbose :
+    if verbose:
       pind.done = strm.tell()
       pind.showProgress()
 
@@ -93,7 +93,7 @@ def repeat_masker_iterator(fh, alignment_index=None,
     if line == "":
       continue
     rto = retrotransposon.from_repeat_masker_string(line)
-    if alignment_index != None:
+    if alignment_index is not None:
       rto.pairwise_alignment =\
           JustInTimePairwiseAlignment(alignment_index, rto.uniq_id)
     yield rto
@@ -219,7 +219,6 @@ class TestRepMaskerIterators(unittest.TestCase):
     # also test one of the ones that had no alignment; here we expect failure
     self.assertRaises(IndexError, elems[4].liftover,
                       GenomicInterval("chr1", 15200, 15400))
-
 
 
 ###############################################################################

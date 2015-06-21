@@ -111,25 +111,25 @@ def fastaIterator(fn, useMutableString=False, verbose=False):
   if type(fh).__name__ == "str":
     fh = open(fh)
 
-  if verbose :
-    try :
+  if verbose:
+    try:
       total = os.path.getsize(fh.name)
       pind = ProgressIndicator(totalToDo=total,
                                messagePrefix="completed",
                                messageSuffix="of processing "
                                              + fh.name)
-    except AttributeError :
+    except AttributeError:
       sys.stderr.write("Warning: unable to show progress for stream")
       verbose = False
 
-  while True :
+  while True:
     # either we have a sequence header left over from the prev call, or we need
     # to read a new one from the file... try to do that now
     seqHeader = ""
-    if prevLine != None and not _isSequenceHead(prevLine) :
+    if prevLine is not None and not _isSequenceHead(prevLine):
       raise FastaFileFormatError("terminated on non-read header: " + prevLine)
-    if prevLine == None :
-      while seqHeader.strip() == "" :
+    if prevLine == None:
+      while seqHeader.strip() == "":
         seqHeader = fh.readline()
     else:
       seqHeader = prevLine
@@ -139,22 +139,22 @@ def fastaIterator(fn, useMutableString=False, verbose=False):
     # run out of lines.. this is our sequence data
     line = None
     seqdata = ""
-    while line == None or not _isSequenceHead(line) :
+    while line == None or not _isSequenceHead(line):
       line = fh.readline()
       if line == "":
         break  # file is finished...
-      if not _isSequenceHead(line) :
+      if not _isSequenceHead(line):
         seqdata += line.strip()
 
     # package it all up..
-    if verbose :
+    if verbose:
       pind.done = fh.tell()
       pind.showProgress()
     yield Sequence(name, seqdata, useMutableString)
 
     # remember where we stopped for next call, or finish
     prevLine = line
-    if prevLine == "" :
+    if prevLine == "":
       break
 
 

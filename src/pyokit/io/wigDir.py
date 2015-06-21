@@ -27,12 +27,13 @@ import sys, unittest, os
 from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
 from pyokit.io.wigFile import WigFile
 
-class WigDir :
+
+class WigDir(object):
   def __init__(self, dir, extension="wig", verbose=False):
     self.extension = extension
     self.files = {}
     self.currentlyLoaded = None
-    self.verbose=verbose
+    self.verbose = verbose
     self.__load(dir, verbose)
 
   def contains(self, chrom, point):
@@ -41,8 +42,10 @@ class WigDir :
                 given position, False otherwise
     """
     filename = self._chromToFilename(chrom)
-    if filename == None : return False
-    if self.currentlyLoaded != filename : self._loadFile(filename)
+    if filename is None:
+      return False
+    if self.currentlyLoaded != filename:
+      self._loadFile(filename)
     return self.currentlyLoaded.contains(chrom, point)
 
   def getElement(self, chrom, point):
@@ -53,8 +56,10 @@ class WigDir :
       @raise WigFileError: if more than one element intersects the point
     """
     fh = self.__chromToFileHandle(chrom)
-    if fh == None : return None
-    if self.currentlyLoaded != fh : self.__loadFile(fh, verbose=self.verbose)
+    if fh is None:
+      return None
+    if self.currentlyLoaded != fh:
+      self.__loadFile(fh, verbose=self.verbose)
     return self.currentlyLoaded.getElement(chrom, point)
 
   def getScore(self, chrom, point):
@@ -65,7 +70,8 @@ class WigDir :
       @raise WigFileError: if more than one element intersects the point
     """
     e = self.getElement(chrom, point)
-    if e == None : return None
+    if e is None:
+      return None
     return e.score
 
   def __str__(self):
@@ -75,7 +81,8 @@ class WigDir :
     """
       @summary: find the file that contains entries for the given chromosome
     """
-    if not chrom in self.files : return None
+    if chrom not in self.files:
+      return None
     return self.files[chrom]
     #hits = [f for f in self.files.keys() if f.name.find(chrom) != -1]
     #mhits = [f for f in hits if len(f.nam) == max(hits, key=len)]
@@ -92,13 +99,14 @@ class WigDir :
                   -if list of anything else, treat as list of file-handle-like
                    objects (must have .name attributes)
     """
-    if type(dir).__name__ == "str" :
-      for f in os.listdir(dir) :
+    if type(dir).__name__ == "str":
+      for f in os.listdir(dir):
         name = os.path.splitext(f)[0]
-        self.files[name] = open(os.path.join(dir,f))
-    else :
-      for f in dir :
-        if type(f).__name__ == "str" : f = open(f)
+        self.files[name] = open(os.path.join(dir, f))
+    else:
+      for f in dir:
+        if type(f).__name__ == "str":
+          f = open(f)
         name = os.path.splitext(f.name)[0]
         self.files[name] = f
 
@@ -111,8 +119,9 @@ class WigDir :
                        WigFile object from it
     """
     fh = None
-    if type(filename).__name__ == "str" : fh = open(filename)
-    else :
+    if type(filename).__name__ == "str":
+      fh = open(filename)
+    else:
       fh = filename
       fh.seek(0)
     self.currentlyLoaded = WigFile(fh, verbose=verbose)
@@ -148,20 +157,20 @@ class WigDirUnitTests(unittest.TestCase):
            "chr4" + "\t" + "12" "\t" + "13" + "\t" + "14" + "\n" +\
            "chr4" + "\t" + "13" "\t" + "14" + "\t" + "15" + "\n" +\
            "chr4" + "\t" + "14" "\t" + "15" + "\t" + "16" + "\n")
-    wig1.name="chr1.wig"
-    wig2.name="chr2.wig"
-    wig3.name="chr3.wig"
-    wig4.name="chr4.wig"
+    wig1.name = "chr1.wig"
+    wig2.name = "chr2.wig"
+    wig3.name = "chr3.wig"
+    wig4.name = "chr4.wig"
     wigInfs = [wig1, wig2, wig3, wig4]
     test = [("chr1", 4, 1),
-            ("chr1",45, 2),
-            ("chr2",34, 6),
-            ("chr2",77, 8),
-            ("chr4",14,16)]
+            ("chr1", 45, 2),
+            ("chr2", 34, 6),
+            ("chr2", 77, 8),
+            ("chr4", 14, 16)]
 
     wd = WigDir(wigInfs)
-    for chrom, point, ans in test :
+    for chrom, point, ans in test:
       self.assertTrue(wd.getScore(chrom, point) == ans)
 
 if __name__ == "__main__":
-    unittest.main(argv = [sys.argv[0]])
+    unittest.main(argv=[sys.argv[0]])

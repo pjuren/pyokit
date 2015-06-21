@@ -171,8 +171,8 @@ def maf_iterator(fn, yield_class=MultipleSequenceAlignment, yield_kw_args={}):
     if line_type == A_LINE:
       if sequences != []:
         meta_data[SEQ_ORDER_KEY] = [s.name for s in sequences]
-        kw_args = merge_dictionaries({"sequences":sequences,
-                                      "meta_data":meta_data},
+        kw_args = merge_dictionaries({"sequences": sequences,
+                                      "meta_data": meta_data},
                                      yield_kw_args)
         yield yield_class(**kw_args)
       sequences = []
@@ -233,8 +233,8 @@ def maf_iterator(fn, yield_class=MultipleSequenceAlignment, yield_kw_args={}):
   # don't forget to yield the final block
   if sequences != []:
     meta_data[SEQ_ORDER_KEY] = [s.name for s in sequences]
-    kw_args = merge_dictionaries({"sequences":sequences,
-                                  "meta_data":meta_data},
+    kw_args = merge_dictionaries({"sequences": sequences,
+                                  "meta_data": meta_data},
                                  yield_kw_args)
     yield yield_class(**kw_args)
 
@@ -331,21 +331,21 @@ class TestMAF(unittest.TestCase):
     self.b1_hg19 = Sequence("hg19.chr22", b1_hg19_seq, 1711, 1768,
                             "+", 51302798)
     self.b1_panTro = Sequence("panTro2.chrUn", b1_panTro_s, 1110, 1169, "+",
-                              58616431 - 1169, {QUALITY_META_KEY:b1_panTro_q,
-                                                LEFT_STATUS_KEY:"C",
-                                                LEFT_COUNT_KEY:0,
-                                                RIGHT_STATUS_KEY:"C",
-                                                RIGHT_COUNT_KEY:0})
+                              58616431 - 1169, {QUALITY_META_KEY: b1_panTro_q,
+                                                LEFT_STATUS_KEY: "C",
+                                                LEFT_COUNT_KEY: 0,
+                                                RIGHT_STATUS_KEY: "C",
+                                                RIGHT_COUNT_KEY: 0})
     self.b1_tarSyr = Sequence("tarSyr1.scaffold_5923", b1_tarSyr_s,
                               8928 - 2859 - 50, 8928 - 2859, "-",
-                              2859, {QUALITY_META_KEY:b1_tarSyr_q,
-                                     LEFT_STATUS_KEY:"N",
-                                     LEFT_COUNT_KEY:0,
-                                     RIGHT_STATUS_KEY:"C",
-                                     RIGHT_COUNT_KEY:0})
+                              2859, {QUALITY_META_KEY: b1_tarSyr_q,
+                                     LEFT_STATUS_KEY: "N",
+                                     LEFT_COUNT_KEY: 0,
+                                     RIGHT_STATUS_KEY: "C",
+                                     RIGHT_COUNT_KEY: 0})
     self.b1_mm4 = UnknownSequence("mm4.chr6", 53310102, 53310102 + 58, "+",
                                   151104725 - (53310102 + 58),
-                                  {EMPTY_ALIGNMENT_STATUS_KEY:"I"})
+                                  {EMPTY_ALIGNMENT_STATUS_KEY: "I"})
 
     b2_hg19_seq = "ccttcttttaattaattttgttaagg----gatttcctctagggccactgcacgtca"
     b2_panTro_s = "ccttcttttaattaattttgttatgg----gatttcgtctagggtcactgcacatca"
@@ -370,18 +370,18 @@ class TestMAF(unittest.TestCase):
                             "+", 51302741)
     self.b2_panTro = Sequence("panTro2.chrUn", b2_panTro_s, 1169, 1169 + 53,
                               "+", 58616431 - (1169 + 53),
-                              {QUALITY_META_KEY:b2_panTro_q,
-                               LEFT_STATUS_KEY:"C",
-                               LEFT_COUNT_KEY:0,
-                               RIGHT_STATUS_KEY:"C",
-                               RIGHT_COUNT_KEY:0})
+                              {QUALITY_META_KEY: b2_panTro_q,
+                               LEFT_STATUS_KEY: "C",
+                               LEFT_COUNT_KEY: 0,
+                               RIGHT_STATUS_KEY: "C",
+                               RIGHT_COUNT_KEY: 0})
     self.b2_tarSyr = Sequence("tarSyr1.scaffold_5923", b2_tarSyr_s,
                               8928 - 2909 - 124, 8928 - 2909, "-",
-                              2909, {QUALITY_META_KEY:b2_tarSyr_q,
-                                     LEFT_STATUS_KEY:"C",
-                                     LEFT_COUNT_KEY:0,
-                                     RIGHT_STATUS_KEY:"N",
-                                     RIGHT_COUNT_KEY:0})
+                              2909, {QUALITY_META_KEY: b2_tarSyr_q,
+                                     LEFT_STATUS_KEY: "C",
+                                     LEFT_COUNT_KEY: 0,
+                                     RIGHT_STATUS_KEY: "N",
+                                     RIGHT_COUNT_KEY: 0})
     self.b1 = b1
     self.b2 = b2
 

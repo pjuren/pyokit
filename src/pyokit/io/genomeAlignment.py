@@ -121,21 +121,21 @@ class TestGenomeAlignment(unittest.TestCase):
                             "+", 51302798)
     self.b1_panTro = Sequence("panTro2.chrUn", b1_panTro_s, 1110, 1169, "+",
                               58616431 - 1169,
-                              {maf.QUALITY_META_KEY:b1_panTro_q,
-                               maf.LEFT_STATUS_KEY:"C",
-                               maf.LEFT_COUNT_KEY:0,
-                               maf.RIGHT_STATUS_KEY:"C",
-                               maf.RIGHT_COUNT_KEY:0})
+                              {maf.QUALITY_META_KEY: b1_panTro_q,
+                               maf.LEFT_STATUS_KEY: "C",
+                               maf.LEFT_COUNT_KEY: 0,
+                               maf.RIGHT_STATUS_KEY: "C",
+                               maf.RIGHT_COUNT_KEY: 0})
     self.b1_tarSyr = Sequence("tarSyr1.scaffold_5923", b1_tarSyr_s,
                               8928 - 2859 - 50, 8928 - 2859, "-",
-                              2859, {maf.QUALITY_META_KEY:b1_tarSyr_q,
-                                     maf.LEFT_STATUS_KEY:"N",
-                                     maf.LEFT_COUNT_KEY:0,
-                                     maf.RIGHT_STATUS_KEY:"C",
-                                     maf.RIGHT_COUNT_KEY:0})
+                              2859, {maf.QUALITY_META_KEY: b1_tarSyr_q,
+                                     maf.LEFT_STATUS_KEY: "N",
+                                     maf.LEFT_COUNT_KEY: 0,
+                                     maf.RIGHT_STATUS_KEY: "C",
+                                     maf.RIGHT_COUNT_KEY: 0})
     self.b1_mm4 = UnknownSequence("mm4.chr6", 53310102, 53310102 + 58, "+",
                                   151104725 - (53310102 + 58),
-                                  {maf.EMPTY_ALIGNMENT_STATUS_KEY:"I"})
+                                  {maf.EMPTY_ALIGNMENT_STATUS_KEY: "I"})
 
     b2_hg19_seq = "ccttcttttaattaattttgttaagg----gatttcctctagggccactgcacgtca"
     b2_panTro_s = "ccttcttttaattaattttgttatgg----gatttcgtctagggtcactgcacatca"
@@ -160,18 +160,18 @@ class TestGenomeAlignment(unittest.TestCase):
                             "+", 51302741)
     self.b2_panTro = Sequence("panTro2.chrUn", b2_panTro_s, 1169, 1169 + 53,
                               "+", 58616431 - (1169 + 53),
-                              {maf.QUALITY_META_KEY:b2_panTro_q,
-                               maf.LEFT_STATUS_KEY:"C",
-                               maf.LEFT_COUNT_KEY:0,
-                               maf.RIGHT_STATUS_KEY:"C",
-                               maf.RIGHT_COUNT_KEY:0})
+                              {maf.QUALITY_META_KEY: b2_panTro_q,
+                               maf.LEFT_STATUS_KEY: "C",
+                               maf.LEFT_COUNT_KEY: 0,
+                               maf.RIGHT_STATUS_KEY: "C",
+                               maf.RIGHT_COUNT_KEY: 0})
     self.b2_tarSyr = Sequence("tarSyr1.scaffold_5923", b2_tarSyr_s,
                               8928 - 2909 - 124, 8928 - 2909, "-",
-                              2909, {maf.QUALITY_META_KEY:b2_tarSyr_q,
-                                     maf.LEFT_STATUS_KEY:"C",
-                                     maf.LEFT_COUNT_KEY:0,
-                                     maf.RIGHT_STATUS_KEY:"N",
-                                     maf.RIGHT_COUNT_KEY:0})
+                              2909, {maf.QUALITY_META_KEY: b2_tarSyr_q,
+                                     maf.LEFT_STATUS_KEY: "C",
+                                     maf.LEFT_COUNT_KEY: 0,
+                                     maf.RIGHT_STATUS_KEY: "N",
+                                     maf.RIGHT_COUNT_KEY: 0})
     self.b1 = b1
     self.b2 = b2
 
@@ -212,12 +212,14 @@ class TestGenomeAlignment(unittest.TestCase):
   def test_build_genome_alignment_from_directory(self, mock_open, mock_isfile,
                                                  mock_listdir):
     mock_listdir.return_value = ["one.maf", "two.maf", "some_sub_dir"]
+
     def open_side_effect(*args, **kwargs):
       if args[0] == os.path.join("the_dir", "one.maf"):
         return StringIO.StringIO(self.b1)
       elif args[0] == os.path.join("the_dir", "two.maf"):
         return StringIO.StringIO(self.b2)
       raise IOError("No such file")
+
     def isfile_side_effect(*args, **kwargs):
       if (args[0] == os.path.join("the_dir", "one.maf") or
           args[0] == os.path.join("the_dir", "two.maf")):

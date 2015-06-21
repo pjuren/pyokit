@@ -62,15 +62,15 @@ def wigIterator(fd, verbose=False, sortedby=None, scoreType=int):
   fh = openFD(fd)
   at = fh.tell()
   line = None
-  while(line is None) :
+  while(line is None):
     l = fh.readline()
     if l.strip() != "":
       line = l
 
   fh.seek(at)
-  if line.split()[0] == "fixedStep" :
+  if line.split()[0] == "fixedStep":
     return fixedWigIterator(fd, verbose, sortedby)
-  else :
+  else:
     return regularWigIterator(fd, verbose, sortedby, scoreType=scoreType)
 
 
@@ -81,13 +81,13 @@ def regularWigIterator(fd, verbose=False, sortedby=None, scoreType=int):
                      sorted in
     @raise WigIteratorError: if sortedBy is set and stream is not sorted
   """
-  if verbose :
-    try :
+  if verbose:
+    try:
       totalLines = linesInFile(fd)
       pind = ProgressIndicator(totalToDo=totalLines,
                                messagePrefix="completed",
                                messageSuffix="of processing " + getFDName(fd))
-    except AttributeError :
+    except AttributeError:
       sys.stderr.write("WigIterator -- warning: "
                        + "unable to show progress for stream")
       verbose = False
@@ -96,8 +96,8 @@ def regularWigIterator(fd, verbose=False, sortedby=None, scoreType=int):
   prev = None
 
   fh = openFD(fd)
-  for line in fh :
-    if verbose :
+  for line in fh:
+    if verbose:
       pind.done += 1
       pind.showProgress()
 
@@ -107,16 +107,16 @@ def regularWigIterator(fd, verbose=False, sortedby=None, scoreType=int):
     e = parseWigString(line, scoreType=scoreType)
 
     # on same chrom as the prev item, make sure order is right
-    if prev != None and sortedby != None and e.chrom == prev.chrom :
-      if sortedby == ITERATOR_SORTED_START and prev.start > e.start :
+    if prev is not None and sortedby is not None and e.chrom == prev.chrom:
+      if sortedby == ITERATOR_SORTED_START and prev.start > e.start:
         raise WigIteratorError("bed file " + fd.name
                                + " not sorted by start index - saw item "
                                + str(prev) + " before " + str(e))
 
     # starting a new chrom.. make sure we haven't already seen it
-    if prev != None and prev.chrom != e.chrom :
+    if prev is not None and prev.chrom != e.chrom:
       if (sortedby == ITERATOR_SORTED_START) and\
-         (e.chrom in chromsSeen or prev.chrom > e.chrom) :
+         (e.chrom in chromsSeen or prev.chrom > e.chrom):
         raise WigIteratorError("BED file " + fd.name
                                + " not sorted by chrom")
       chromsSeen.add(e.chrom)
@@ -131,12 +131,12 @@ def fixedWigIterator(fd, verbose=False, sortedby=None, scoreType=int):
     @summary:
   """
   fh = openFD(fd)
-  if verbose :
-    try :
+  if verbose:
+    try:
       pind = ProgressIndicator(totalToDo=os.path.getsize(fh.name),
                                messagePrefix="completed",
                                messageSuffix="of processing " + fh.name)
-    except AttributeError :
+    except AttributeError:
       sys.stderr.write("WigIterator -- warning: "
                        + "unable to show progress for stream")
       verbose = False
@@ -146,35 +146,35 @@ def fixedWigIterator(fd, verbose=False, sortedby=None, scoreType=int):
 
   # NUMBERS = set(['1','2','3','4','5','6','7','8','9','0','.'])
   currentChrom, at, step = None, None, None
-  for line in fh :
+  for line in fh:
     line = line.strip()
     if line == "":
       continue
 
-    if line[0] == 't' or line[0] == 'f' :
+    if line[0] == 't' or line[0] == 'f':
       parts = line.split()
       if parts[0] == "track":
         continue
-      elif parts[0] == "fixedStep" :
+      elif parts[0] == "fixedStep":
         currentChrom = parts[1].split("=")[1]
         at = int(parts[2].split("=")[1])
         step = int(parts[3].split("=")[1])
-    else :
+    else:
       val = float(line)
       e = GenomicInterval(currentChrom, at, at + step, None,
                           val, scoreType=scoreType)
 
       # on same chrom as the prev item, make sure order is right
-      if prev != None and sortedby != None and e.chrom == prev.chrom :
-        if sortedby == ITERATOR_SORTED_START and prev.start > e.start :
+      if prev is not None and sortedby is not None and e.chrom == prev.chrom:
+        if sortedby == ITERATOR_SORTED_START and prev.start > e.start:
           raise WigIteratorError("Wig file " + fd.name
                                  + " not sorted by start index - saw item "
                                  + str(prev) + " before " + str(e))
 
       # starting a new chrom.. make sure we haven't already seen it
-      if prev != None and prev.chrom != e.chrom :
+      if prev is not None and prev.chrom != e.chrom:
         if (sortedby == ITERATOR_SORTED_START) and\
-           (e.chrom in chromsSeen or prev.chrom > e.chrom) :
+           (e.chrom in chromsSeen or prev.chrom > e.chrom):
           raise WigIteratorError("Wig file " + fd.name
                                  + " not sorted by chrom")
         chromsSeen.add(e.chrom)
@@ -209,10 +209,10 @@ def pairedWigIterator(inputStreams, mirror=False, mirrorScore=None,
   """
   # let's build our sorting order...
   sortOrder = ["chrom"]
-  if sortedby == ITERATOR_SORTED_START :
+  if sortedby == ITERATOR_SORTED_START:
     sortOrder.append("start")
     sortOrder.append("end")
-  elif sortedby == ITERATOR_SORTED_END :
+  elif sortedby == ITERATOR_SORTED_END:
     sortOrder.append("end")
     sortOrder.append("start")
   if not ignoreScore:
@@ -230,20 +230,20 @@ def pairedWigIterator(inputStreams, mirror=False, mirrorScore=None,
                             scoreType=scoreType) for fh in inputStreams]
   elements = [next_item(it) for it in wIterators]
 
-  while True :
+  while True:
     assert(len(elements) >= 2)
-    if None not in elements and len(set([keyFunc(x) for x in elements])) == 1 :
+    if None not in elements and len(set([keyFunc(x) for x in elements])) == 1:
       # All equal -- yield and move on for all streams
       yield [e for e in elements]
       elements = [next_item(it) for it in wIterators]
-    else :
+    else:
       # something wasn't equal.... find the smallest thing, it's about
       # to drop out of range...
-      minElement = min([x for x in elements if x != None], key=keyFunc)
+      minElement = min([x for x in elements if x is not None], key=keyFunc)
       minIndices = [i for i in range(0, len(elements))
-                    if elements[i] != None and
+                    if elements[i] is not None and
                     keyFunc(elements[i]) == keyFunc(minElement)]
-      if mirror :
+      if mirror:
         # mirror the min item for any streams in which it doesn't match
         score = minElement.score if mirrorScore is None else mirrorScore
         yield [elements[i] if i in minIndices
@@ -256,7 +256,8 @@ def pairedWigIterator(inputStreams, mirror=False, mirrorScore=None,
         elements[index] = next_item(wIterators[index])
 
     # stop once all strams are exhuasted
-    if reduce(lambda x, y:x and y, [e is None for e in elements]) : break
+    if reduce(lambda x, y: x and y, [e is None for e in elements]):
+      break
 
 
 class WigIteratorUnitTests(unittest.TestCase):
@@ -279,13 +280,13 @@ class WigIteratorUnitTests(unittest.TestCase):
               "chr4\t30\t60\t6"]
 
     out = []
-    for element in wigIterator(DummyInputStream(wigIn)) :
+    for element in wigIterator(DummyInputStream(wigIn)):
       out.append(str(element))
 
     out.sort()
     expect.sort()
 
-    if debug :
+    if debug:
       print "out ------ "
       for l in out:
         print l
@@ -316,13 +317,13 @@ class WigIteratorUnitTests(unittest.TestCase):
               "chr4" + "\t" + "11" + "\t" + "12" + "\t" + "0.5"]
 
     out = []
-    for element in fixedWigIterator(DummyInputStream(wigIn), scoreType=float) :
+    for element in fixedWigIterator(DummyInputStream(wigIn), scoreType=float):
       out.append(str(element))
 
     out.sort()
     expect.sort()
 
-    if debug :
+    if debug:
       print "out ------ "
       for l in out:
         print l
@@ -367,7 +368,7 @@ class WigIteratorUnitTests(unittest.TestCase):
     out.sort()
     expect.sort()
 
-    if debug :
+    if debug:
       print "out ------ "
       for l in out:
         print l

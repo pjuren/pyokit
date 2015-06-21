@@ -107,34 +107,34 @@ def fastqIteratorSimple(fn, verbose=False, allowNameMissmatch=False):
     fh = open(fh)
 
   # try to get an idea of how much data we have...
-  if verbose :
-    try :
+  if verbose:
+    try:
       totalLines = os.path.getsize(fh.name)
       pind = ProgressIndicator(totalToDo=totalLines,
                                messagePrefix="completed",
                                messageSuffix="of processing "
                                              + fh.name)
-    except AttributeError :
+    except AttributeError:
       sys.stderr.write("fastqIterator -- warning: "
                        + "unable to show progress for stream")
       verbose = False
 
-  while True :
+  while True:
     # read four lines.. if we can't get four lines, something is wrong
     lines = []
     gotLines = 0
-    while gotLines < 4 :
+    while gotLines < 4:
       l = fh.readline()
-      if verbose :
+      if verbose:
         pind.done = fh.tell()
         pind.showProgress()
 
-      if l == "" :
+      if l == "":
         # end of file found...
-        if gotLines == 0 :
+        if gotLines == 0:
           # ok, not in the middle of a sequence
           break
-        else :
+        else:
           raise FastqFileFormatError("reached end of file in the " +
                                      "middle of sequence data")
 
@@ -161,7 +161,7 @@ def fastqIteratorSimple(fn, verbose=False, allowNameMissmatch=False):
 
 
 def fastqIterator(fn, useMutableString=False, verbose=False, debug=False,
-                  sanger=False, allowNameMissmatch=False) :
+                  sanger=False, allowNameMissmatch=False):
   """
     A generator function which yields FastqSequence objects read from a file or
     stream. This is a general function which wraps fastqIteratorSimple. In
@@ -220,31 +220,31 @@ def fastqIteratorComplex(fn, useMutableString=False, verbose=False,
   prevLine = None
 
   # try to get an idea of how much data we have...
-  if verbose :
-    try :
+  if verbose:
+    try:
       totalLines = linesInFile(fh.name)
       pind = ProgressIndicator(totalToDo=totalLines,
                                messagePrefix="completed",
                                messageSuffix="of processing "
                                              + fh.name)
-    except AttributeError :
+    except AttributeError:
       sys.stderr.write("fastqIterator -- warning: "
                        + "unable to show progress for stream")
       verbose = False
 
-  while True :
+  while True:
     # either we have a sequence header left over from the
     # prev call, or we need to read a new one from the file...
     # try to do that now
     seqHeader = ""
-    if prevLine != None and not _isSequenceHead(prevLine) :
+    if prevLine is not None and not _isSequenceHead(prevLine):
       raise FastqFileFormatError("terminated on non-read header: " + prevLine)
-    if prevLine == None :
-      while seqHeader.strip() == "" :
+    if prevLine is None:
+      while seqHeader.strip() == "":
         nl = fh.readline()
         if verbose:
           pind.done += 1
-        if nl == "" :
+        if nl == "":
            # we're looking for a sequence header, but we're getting eof --
            # file is empty!
            raise StopIteration()
@@ -257,11 +257,11 @@ def fastqIteratorComplex(fn, useMutableString=False, verbose=False,
     # this is our sequence data
     line = None
     seqdata = ""
-    while line == None or not _isQualityHead(line) :
+    while line is None or not _isQualityHead(line):
       line = fh.readline()
       if verbose:
         pind.done += 1
-      if line == "" :
+      if line == "":
         raise FastqFileFormatError("ran out of lines before finding qual head")
       if not _isQualityHead(line):
         seqdata += line.strip()
@@ -272,7 +272,7 @@ def fastqIteratorComplex(fn, useMutableString=False, verbose=False,
       sys.stderr.write("found quality header: " + line.strip() + "\n")
     prevLine = line
     qualdata = ""
-    while not _isSequenceHead(line, prevLine) :
+    while not _isSequenceHead(line, prevLine):
       prevLine = line
       line = fh.readline()
       if verbose:
@@ -287,7 +287,7 @@ def fastqIteratorComplex(fn, useMutableString=False, verbose=False,
       sys.stderr.write("loop terminated with line: " + line.strip() + "\n")
       sys.stderr.write("prev when loop termianted was: "
                        + prevLine.strip() + "\n")
-    if qualdata.strip() == "" :
+    if qualdata.strip() == "":
       raise FastqFileFormatError("missing quality data..")
 
     # package it all up..
@@ -339,12 +339,12 @@ class FastQUintTests(unittest.TestCase):
     seqs.sort(key=lambda x: x.name)
     expect.sort(key=lambda x: x.name)
 
-    if debug :
+    if debug:
       sys.stderr.write("expect\n")
-      for seq in expect :
+      for seq in expect:
         sys.stderr.write(str(seq) + "\n" + "----------------\n")
       sys.stderr.write("got\n")
-      for seq in seqs :
+      for seq in seqs:
         sys.stderr.write(str(seq) + "\n" + "----------------\n")
 
     self.assertTrue(seqs == expect)
@@ -384,12 +384,12 @@ class FastQUintTests(unittest.TestCase):
     seqs.sort(key=lambda x: x.name)
     expect.sort(key=lambda x: x.name)
 
-    if debug :
+    if debug:
       sys.stderr.write("expect\n")
-      for seq in expect :
+      for seq in expect:
         sys.stderr.write(str(seq) + "\n" + "----------------\n")
       sys.stderr.write("got\n")
-      for seq in seqs :
+      for seq in seqs:
         sys.stderr.write(str(seq) + "\n" + "----------------\n")
 
     self.assertTrue(seqs == expect)

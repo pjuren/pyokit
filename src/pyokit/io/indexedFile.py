@@ -131,7 +131,7 @@ class IndexedFile(object):
        (handle != self._indexed_file_handle):
       self.index = {}
     if ((handle is not None or filename is not None) and
-       (self.record_iterator == None or self.record_hash_function == None)):
+       (self.record_iterator is None or self.record_hash_function is None)):
       raise IndexError("Setting index file failed; reason: iterator "
                        "(self.record_iterator) or hash function "
                        "(self.record_hash_function) have to be set first")
@@ -290,9 +290,9 @@ class IndexedFile(object):
     :raise IndexError: on malformed line in input file/stream
     """
     # set the record iterator and hash functions, if they were given
-    if rec_iterator != None:
+    if rec_iterator is not None:
       self.record_iterator = rec_iterator
-    if rec_hash_func != None:
+    if rec_hash_func is not None:
       self.record_hash_function = rec_hash_func
 
     # disable re-indexing?
@@ -323,14 +323,14 @@ class IndexedFile(object):
         # try treating this as a file handle
         self.indexed_file = (None, indexed_fh)
       except TypeError:
-        fn = " from " + str(fh) if indexed_fn != None else ""
+        fn = " from " + str(fh) if indexed_fn is not None else ""
         raise IndexError("failed to read index" + fn + "; "
                          "reason: expected indexed filename or stream-like "
                          "object, got " + str(type(indexed_fh)))
 
     # try to get an idea of how much data we have...
-    if verbose :
-      try :
+    if verbose:
+      try:
         total = os.path.getsize(handle.name)
         pind = ProgressIndicator(totalToDo=total, messagePrefix="completed",
                                  messageSuffix="of loading " + handle.name)
@@ -343,14 +343,14 @@ class IndexedFile(object):
     for line in handle:
       line = line.rstrip()
 
-      if verbose :
+      if verbose:
         pind.done = handle.tell()
         pind.showProgress()
 
       if line.isspace():
         continue
       parts = line.split("\t")
-      if len(parts) < 2 :
+      if len(parts) < 2:
         raise IndexError("failed to parse line: '" + line + "'")
       key = parse_hash("\t".join(parts[:-1]))
       value = parts[-1]
