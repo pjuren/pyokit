@@ -68,6 +68,11 @@ from pyokit.testing.dummyfiles import *
 from pyokit.util.progressIndicator import *
 from pyokit.util.meta import TestMeta
 
+###############################################################################
+#                                  SCRIPTS                                    #
+###############################################################################
+from pyokit.scripts.fdr import TestFDR
+
 
 if __name__ == "__main__":
   head = " ------------------------  DATA STRUCTURES  --------------------- \n"
@@ -102,6 +107,11 @@ if __name__ == "__main__":
   sys.stderr.write(head)
   sys.stderr.write("registered tests in \n")
   sys.stderr.write("  " + str(TestMeta) + "\n")
+
+  head = " -----------------------------  SCRIPTS  ------------------------ \n"
+  sys.stderr.write(head)
+  sys.stderr.write("registered tests in \n")
+  sys.stderr.write("  " + str(TestFDR) + "\n")
 
   sys.stderr.write("\n\n RUNNING TESTS \n\n")
   unittest.main()
