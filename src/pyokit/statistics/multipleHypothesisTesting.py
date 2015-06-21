@@ -57,7 +57,7 @@ def correct_pvals(pvals, method="BH", verbose=False):
     sys.stderr.write("Correcting p-values for multiple hypothesis testing...\n")
   pvalstr = ",".join([str(i) for i in pvals])
   r("pvals = c(" + pvalstr + ")")
-  return r("p.adjust(pvals, method=\"" + method + "\")")
+  return list(r("p.adjust(pvals, method=\"" + method + "\")"))
 
 
 ###############################################################################
