@@ -1,11 +1,13 @@
 before_install:
   - sudo apt-get update
 install:
+  - sudo apt-get install r-base
+  - sudo apt-get install r-base-dev
   - sudo apt-get install python-rpy2
   - pip install sphinx
   - pip install coveralls
   - pip install mock
-  - pip install 'ryp2<2.6.0'
+  - pip install ryp2
 language: python
 script: python setup.py sdist; pip install --no-index dist/pyokit-?.?.?.tar.gz; coverage run --source=pyokit src/test.py
 env:
