@@ -32,6 +32,7 @@ from pyokit.datastruct.intervalTree import IntervalTree
 from pyokit.util.meta import decorate_all_methods_and_properties
 from pyokit.util.meta import just_in_time_method
 from pyokit.util.meta import just_in_time_property
+from pyokit.datastruct.sequence import Sequence
 
 
 ###############################################################################
@@ -99,7 +100,7 @@ def _build_trees_by_chrom(blocks):
     by_chrom[b.chrom].append(b)
   res = {}
   for c in by_chrom:
-    res[c] = IntervalTree(by_chrom[c])
+    res[c] = IntervalTree(by_chrom[c], openEnded=True)
   return res
 
 
@@ -154,6 +155,28 @@ class GenomeAlignmentBlock(MultipleSequenceAlignment):
   def end(self):
     """:return: the end of the block on the reference genome sequence."""
     return self[self.reference_sequence_name].end
+
+  def get_column_absolute(self, position):
+    """
+    return a column from the block as dictionary indexed by seq. name.
+
+    :param position: the index to extract from the block; must be absolute
+                     coordinates (i.e. between self.start and self.end, not
+                     inclusive of the end).
+    :return: dictionary where keys are sequence names and values are
+             nucleotides (raw strings).
+    """
+    if position < self.start or position >= self.end:
+      raise ValueError("getting column at genomic locus " + self.chrom + " " +
+                       str(position) + " failed; locus is outside of genome " +
+                       "alignment block")
+
+    rel_coord = self.sequence_to_alignment_coords(self.reference_sequence_name,
+                                                  position, position + 1)
+    assert(len(rel_coord) == 1)
+    rel_start, rel_end = rel_coord[0]
+    assert(rel_end == rel_start + 1)
+    return self.get_column(rel_start)
 
 
 ###############################################################################
@@ -215,20 +238,73 @@ class GenomeAlignment(object):
       return []
     return self.block_trees[chrom].intersectingInterval(start, end)
 
-  def get_column(chrom, position):
-    """Get the alignment column at the specified chromosome and position"""
-    raise GenomeAlignmentError("Not implemented")
+  def get_column(self, chrom, position):
+    """Get the alignment column at the specified chromosome and position."""
+    blocks = self.get_blocks(chrom, position, position + 1)
+    if len(blocks) == 0:
+      raise NoSuchAlignmentColumnError("Request for column on chrom " +
+                                       chrom + " at position " +
+                                       str(position) + " not possible; " +
+                                       "genome alignment not defined at " +
+                                       "that locus.")
+    if len(blocks) > 1:
+      raise NoUniqueColumnError("Request for column on chrom " + chrom +
+                                " at position " + str(position) + "not " +
+                                "possible; ambiguous alignment of that locus.")
+
+    return blocks[0].get_column_absolute(position)
 
 
 ###############################################################################
 #                                UNIT TESTS                                   #
 ###############################################################################
-class TestGenomeAlignment(unittest.TestCase):
+class TestGenomeAlignmentDS(unittest.TestCase):
 
   """Unit tests for GenomeAlignment module."""
 
-  pass
+  def setUp(self):
+    """Set up some genome alignment blocks and genome alignments for tests."""
+    self.block1 = GenomeAlignmentBlock([Sequence("s1.c1", "TCTCGC-A", 11, 18),
+                                        Sequence("s2.c1", "ACTGGC--", 25, 31),
+                                        Sequence("s3.c2", "ACTGCCTA", 5, 13),
+                                        Sequence("s4.c1", "ACT-GCTA", 58, 65)],
+                                       "s1")
+    self.block2 = GenomeAlignmentBlock([Sequence("s1.c2", "C------G", 21, 23),
+                                        Sequence("s2.c2", "CGGTCAGG", 85, 94),
+                                        Sequence("s3.c2", "-GGTC-GG", 1, 7),
+                                        Sequence("s4.c3", "-GGCCAGG", 3, 11)],
+                                       "s1")
+    # this block defines an ambiguous alignment of part of block1
+    self.block3 = GenomeAlignmentBlock([Sequence("s1.c1", "GCACGCT", 15, 22),
+                                        Sequence("s2.c8", "GCAC-CT", 25, 31),
+                                        Sequence("s3.c8", "GC-CGCT", 5, 13),
+                                        Sequence("s4.c8", "GC--GCT", 58, 65)],
+                                       "s1")
+    self.ga1 = GenomeAlignment([self.block1, self.block2])
+    self.ga2 = GenomeAlignment([self.block1, self.block2, self.block3])
 
+  def test_block_get_column(self):
+    """Test getting a single column from a block."""
+    exp1 = {"s1.c1": "T", "s2.c1": "A", "s3.c2": "A", "s4.c1": "A"}
+    self.assertEqual(self.block1.get_column_absolute(11), exp1)
+    exp2 = {"s1.c1": "A", "s2.c1": "-", "s3.c2": "A", "s4.c1": "A"}
+    self.assertEqual(self.block1.get_column_absolute(17), exp2)
+    self.assertRaises(ValueError, self.block1.get_column_absolute, 18)
+    self.assertRaises(ValueError, self.block1.get_column_absolute, 10)
+    exp3 = {"s1.c2": "G", "s2.c2": "G", "s3.c2": "G", "s4.c3": "G"}
+    self.assertEqual(self.block2.get_column_absolute(22), exp3)
+
+  def test_genome_alig_get_col(self):
+    """Test getting a single column from a genome alignment."""
+    exp1 = {"s1.c1": "T", "s2.c1": "A", "s3.c2": "A", "s4.c1": "A"}
+    self.assertEqual(self.ga1.get_column("c1", 11), exp1)
+    exp2 = {"s1.c2": "C", "s2.c2": "C", "s3.c2": "-", "s4.c3": "-"}
+    self.assertEqual(self.ga1.get_column("c2", 21), exp2)
+    self.assertRaises(NoUniqueColumnError, self.ga2.get_column, "c1", 15)
+    self.assertRaises(NoSuchAlignmentColumnError, self.ga1.get_column,
+                      "c1", 10)
+    self.assertRaises(NoSuchAlignmentColumnError, self.ga1.get_column,
+                      "c3", 15)
 
 ###############################################################################
 #              MAIN ENTRY POINT WHEN RUN AS STAND-ALONE MODULE                #
