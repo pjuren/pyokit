@@ -55,6 +55,32 @@ class GenomeAlignmentError(Exception):
     return repr(self.value)
 
 
+class NoSuchAlignmentColumnError(GenomeAlignmentError):
+
+  """Raised when a column is requested that doesn't exist in the alignment."""
+
+  def __init__(self, msg):
+    """
+    Constructor for GenomeAlignmentErrors.
+
+    :param msg: message to display
+    """
+    self.value = msg
+
+
+class NoUniqueColumnError(GenomeAlignmentError):
+
+  """Raised when no unique alignment present (i.e. ambiguous)."""
+
+  def __init__(self, msg):
+    """
+    Constructor for GenomeAlignmentErrors.
+
+    :param msg: message to display
+    """
+    self.value = msg
+
+
 ###############################################################################
 #                              HELPER FUNCTIONS                               #
 ###############################################################################
@@ -188,6 +214,10 @@ class GenomeAlignment(object):
     if chrom not in self.block_trees:
       return []
     return self.block_trees[chrom].intersectingInterval(start, end)
+
+  def get_column(chrom, position):
+    """Get the alignment column at the specified chromosome and position"""
+    raise GenomeAlignmentError("Not implemented")
 
 
 ###############################################################################
