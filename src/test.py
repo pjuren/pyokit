@@ -56,6 +56,7 @@ from pyokit.io.wigIterators import WigIteratorUnitTests
 from pyokit.datastruct.multipleAlignment import TestAlignments
 from pyokit.datastruct.retrotransposon import TestRetrotransposon
 from pyokit.datastruct.read import NGSReadUnitTests
+from pyokit.datastruct.genomeAlignment import TestGenomeAlignmentDS
 from pyokit.datastruct.intervalTree import *
 from pyokit.datastruct.genomicInterval import TestGenomicInterval
 from pyokit.datastruct.sequence import *
@@ -80,7 +81,8 @@ if __name__ == "__main__":
   sys.stderr.write("  " + str(NGSReadUnitTests) + "\n")
   sys.stderr.write("  " + str(TestAlignments) + "\n")
   sys.stderr.write("  " + str(TestRetrotransposon) + "\n")
-  sys.stderr.write("  " + str(TestGenomicInterval) + "\n\n")
+  sys.stderr.write("  " + str(TestGenomicInterval) + "\n")
+  sys.stderr.write("  " + str(TestGenomeAlignmentDS) + "\n\n")
 
   head = " ------------------------        IO         --------------------- \n"
   sys.stderr.write(head)

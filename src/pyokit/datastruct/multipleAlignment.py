@@ -123,15 +123,15 @@ class MultipleSequenceAlignment(object):
     """
     return a column from an alignment as a dictionary indexed by seq. name.
 
-    :param position: the index to extract; coordinates relative to start of
-                     alignment, where index 0 is the first column, and index
-                     size(self) - 1 is the last column.
+    :param position: the index to extract; these are in alignment co-ordinates,
+                     which are one-based, so the first column has index 1, and
+                     the final column has index == size(self).
     :return: dictionary where keys are sequence names and values are
              nucleotides (raw strings).
     """
     res = {}
     for k in self.sequences:
-      res[k] = self.sequences[k][position]
+      res[k] = self.sequences[k][position - 1]
     return res
 
   def __iter__(self):
@@ -403,11 +403,11 @@ class TestAlignments(unittest.TestCase):
 
   def test_get_column(self):
     """Test extracting single columns from multiple and pairwise aligs."""
-    self.assertEqual(self.msa1.get_column(0), {"s1": "-", "s2": "A",
+    self.assertEqual(self.msa1.get_column(1), {"s1": "-", "s2": "A",
                                                "s3": "A"})
-    self.assertEqual(self.msa1.get_column(4), {"s1": "C", "s2": "C",
+    self.assertEqual(self.msa1.get_column(5), {"s1": "C", "s2": "C",
                                                "s3": "C"})
-    self.assertEqual(self.pa1.get_column(10), {"s1": "-", "s2": "T"})
+    self.assertEqual(self.pa1.get_column(11), {"s1": "-", "s2": "T"})
 
   def test_sequence_to_alig_coord(self):
     """
