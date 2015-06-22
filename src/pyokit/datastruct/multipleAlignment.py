@@ -78,15 +78,15 @@ class InvalidAlignmentCoordinatesError(MultipleAlignmentError):
 ###############################################################################
 
 class MultipleSequenceAlignment(object):
+
   """
-  An alignment of two or more sequences
+  An alignment of two or more sequences.
 
   :param sequences: a list of sequence objects; all have to be the same length
   """
 
   def __init__(self, sequences, meta_data=None):
-    """
-    """
+    """Constructor for MSAs; see class docstring for param descriptions."""
     # must get at least 2 sequences
     if len(sequences) < 2:
       raise MultipleAlignmentError("Constructing multiple alignment object " +
@@ -111,8 +111,7 @@ class MultipleSequenceAlignment(object):
     self._meta = meta_data
 
   def __getitem__(self, seq_name):
-    """
-    """
+    """:return: the sequence with the given name in this alignment."""
     try:
       return self.sequences[seq_name]
     except KeyError:
@@ -120,31 +119,43 @@ class MultipleSequenceAlignment(object):
                                  str(seq_name) + "; sequences in alignment: " +
                                  ", ".join(self.sequences.keys()))
 
+  def get_column(self, position):
+    """
+    return a column from an alignment as a dictionary indexed by seq. name.
+
+    :param position: the index to extract; coordinates relative to start of
+                     alignment, where index 0 is the first column, and index
+                     size(self) - 1 is the last column.
+    :return: dictionary where keys are sequence names and values are
+             nucleotides (raw strings).
+    """
+    res = {}
+    for k in self.sequences:
+      res[k] = self.sequences[k][position]
+    return res
+
   def __iter__(self):
+    """:return: an iterator for the alignment, which yields sequences."""
     return self.sequences.__iter__()
 
   @property
   def meta(self):
-    """
-    ...
-    """
+    """:return: dictionary of key-value pairs; the alignment's meta data."""
     return self._meta
 
   def __str__(self):
+    """:return: a string representation of the alignment."""
     res = ""
     for k in self.sequences:
       res += str(self.sequences[k])
     return res
 
   def size(self):
-    """
-    Get the length (number of columns) in this multiple alignment.
-    """
+    """:return: the length (number of columns) in this multiple alignment."""
     return self.length
 
   def num_seqs(self):
-    """
-    """
+    """:return: the length (number of sequences) in this alignment."""
     return len(self.sequences)
 
   def alignment_to_sequence_coords(self, seq_name, start, end, trim=False):
@@ -377,8 +388,10 @@ class TestAlignments(unittest.TestCase):
 
     self.pa1 = PairwiseAlignment(s1, s2)
     self.pa2 = PairwiseAlignment(s1, s3)
+    self.msa1 = MultipleSequenceAlignment([s1, s2, s3])
 
   def test_ungapped_length(self):
+    """Test computing the ungapped length of sequences in the alignment."""
     self.assertEqual(self.pa1["s1"].ungapped_len,
                      len("TCGCGTAGCCGCTAGCTGATGCGATCTGA"))
     self.assertEqual(self.pa1["s1"].ungapped_len,
@@ -387,6 +400,14 @@ class TestAlignments(unittest.TestCase):
                      len("TCGCGTAGCCGCTAGCTGATGCGATCTGA"))
     self.assertEqual(self.pa2["s3"].ungapped_len,
                      len("ATCGCGTAGCTAGCGCGAGCTGCGATGCT"))
+
+  def test_get_column(self):
+    """Test extracting single columns from multiple and pairwise aligs."""
+    self.assertEqual(self.msa1.get_column(0), {"s1": "-", "s2": "A",
+                                               "s3": "A"})
+    self.assertEqual(self.msa1.get_column(4), {"s1": "C", "s2": "C",
+                                               "s3": "C"})
+    self.assertEqual(self.pa1.get_column(10), {"s1": "-", "s2": "T"})
 
   def test_sequence_to_alig_coord(self):
     """
