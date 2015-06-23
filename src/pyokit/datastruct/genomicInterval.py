@@ -642,6 +642,43 @@ class GenomicInterval(object):
       return True
     return self.strand == self.NEGATIVE_STRAND
 
+  def transform_center(self, size):
+    """
+    Tranform self so it is centered on the same spot, but has new size.
+
+    If the region grows, the extra nucleotides will be distributed evenly to
+    the 5' and 3' side of the current region if possible. If the extra is odd,
+    the 3' side will get the extra one. Similarly, if the resize shrinks the
+    interval, bases will be removed from the 5' and 3' sides equally; if the
+    number to remove is odd, the extra one will be removed from the 3' side.
+
+    :param size: size of the region after transformation.
+    """
+    if size < 1:
+      raise GenomicIntervalError("Cannot resize genomic interval to " +
+                                 str(size) + " bases; must be at least 1 " +
+                                 "base in length")
+    if size == len(self):
+      return
+    elif size > len(self):
+      extra = size - len(self)
+      extra_5_prime = extra / 2
+      extra_3_prime = extra / 2 if extra % 2 == 0 else (extra / 2) + 1
+      assert(extra_5_prime + extra_3_prime == extra)
+      self.start = (self.start - extra_5_prime if self.isPositiveStrand()
+                    else self.start - extra_3_prime)
+      self.end = (self.end + extra_3_prime if self.isPositiveStrand()
+                  else self.end + extra_5_prime)
+    else:
+      less = len(self) - size
+      less_5_prime = less / 2
+      less_3_prime = less / 2 if less % 2 == 0 else (less / 2) + 1
+      assert(less_5_prime + less_3_prime == less)
+      self.start = (self.start + less_5_prime if self.isPositiveStrand()
+                    else self.start + less_3_prime)
+      self.end = (self.end - less_3_prime if self.isPositiveStrand()
+                  else self.end - less_5_prime)
+
 
 ###############################################################################
 #                         UNIT TESTS FOR THIS MODULE                          #
@@ -963,6 +1000,38 @@ class TestGenomicInterval(unittest.TestCase):
     a = GenomicInterval("chr1", 15, 18)
     b = GenomicInterval("chr1", 18, 25)
     self.assertEqual(a.intersects(b), False)
+
+  def test_transform_center(self):
+    """Test growing and shrinking regions around their center."""
+    a = GenomicInterval("chr1", 15, 30, strand="+")
+    b = GenomicInterval("chr1", 15, 30, strand="-")
+
+    # symmetrical grow/shrink on positive and negative strand are equivalent
+    # 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29
+    #                      --
+    a.transform_center(11)
+    b.transform_center(11)
+    self.assertEqual(a.start, b.start)
+    self.assertEqual(a.start, 17)
+    self.assertEqual(a.end, b.end)
+    self.assertEqual(a.end, 28)
+    a.transform_center(15)
+    b.transform_center(15)
+    self.assertEqual(a.start, b.start)
+    self.assertEqual(a.start, 15)
+    self.assertEqual(a.end, b.end)
+    self.assertEqual(a.end, 30)
+
+    # non-symetric grow/shrink on positive and negative strand skewed, but
+    # reverse gets you back to where you started.
+    a.transform_center(10)
+    b.transform_center(10)
+    self.assertEqual((a.start, a.end), (17, 27))
+    self.assertEqual((b.start, b.end), (18, 28))
+    a.transform_center(15)
+    b.transform_center(15)
+    self.assertEqual((a.start, a.end), (15, 30))
+    self.assertEqual((b.start, b.end), (15, 30))
 
 
 ###############################################################################
