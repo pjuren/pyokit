@@ -67,8 +67,7 @@ class, see  <a class="reference internal" href="genomicIntervals.html#genomicint
 <dl class="class">
 <dt id="pyokit.datastruct.genomicInterval.GenomicInterval">
 <em class="property">class </em><code class="descclassname">pyokit.datastruct.genomicInterval.</code><code class="descname">GenomicInterval</code><span class="sig-paren">(</span><em>chrom</em>, <em>start</em>, <em>end</em>, <em>name=None</em>, <em>score=None</em>, <em>strand=None</em>, <em>scoreType=&lt;type 'int'&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval" title="Permalink to this definition">¶</a></dt>
-<dd><p>Represents a contiguous segment of a genome; inclusive of the start, but not
-the end coordinate</p>
+<dd><p>Represents contiguous segment of a genome; inclusive of start, but not end.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -90,10 +89,10 @@ this genomic interval</li>
 <dl class="method">
 <dt id="pyokit.datastruct.genomicInterval.GenomicInterval.distance">
 <code class="descname">distance</code><span class="sig-paren">(</span><em>e</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval.distance" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get the distance from this genomic interval to another. We consider
-intervals that overlap to have a distance of 0 to each other. The distance
-between two intervals on different chromosomes is considered undefined, and
-causes an exception to be raised.</p>
+<dd><p>Distance between this interval and e &#8211; number of nucleotides.</p>
+<p>We consider intervals that overlap to have a distance of 0 to each other.
+The distance between two intervals on different chromosomes is considered
+undefined, and causes an exception to be raised.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -126,7 +125,7 @@ causes an exception to be raised.</p>
 <dl class="method">
 <dt id="pyokit.datastruct.genomicInterval.GenomicInterval.isNegativeStrand">
 <code class="descname">isNegativeStrand</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval.isNegativeStrand" title="Permalink to this definition">¶</a></dt>
-<dd><p>Check if this genomic interval is on the negative strand</p>
+<dd><p>Check if this genomic interval is on the negative strand.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -154,7 +153,7 @@ causes an exception to be raised.</p>
 <dl class="method">
 <dt id="pyokit.datastruct.genomicInterval.GenomicInterval.sameRegion">
 <code class="descname">sameRegion</code><span class="sig-paren">(</span><em>e</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval.sameRegion" title="Permalink to this definition">¶</a></dt>
-<dd><p>Check whether self represents the same DNA region as e</p>
+<dd><p>Check whether self represents the same DNA region as e.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -172,7 +171,8 @@ consider strand)</td>
 <dl class="method">
 <dt id="pyokit.datastruct.genomicInterval.GenomicInterval.signedDistance">
 <code class="descname">signedDistance</code><span class="sig-paren">(</span><em>e</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval.signedDistance" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get the signed distance from this genomic interval to another one. We
+<dd><p>Signed distance between this interval and e &#8211; number of nucleotides.</p>
+<p>Get the signed distance from this genomic interval to another one. We
 consider intervals that overlap to have a distance of 0 to each other. The
 distance between two intervals on different chromosomes is considered
 undefined, and causes an exception to be raised. If e comes earlier than
@@ -195,7 +195,7 @@ self, the distance will be negative.</p>
 <dl class="method">
 <dt id="pyokit.datastruct.genomicInterval.GenomicInterval.sizeOfOverlap">
 <code class="descname">sizeOfOverlap</code><span class="sig-paren">(</span><em>e</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval.sizeOfOverlap" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get the size of the overlap between self and e</p>
+<dd><p>Get the size of the overlap between self and e.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -209,7 +209,7 @@ self, the distance will be negative.</p>
 <dl class="method">
 <dt id="pyokit.datastruct.genomicInterval.GenomicInterval.subtract">
 <code class="descname">subtract</code><span class="sig-paren">(</span><em>es</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval.subtract" title="Permalink to this definition">¶</a></dt>
-<dd><p>Subtracts the BED elements in es from self</p>
+<dd><p>Subtract the BED elements in es from self.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -218,6 +218,25 @@ self, the distance will be negative.</p>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">a list of BED elements which represent what is left of
 self after the subtraction. This might be an empty list.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyokit.datastruct.genomicInterval.GenomicInterval.transform_center">
+<code class="descname">transform_center</code><span class="sig-paren">(</span><em>size</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.genomicInterval.GenomicInterval.transform_center" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tranform self so it is centered on the same spot, but has new size.</p>
+<p>If the region grows, the extra nucleotides will be distributed evenly to
+the 5&#8217; and 3&#8217; side of the current region if possible. If the extra is odd,
+the 3&#8217; side will get the extra one. Similarly, if the resize shrinks the
+interval, bases will be removed from the 5&#8217; and 3&#8217; sides equally; if the
+number to remove is odd, the extra one will be removed from the 3&#8217; side.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>size</strong> &#8211; size of the region after transformation.</td>
 </tr>
 </tbody>
 </table>
