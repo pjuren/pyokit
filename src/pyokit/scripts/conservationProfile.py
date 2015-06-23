@@ -38,6 +38,8 @@ from pyokit.interface.cli import Option
 from pyokit.io.bedIterators import BEDIterator
 from pyokit.datastruct.genomeAlignment import NoSuchAlignmentColumnError
 from pyokit.datastruct.genomeAlignment import NoUniqueColumnError
+from pyokit import sequence
+from pyokit.statistics.online import RollingMean
 
 
 ###############################################################################
@@ -77,7 +79,7 @@ def center_start(r, window_size):
 
 def center_end(r, window_size):
   """
-  Center a region on its end and expand it to window_size bases
+  Center a region on its end and expand it to window_size bases.
 
   :return: the new region.
   """
@@ -89,7 +91,7 @@ def center_end(r, window_size):
 
 def center_middle(r, window_size):
   """
-  Center a region on its middle and expand it to window_size bases
+  Center a region on its middle and expand it to window_size bases.
 
   :return: the new region.
   """
@@ -139,8 +141,15 @@ def transform_locus(region, window_center, window_size):
 ###############################################################################
 
 def pid(col, ignore_gaps=False):
-  """Compute the percent identity of a an alignment column"""
-  pass
+  """Compute the percent identity of a an alignment column."""
+  hist = {}
+  for v in col.values():
+    if v == sequence.GAP_CHAR and ignore_gaps:
+      continue
+    if v not in hist:
+      hist[v] = 0
+    hist[v] += 1
+  return max(hist.values()) / float(sum(hist.values()))
 
 
 def conservtion_profile_pid(region, genome_alignment):
@@ -162,17 +171,19 @@ def conservtion_profile_pid(region, genome_alignment):
       col = genome_alignment.get_column(region.chrom, i)
       res[i] = pid(col)
     except NoSuchAlignmentColumnError:
-      res[i] = 0  # TODO: NaN
+      res[i] = None
     except NoUniqueColumnError:
-      res[i] = 0  # TODO: NaN
+      res[i] = None
 
   return res
 
 
 def merge_profile(mean_profile, new_profile):
-  """
-  """
-  pass
+  """Add a new list of values to a list of rolling means."""
+  for i in range(0, len(mean_profile)):
+    if new_profile[i] is None:
+      continue
+    mean_profile[i].add(new_profile[i])
 
 
 ###############################################################################
@@ -195,6 +206,9 @@ def processBED(fh, genome_alig, window_size, window_centre, verbose=False):
   :return:
   """
   mean_profile = []
+  while len(mean_profile) < window_size:
+    mean_profile.append(RollingMean())
+
   for e in BEDIterator(fh, verbose=verbose, scoreType=float):
     # figure out which interval to look at...
     region = transform_locus(e)
@@ -208,6 +222,7 @@ def processBED(fh, genome_alig, window_size, window_centre, verbose=False):
 ###############################################################################
 
 def getUI(args):
+  """Build and return user interface object for this script."""
   programName = os.path.basename(sys.argv[0])
   longDescription = "Given a set of BED intervals, compute a profile of " +\
                     "conservation by averaging over all intervals using a " +\
@@ -263,6 +278,7 @@ def getUI(args):
 ###############################################################################
 
 def main(args):
+  """Process the command line arguments of this script and dispatch."""
   # get options and arguments
   ui = getUI()
 
@@ -303,12 +319,6 @@ def main(args):
       sys.stderr.write("un-recognised window anchor position: " +
                        str(windowCentre) + "\n")
       sys.exit(1)
-
-  # get set of species to use
-  species = None
-  if ui.optionIsSet("species"):
-    species = [l.strip() for l in open(ui.getValue("species"))
-               if l.strip() != ""]
 
   # processBED(infh, out_fh, mafdir, windowSize, windowCentre, species, ref,
   #           verbose)
