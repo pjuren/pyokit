@@ -32,6 +32,7 @@ import unittest
 from pyokit.statistics.probability import ProbabilityTests
 from pyokit.statistics.fisher import FisherTests
 from pyokit.statistics.multipleHypothesisTesting import TestMHT
+from pyokit.statistics.online import TestOnlineStats
 
 ###############################################################################
 #                              I/O LIBRARIES                                  #
@@ -102,6 +103,7 @@ if __name__ == "__main__":
   sys.stderr.write("registered tests in \n")
   sys.stderr.write("  " + str(ProbabilityTests) + "\n")
   sys.stderr.write("  " + str(FisherTests) + "\n")
+  sys.stderr.write("  " + str(TestOnlineStats) + "\n")
   sys.stderr.write("  " + str(TestMHT) + "\n\n")
 
   head = " ------------------------  TESTING AND UTIL  -------------------- \n"
