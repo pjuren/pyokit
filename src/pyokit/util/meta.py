@@ -32,9 +32,9 @@ import unittest
 ###############################################################################
 
 class MetaError(Exception):
-  """
-  ...
-  """
+
+  """Errors raised when using meta-programmign utility code."""
+
   def __init__(self, msg):
     self.value = msg
 
@@ -48,10 +48,10 @@ class MetaError(Exception):
 
 def decorate_all_methods(decorator):
   """
-  This is a class decorator function that will apply the passed decorator to
-  all of the methods in the decorated class, except the __init__ method. Its
-  not specifically related to file indexing, but since that is the only place
-  where I've used it and I have no better place to keep it at the moment...
+  Build and return a decorator that will decorate all class members.
+
+  This will apply the passed decorator to all of the methods in the decorated
+  class, except the __init__ method, when a class is decorated with it.
   """
   def decorate_class(cls):
     for name, m in inspect.getmembers(cls, inspect.ismethod):
@@ -132,9 +132,75 @@ def just_in_time_property(name, prop):
   return property(fget)
 
 
+###############################################################################
+#                                  ITERATORS                                  #
+###############################################################################
+
+class PeekableIterator(object):
+
+  """
+  Wrapper for any iterator allowing a peek at next item before consuming it.
+
+  :param iterable: any iterable object
+  """
+
+  def __init__(self, iterable):
+    """Constructor for peekableIter; see class docstring for param details."""
+    self._iterable = iter(iterable)
+    try:
+      self._head = self._iterable.next()
+    except StopIteration:
+      self._head = None
+
+  def __iter__(self):
+    """Get an iterator for this object (i.e. return itself)."""
+    return self
+
+  def _fill(self):
+    """Advance the iterator without returning the old head."""
+    try:
+      self._head = self._iterable.next()
+    except StopIteration:
+      self._head = None
+
+  def __next__(self):
+    """Pop the head off the iterator and return it."""
+    res = self._head
+    self._fill()
+    if res is None:
+      raise StopIteration()
+    return res
+
+  def peek(self):
+    """Peak at the head item without removing it."""
+    return self._head
 
 
+class AutoApplyIterator(PeekableIterator):
 
+  """
+  Wrapper for any iterator allowing appl. of func to new an prev. elements.
+
+  :param iterator: any iterable object.
+  :param on_next: this function will applied to each new element when it comes
+                  to the head of the iterator, but before it is consumed. The
+                  element that came before it is also passed; i.e. signature
+                  should be on_next(new_head, old_head). old_head might be None
+                  if new_head is the first item in the iterable. Good for
+                  checking sorting order and other constraint checking.
+  """
+
+  def __init__(self, iterable, on_next):
+    """Constructor for AutoApplyIterator; see class docstring for details."""
+    super(AutoApplyIterator, self).__init__(iterable)
+    self.on_next = on_next
+
+  def _fill(self):
+    """Advance the iterator without returning the old head."""
+    prev = self._head
+    super(AutoApplyIterator, self)._fill()
+    if self._head is not None:
+      self.on_next(self._head, prev)
 
 
 ###############################################################################
