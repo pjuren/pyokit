@@ -28,6 +28,7 @@ import unittest
 
 # pyokit imports
 from pyokit.datastruct.multipleAlignment import MultipleSequenceAlignment
+from pyokit.datastruct.multipleAlignment import MissingSequenceHandler
 from pyokit.datastruct.intervalTree import IntervalTree
 from pyokit.util.meta import decorate_all_methods_and_properties
 from pyokit.util.meta import just_in_time_method
@@ -176,7 +177,7 @@ class GenomeAlignmentBlock(MultipleSequenceAlignment):
     assert(len(rel_coord) == 1)
     rel_start, rel_end = rel_coord[0]
     assert(rel_end == rel_start + 1)
-    return self.get_column(rel_start)
+    return self.get_column(rel_start, MissingSequenceHandler.TREAT_AS_ALL_GAPS)
 
 
 ###############################################################################

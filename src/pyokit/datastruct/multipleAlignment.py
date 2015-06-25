@@ -26,8 +26,12 @@
 # standard python imports
 import unittest
 
+# backported enum package
+from enum import Enum
+
 # pyokit imports
 from pyokit.datastruct.sequence import Sequence
+from pyokit.datastruct.sequence import UnknownSequence
 from pyokit.datastruct.sequence import InvalidSequenceCoordinatesError
 from pyokit.datastruct.sequence import GAP_CHAR
 from pyokit.util.meta import decorate_all_methods_and_properties
@@ -51,9 +55,9 @@ class MultipleAlignmentError(Exception):
 
 
 class InvalidSequenceError(MultipleAlignmentError):
-  """
-  Thrown when providing an invalid sequence index into the multiple alignment
-  """
+
+  """Throw when provided an invalid sequence index into the MSA."""
+
   def __init__(self, msg):
     self.value = msg
 
@@ -71,6 +75,17 @@ class InvalidAlignmentCoordinatesError(MultipleAlignmentError):
 
   def __str__(self):
     return repr(self.value)
+
+
+###############################################################################
+#                                ENUMERATIONS                                 #
+###############################################################################
+class MissingSequenceHandler(Enum):
+
+  """An enum of ways to handle missing sequences."""
+
+  SKIP = 1
+  TREAT_AS_ALL_GAPS = 2
 
 
 ###############################################################################
@@ -119,19 +134,28 @@ class MultipleSequenceAlignment(object):
                                  str(seq_name) + "; sequences in alignment: " +
                                  ", ".join(self.sequences.keys()))
 
-  def get_column(self, position):
+  def get_column(self, position, missing_seqs=MissingSequenceHandler.SKIP):
     """
     return a column from an alignment as a dictionary indexed by seq. name.
 
-    :param position: the index to extract; these are in alignment co-ordinates,
-                     which are one-based, so the first column has index 1, and
-                     the final column has index == size(self).
+    :param position:     the index to extract; these are in alignment
+                         co-ordinates, which are one-based, so the first column
+                         has index 1, and the final column has
+                         index == size(self).
+    :param missing_seqs: how to treat sequence with no actual sequence data for
+                          the column.
     :return: dictionary where keys are sequence names and values are
              nucleotides (raw strings).
     """
     res = {}
     for k in self.sequences:
-      res[k] = self.sequences[k][position - 1]
+      if isinstance(self.sequences[k], UnknownSequence):
+        if missing_seqs is MissingSequenceHandler.TREAT_AS_ALL_GAPS:
+          res[k] = "-"
+        elif missing_seqs is MissingSequenceHandler.SKIP:
+          continue
+      else:
+        res[k] = self.sequences[k][position - 1]
     return res
 
   def __iter__(self):
