@@ -128,15 +128,37 @@ def transform_locus(region, window_center, window_size):
 ###############################################################################
 
 def pid(col, ignore_gaps=False):
-  """Compute the percent identity of a an alignment column."""
+  """
+    Compute the percent identity of a an alignment column.
+
+    Define PID as the frequency of the most frequent nucleotide in the column.
+
+    :param col:         an alignment column; a dictionary where keys are seq.
+                        names and values are the nucleotide in the column for
+                        that sequence.
+    :param ignore_gaps: if True, do not count gaps towards the total number of
+                        sequences in the column (i.e. the denominator of the
+                        fraction).
+    :raise ValueError: if the column contains only gaps.
+  """
   hist = {}
+  total = 0
+  found_non_gap = False
   for v in col.values():
-    if v == sequence.GAP_CHAR and ignore_gaps:
-      continue
-    if v not in hist:
-      hist[v] = 0
-    hist[v] += 1
-  return max(hist.values()) / float(sum(hist.values()))
+    if v == sequence.GAP_CHAR:
+      if ignore_gaps:
+        continue
+      else:
+        total += 1
+    else:
+      found_non_gap = True
+      if v not in hist:
+        hist[v] = 0
+      hist[v] += 1
+      total += 1
+  if not found_non_gap:
+    raise ValueError("Cannot determine PID of column with only gaps")
+  return max(hist.values()) / float(total)
 
 
 def conservtion_profile_pid(region, genome_alignment):
@@ -147,21 +169,20 @@ def conservtion_profile_pid(region, genome_alignment):
   reference sequence.
 
   :return: a list of the same length as the region where each entry is the
-           score of conservation at the corresponding
+           PID at the corresponding locus.
   """
   res = []
-  while len(res) < len(region):
-    res.append(0)
-
-  for i in range(region.start, region.end):
-    rel = i - region.start
+  s = region.start if region.isPositiveStrand() else region.end - 1
+  e = region.end if region.isPositiveStrand() else region.start - 1
+  step = 1 if region.isPositiveStrand() else -1
+  for i in range(s, e, step):
     try:
       col = genome_alignment.get_column(region.chrom, i)
-      res[rel] = pid(col)
+      res.append(pid(col))
     except NoSuchAlignmentColumnError:
-      res[rel] = None
+      res.append(None)
     except NoUniqueColumnError:
-      res[rel] = None
+      res.append(None)
 
   return res
 
@@ -323,7 +344,7 @@ class TestConservationProfile(unittest.TestCase):
   def setUp(self):
     """Set up a genome alignment and set of query regions for testing."""
     b1_A_seq = "CTGATGCAGTC-"
-    b1_B_seq = "TA-ATACA-ATG"
+    b1_B_seq = "TA-ATGCA-ATG"
     b1_B_qul = "gg-ggggg-ggg"
     b1_C_seq = "TGGT-GCAGTAA"
     b1_C_qul = "gg-ggggg-ggg"
@@ -361,27 +382,75 @@ class TestConservationProfile(unittest.TestCase):
     b4_B_seq = "-GA-TTA"
     b4_B_qul = "-gg-ggg"
     b4 = "a score=14489.458\n" +\
-         "s A.chr7 11 7 + 53347 " + b4_A_seq + "\n" +\
+         "s A.chr7 10 7 + 53347 " + b4_A_seq + "\n" +\
          "s B.chr7 33 5 + 53456 " + b4_B_seq + "\n" +\
          "q B.chr7              " + b4_B_qul + "\n" +\
          "e C.chr7 54  7 + 50486 I"
     self.maf2 = b3 + "\n\n" + b4
 
-    self.roi = "chr1" + "\t" + "14" + "\t" + "18" + "\t" + "+\n" +\
-               "chr1" + "\t" + "19" + "\t" + "22" + "\t" + "+\n" +\
-               "chr1" + "\t" + "88" + "\t" + "92" + "\t" + "+\n" +\
-               "chr1" + "\t" + "94" + "\t" + "98" + "\t" + "+\n" +\
-               "chrX" + "\t" + "11" + "\t" + "14" + "\t" + "+\n" +\
-               "chrX" + "\t" + "15" + "\t" + "18" + "\t" + "+\n" +\
-               "chr7" + "\t" + "10" + "\t" + "12" + "\t" + "+\n"
+    self.roi = "chr1" + "\t" + "14" + "\t" + "18" + "\t" + "X" + "\t" + "0" +\
+               "\t" + "+\n" +\
+               "chr1" + "\t" + "19" + "\t" + "22" + "\t" + "X" + "\t" + "0" +\
+               "\t" + "+\n" +\
+               "chr1" + "\t" + "88" + "\t" + "92" + "\t" + "X" + "\t" + "0" +\
+               "\t" + "+\n" +\
+               "chr1" + "\t" + "94" + "\t" + "98" + "\t" + "X" + "\t" + "0" +\
+               "\t" + "-\n" +\
+               "chrX" + "\t" + "11" + "\t" + "14" + "\t" + "X" + "\t" + "0" +\
+               "\t" + "-\n" +\
+               "chrX" + "\t" + "15" + "\t" + "18" + "\t" + "X" + "\t" + "0" +\
+               "\t" + "+\n" +\
+               "chr7" + "\t" + "10" + "\t" + "12" + "\t" + "X" + "\t" + "0" +\
+               "\t" + "+\n"
+
+  def test_conservation_profile_pid(self):
+    """Test getting conservation profiles (PID) from genome alignments"""
+    m = StringIO.StringIO(self.maf1 + "\n\n" + self.maf2)
+    ga = GenomeAlignment([x for x in genome_alignment_iterator(m, "A")])
+
+    # here we're testing directly; the actual script will adjust the regions
+    # before it does this step.
+    expect_raw = [[0.66666666, 1.00000000, 1.00000000, 1.0000000],
+                  [0.66666666, 0.33333333, None],
+                  [0.33333333, 0.33333333, 0.66666666, 0.33333333],
+                  [None, None, 1.00000000, 1.00000000],
+                  [0.33333333, 1.00000000, 1.00000000],
+                  [0.66666666, 1.00000000, 0.66666666],
+                  [0.33333333, 0.66666666]]
+    in_regions = [r for r in BEDIterator(StringIO.StringIO(self.roi))]
+    res = [conservtion_profile_pid(r, ga) for r in in_regions]
+    self.assertEqual(len(expect_raw), len(res))
+    for i in range(0, len(expect_raw)):
+      self.assertEqual(len(expect_raw[i]), len(res[i]))
+      for j in range(0, len(expect_raw[i])):
+        self.assertAlmostEqual(expect_raw[i][j], res[i][j])
+
+    # now we test with the adjusted regions
+    for l in in_regions:
+      transform_locus(l, CENTRE, 4)
+    res_adjusted = [conservtion_profile_pid(r, ga) for r in in_regions]
+    expect_adjusted = [[0.66666666, 1.00000000, 1.00000000, 1.0000000],
+                       [0.66666666, 0.33333333, None, None],
+                       [0.33333333, 0.33333333, 0.66666666, 0.33333333],
+                       [None, None, 1.00000000, 1.00000000],
+                       [0.33333333, 1.00000000, 1.00000000, 0.66666666],
+                       [0.66666666, 1.00000000, 0.66666666, None],
+                       [None, 0.33333333, 0.66666666, 0.66666666]]
+    self.assertEqual(len(expect_adjusted), len(res_adjusted))
+    for i in range(0, len(expect_adjusted)):
+      self.assertEqual(len(expect_adjusted[i]), len(res_adjusted[i]))
+      for j in range(0, len(expect_adjusted[i])):
+        self.assertAlmostEqual(expect_adjusted[i][j], res_adjusted[i][j])
 
   def test_process(self):
     """Bypass the UI and test the main logic function directly."""
     m = StringIO.StringIO(self.maf1 + "\n\n" + self.maf2)
     ga = GenomeAlignment([x for x in genome_alignment_iterator(m, "A")])
     prof = processBED(StringIO.StringIO(self.roi), ga, 4, CENTRE)
-
-    print str(prof)
+    expect = [0.53333333, 0.66666666, 0.83333333, 0.73333333]
+    self.assertEqual(len(prof), len(expect))
+    for i in range(0, len(expect)):
+      self.assertAlmostEqual(prof[i], expect[i])
 
 
 ###############################################################################
