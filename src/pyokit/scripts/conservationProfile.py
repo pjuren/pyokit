@@ -31,6 +31,7 @@ import os
 import sys
 import copy
 import unittest
+import StringIO
 
 # pyokit imports
 from pyokit.interface.cli import CLI
@@ -38,8 +39,10 @@ from pyokit.interface.cli import Option
 from pyokit.io.bedIterators import BEDIterator
 from pyokit.datastruct.genomeAlignment import NoSuchAlignmentColumnError
 from pyokit.datastruct.genomeAlignment import NoUniqueColumnError
-from pyokit import sequence
+from pyokit.datastruct import sequence
 from pyokit.statistics.online import RollingMean
+from pyokit.io.genomeAlignment import genome_alignment_iterator
+from pyokit.datastruct.genomeAlignment import GenomeAlignment
 
 
 ###############################################################################
@@ -113,27 +116,11 @@ def transform_locus(region, window_center, window_size):
            <window_center> (e.g. 3' end) of the input region and resized to
            be window_size long.
   """
-  if window_center == START:
-    return center_start(region)
-  elif window_center == END:
-    return center_end(region)
-  elif window_center == CENTRE:
-    return center_middle(region, window_size)
-  elif window_center == THREE_PRIME:
-    if region.isPositiveStrand():
-      return center_end(region, window_size)
-    elif region.isNegativeStrand():
-      return center_start(region, window_size)
-    else:
-      raise ValueError("Can't center on three-prime end, no strand.")
-  elif window_center == FIVE_PRIME:
-    if region.isPositiveStrand():
-      return center_start(region, window_size)
-    elif region.isNegativeStrand():
-      return center_end(region, window_size)
-    else:
-      raise ValueError("Can't center on five-prime end, no strand.")
-  raise ValueError("invalid window center")
+  if window_center == CENTRE:
+    region.transform_center(window_size)
+  else:
+    raise ValueError("Don't know how to do this transformation: " +
+                     window_center)
 
 
 ###############################################################################
@@ -167,13 +154,14 @@ def conservtion_profile_pid(region, genome_alignment):
     res.append(0)
 
   for i in range(region.start, region.end):
+    rel = i - region.start
     try:
       col = genome_alignment.get_column(region.chrom, i)
-      res[i] = pid(col)
+      res[rel] = pid(col)
     except NoSuchAlignmentColumnError:
-      res[i] = None
+      res[rel] = None
     except NoUniqueColumnError:
-      res[i] = None
+      res[rel] = None
 
   return res
 
@@ -211,10 +199,10 @@ def processBED(fh, genome_alig, window_size, window_centre, verbose=False):
 
   for e in BEDIterator(fh, verbose=verbose, scoreType=float):
     # figure out which interval to look at...
-    region = transform_locus(e)
-    new_profile = conservtion_profile_pid(region, genome_alig)
+    transform_locus(e, window_centre, window_size)
+    new_profile = conservtion_profile_pid(e, genome_alig)
     merge_profile(mean_profile, new_profile)
-  return mean_profile
+  return [m.mean for m in mean_profile]
 
 
 ###############################################################################
@@ -332,8 +320,69 @@ class TestConservationProfile(unittest.TestCase):
 
   """Unit tests for this script."""
 
-  def setUP(self):
-    pass
+  def setUp(self):
+    """Set up a genome alignment and set of query regions for testing."""
+    b1_A_seq = "CTGATGCAGTC-"
+    b1_B_seq = "TA-ATACA-ATG"
+    b1_B_qul = "gg-ggggg-ggg"
+    b1_C_seq = "TGGT-GCAGTAA"
+    b1_C_qul = "gg-ggggg-ggg"
+    b1 = "a score=28452.00\n" +\
+         "s A.chr1 10 11 + 51323347 " + b1_A_seq + "\n" +\
+         "s B.chr1 50 10 + 51313456 " + b1_B_seq + "\n" +\
+         "q B.chr1                  " + b1_B_qul + "\n" +\
+         "s C.chr2 31 11 + 50314486 " + b1_C_seq + "\n" +\
+         "q C.chr2                  " + b1_C_qul
+    b2_A_seq = "GTAGTAGC-"
+    b2_B_seq = "-CAAT-GCA"
+    b2_B_qul = "-gggg-ggg"
+    b2_C_seq = "-A-TAAGCC"
+    b2_C_qul = "-g-gggggg"
+    b2 = "a score=45845.2456\n" +\
+         "s A.chr1 88 8 + 51323347 " + b2_A_seq + "\n" +\
+         "s B.chr1 7  7 + 51313456 " + b2_B_seq + "\n" +\
+         "q B.chr1                 " + b2_B_qul + "\n" +\
+         "s C.chr1 62 7 + 50314486 " + b2_C_seq + "\n" +\
+         "q C.chr1                 " + b2_C_qul
+    self.maf1 = b1 + "\n\n" + b2
+
+    b3_A_seq = "G-CCGATGC"
+    b3_B_seq = "ACCC-CTGA"
+    b3_B_qul = "gggg-gggg"
+    b3_C_seq = "ACCC-GGGA"
+    b3_C_qul = "gggg-gggg"
+    b3 = "a score=15489.458\n" +\
+         "s A.chrX 10 8 + 53347 " + b3_A_seq + "\n" +\
+         "s B.chrX 13 8 + 53456 " + b3_B_seq + "\n" +\
+         "q B.chrX              " + b3_B_qul + "\n" +\
+         "s C.chrX 9  8 - 50486 " + b3_C_seq + "\n" +\
+         "q C.chrX              " + b3_C_qul
+    b4_A_seq = "GGAGTTA"
+    b4_B_seq = "-GA-TTA"
+    b4_B_qul = "-gg-ggg"
+    b4 = "a score=14489.458\n" +\
+         "s A.chr7 11 7 + 53347 " + b4_A_seq + "\n" +\
+         "s B.chr7 33 5 + 53456 " + b4_B_seq + "\n" +\
+         "q B.chr7              " + b4_B_qul + "\n" +\
+         "e C.chr7 54  7 + 50486 I"
+    self.maf2 = b3 + "\n\n" + b4
+
+    self.roi = "chr1" + "\t" + "14" + "\t" + "18" + "\t" + "+\n" +\
+               "chr1" + "\t" + "19" + "\t" + "22" + "\t" + "+\n" +\
+               "chr1" + "\t" + "88" + "\t" + "92" + "\t" + "+\n" +\
+               "chr1" + "\t" + "94" + "\t" + "98" + "\t" + "+\n" +\
+               "chrX" + "\t" + "11" + "\t" + "14" + "\t" + "+\n" +\
+               "chrX" + "\t" + "15" + "\t" + "18" + "\t" + "+\n" +\
+               "chr7" + "\t" + "10" + "\t" + "12" + "\t" + "+\n"
+
+  def test_process(self):
+    """Bypass the UI and test the main logic function directly."""
+    m = StringIO.StringIO(self.maf1 + "\n\n" + self.maf2)
+    ga = GenomeAlignment([x for x in genome_alignment_iterator(m, "A")])
+    prof = processBED(StringIO.StringIO(self.roi), ga, 4, CENTRE)
+
+    print str(prof)
+
 
 ###############################################################################
 #              MAIN ENTRY POINT WHEN RUN AS STAND-ALONE MODULE                #

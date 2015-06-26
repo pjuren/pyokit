@@ -73,6 +73,7 @@ from pyokit.util.meta import TestMeta
 #                                  SCRIPTS                                    #
 ###############################################################################
 from pyokit.scripts.fdr import TestFDR
+from pyokit.scripts.conservationProfile import TestConservationProfile
 
 
 if __name__ == "__main__":
@@ -115,6 +116,7 @@ if __name__ == "__main__":
   sys.stderr.write(head)
   sys.stderr.write("registered tests in \n")
   sys.stderr.write("  " + str(TestFDR) + "\n")
+  sys.stderr.write("  " + str(TestConservationProfile) + "\n\n")
 
   sys.stderr.write("\n\n RUNNING TESTS \n\n")
   unittest.main()
