@@ -33,6 +33,9 @@ import copy
 import unittest
 import StringIO
 
+# for testing
+import mock
+
 # pyokit imports
 from pyokit.interface.cli import CLI
 from pyokit.interface.cli import Option
@@ -42,6 +45,7 @@ from pyokit.datastruct.genomeAlignment import NoUniqueColumnError
 from pyokit.datastruct import sequence
 from pyokit.statistics.online import RollingMean
 from pyokit.io.genomeAlignment import genome_alignment_iterator
+from pyokit.io.genomeAlignment import build_genome_alignment_from_file
 from pyokit.datastruct.genomeAlignment import GenomeAlignment
 
 
@@ -129,17 +133,17 @@ def transform_locus(region, window_center, window_size):
 
 def pid(col, ignore_gaps=False):
   """
-    Compute the percent identity of a an alignment column.
+  Compute the percent identity of a an alignment column.
 
-    Define PID as the frequency of the most frequent nucleotide in the column.
+  Define PID as the frequency of the most frequent nucleotide in the column.
 
-    :param col:         an alignment column; a dictionary where keys are seq.
-                        names and values are the nucleotide in the column for
-                        that sequence.
-    :param ignore_gaps: if True, do not count gaps towards the total number of
-                        sequences in the column (i.e. the denominator of the
-                        fraction).
-    :raise ValueError: if the column contains only gaps.
+  :param col:         an alignment column; a dictionary where keys are seq.
+                      names and values are the nucleotide in the column for
+                      that sequence.
+  :param ignore_gaps: if True, do not count gaps towards the total number of
+                      sequences in the column (i.e. the denominator of the
+                      fraction).
+  :raise ValueError: if the column contains only gaps.
   """
   hist = {}
   total = 0
@@ -230,26 +234,28 @@ def processBED(fh, genome_alig, window_size, window_centre, verbose=False):
 #                               USER INTERFACE                                #
 ###############################################################################
 
-def getUI(args):
+def getUI(prog_name, args):
   """Build and return user interface object for this script."""
-  programName = os.path.basename(sys.argv[0])
   longDescription = "Given a set of BED intervals, compute a profile of " +\
                     "conservation by averaging over all intervals using a " +\
-                    "whole genome alignment to a set of relevent species"
+                    "whole genome alignment to a set of relevent species." +\
+                    "\n\n" +\
+                    "Usage: " + prog_name + " [options] regions.bed " +\
+                    "genome-alig species" +\
+                    "\n\n" +\
+                    "genome-alig can be either a single MAF file, or a " +\
+                    "directory of MAF files. In the latter case, the " +\
+                    "directory may also optionally contain index files for " +\
+                    "the alignment files."
   shortDescription = longDescription
 
-  ui = CLI(programName, shortDescription, longDescription)
-  ui.minArgs = 0
-  ui.maxArgs = 1
+  ui = CLI(prog_name, shortDescription, longDescription)
+  # gotta have two args -- MAF dir/file and BED regions.
+  # Input by stdin not allowed
+  ui.minArgs = 3
+  ui.maxArgs = 3
   ui.addOption(Option(short="o", long="output", argName="filename",
                       description="output to given file, else stdout",
-                      required=False, type=str))
-  ui.addOption(Option(short="m", long="mafdir", argName="filename",
-                      description="directory which contains MAF files",
-                      required=True, type=str))
-  ui.addOption(Option(short="s", long="species", argName="filename",
-                      description="file containing list of assemblies to " +
-                                  "use, one per line. All used if omitted",
                       required=False, type=str))
   ui.addOption(Option(short="w", long="window", argName="size",
                       description="size of window to compute around each " +
@@ -258,16 +264,6 @@ def getUI(args):
                                   " to use whole interval. " +
                                   "Default " + str(DEFAULT_WINDOW_SIZE),
                       required=False, type=int))
-  ui.addOption(Option(short="c", long="centre", argName="location",
-                      description="centre window at " + FIVE_PRIME + ", " +
-                                  THREE_PRIME + " or " + CENTRE + " " +
-                                  "of interval. Ignored if window size " +
-                                  "uses the full interval. Default " +
-                                  DEFAULT_WINDOW_CENTRE,
-                      required=False, type=str))
-  ui.addOption(Option(short="t", long="type", argName="str",
-                      description="type of scores to compute. Options are:",
-                      required=False, type=str))
   ui.addOption(Option(short="v", long="verbose",
                       description="output additional messages to stderr " +
                                   "about run (default: " +
@@ -278,7 +274,7 @@ def getUI(args):
   ui.addOption(Option(short="u", long="test",
                       description="run unit tests ", special=True))
 
-  ui.parseCommandLine(sys.argv[1:])
+  ui.parseCommandLine(args)
   return ui
 
 
@@ -286,10 +282,10 @@ def getUI(args):
 #                     COMMAND LINE PROCESSING AND DISPATCH                    #
 ###############################################################################
 
-def main(args):
+def main(prog_name, args):
   """Process the command line arguments of this script and dispatch."""
   # get options and arguments
-  ui = getUI()
+  ui = getUI(prog_name, args)
 
   # just run unit tests
   if ui.optionIsSet("test"):
@@ -302,23 +298,15 @@ def main(args):
     sys.exit()
   verbose = (ui.optionIsSet("verbose") is True) or DEFAULT_VERBOSITY
 
-  # make MafDir object
-  # mafdir = MafDir(ui.getValue("mafdir"), "maf", "idx")
-
   # get output handle
   out_fh = sys.stdout
   if ui.optionIsSet("output"):
     out_fh = open(ui.getValue("output"), "w")
 
-  # get input handle
-  infh = sys.stdin
-  if ui.hasArgument(0):
-    infh = open(ui.getArgument(0))
-
   # get window size...
-  windowSize = DEFAULT_WINDOW_SIZE
+  window_size = DEFAULT_WINDOW_SIZE
   if ui.optionIsSet("window"):
-    windowSize = ui.getValue("window")
+    window_size = ui.getValue("window")
 
   # get the window anchoring location
   windowCentre = DEFAULT_WINDOW_CENTRE
@@ -329,8 +317,23 @@ def main(args):
                        str(windowCentre) + "\n")
       sys.exit(1)
 
-  # processBED(infh, out_fh, mafdir, windowSize, windowCentre, species, ref,
-  #           verbose)
+  # get paths for the input file of regions and the genome alignment -- we
+  # requried three args in the command line, so we know these will be here.
+  region_fn = ui.getArgument(0)
+  ga_path = ui.getArgument(1)
+
+  # get the name of the reference species; again, we know it'll be there
+  # since we required at least three args.
+  spec = ui.getArgument(2)
+
+  # build the genome alignment
+  if os.path.isdir(ga_path):
+    raise ValueError("Sorry, directories for MAF files not supported yet :-(")
+  ga_alig = build_genome_alignment_from_file(ga_path, spec)
+
+  # get the profile and write it to the output stream
+  profile = processBED(open(region_fn), ga_alig, window_size, CENTRE, verbose)
+  out_fh.write(", ".join(str(x) for x in profile))
 
 
 ###############################################################################
@@ -404,7 +407,7 @@ class TestConservationProfile(unittest.TestCase):
                "\t" + "+\n"
 
   def test_conservation_profile_pid(self):
-    """Test getting conservation profiles (PID) from genome alignments"""
+    """Test getting conservation profiles (PID) from genome alignments."""
     m = StringIO.StringIO(self.maf1 + "\n\n" + self.maf2)
     ga = GenomeAlignment([x for x in genome_alignment_iterator(m, "A")])
 
@@ -452,10 +455,33 @@ class TestConservationProfile(unittest.TestCase):
     for i in range(0, len(expect)):
       self.assertAlmostEqual(prof[i], expect[i])
 
+  @mock.patch('__builtin__.open')
+  def test_full_with_UI(self, mock_open):
+    """Test the full script, including the UI."""
+    output_stream = StringIO.StringIO()
+
+    def open_side_effect(*args, **kwargs):
+      if args[0] == "in.maf":
+        return StringIO.StringIO(self.maf1 + "\n\n" + self.maf2)
+      if args[0] == "in.bed":
+        return StringIO.StringIO(self.roi)
+      if args[0] == "out.txt":
+        return output_stream
+      raise IOError("No such file")
+
+    mock_open.side_effect = open_side_effect
+
+    main("cons_profile", ["-w", "4", "-o", "out.txt", "in.bed", "in.maf", "A"])
+    vals = [float(x) for x in output_stream.getvalue().split(",")]
+    expect = [0.53333333, 0.66666666, 0.83333333, 0.73333333]
+    self.assertEqual(len(expect), len(vals))
+    for i in range(0, len(vals)):
+      self.assertAlmostEqual(vals[i], expect[i])
+
 
 ###############################################################################
 #              MAIN ENTRY POINT WHEN RUN AS STAND-ALONE MODULE                #
 ###############################################################################
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[0], sys.argv[1:])
