@@ -45,23 +45,44 @@ def genome_alignment_block_hash(b):
 
 
 ###############################################################################
-#    CLASSES FOR MANAGING ACCESS TO MULTIPLE GENOME ALIGNMENT FILES ON DISK   #
+#                   BULK LOADING GENOME ALIGNMENTS FROM DISK                  #
 ###############################################################################
 
-def build_genome_alignment_from_directory(d_name, reference_species):
+def build_genome_alignment_from_directory(d_name, ref_spec):
   """
   build a genome aligment by loading all files in a directory.
 
   Not recursive (i.e. subdirectories are not parsed). Will attempt to load all
   files regardless of extension. Expects all files to be MAF format genome
   alignment files.
+
+  :param d_name:   directory to load from.
+  :param ref_spec: which species in the MAF file is the reference?
   """
   blocks = []
   for fn in os.listdir(d_name):
     pth = os.path.join(d_name, fn)
     if os.path.isfile(pth):
-      for b in genome_alignment_iterator(pth, reference_species):
+      for b in genome_alignment_iterator(pth, ref_spec):
         blocks.append(b)
+  return GenomeAlignment(blocks)
+
+
+def build_genome_alignment_from_file(ga_path, ref_spec, idx_path=None):
+  """
+  build a genome alignment by loading from a single MAF file.
+
+  :param ga_path:  the path to the file to load.
+  :param ref_spec: which species in the MAF file is the reference?
+  :param idx_path: if provided, use this index to generate a just-in-time
+                   genome alignment, instead of loading the file immediately.
+  """
+  if (idx_path is not None):
+    raise ValueError("Sorry, index support for genome alignment not yet " +
+                     "implemented")
+  blocks = []
+  for b in genome_alignment_iterator(ga_path, ref_spec):
+    blocks.append(b)
   return GenomeAlignment(blocks)
 
 
@@ -234,6 +255,23 @@ class TestGenomeAlignment(unittest.TestCase):
                                    self.b1_hg19)
     self.assertEqual(ga.get_blocks("chr22", 1770, 1780)[0]["hg19.chr22"],
                                    self.b2_hg19)
+
+  @mock.patch('__builtin__.open')
+  def test_build_genome_alignment_from_file(self, mock_open):
+    """Test building a genome alignment from a single MAF file."""
+    def open_side_effect(*args, **kwargs):
+      if args[0] == "one.maf":
+        return StringIO.StringIO(self.b1 + "\n" + self.b2)
+      raise IOError("No such file")
+
+    mock_open.side_effect = open_side_effect
+
+    ga = build_genome_alignment_from_file("one.maf", "hg19")
+    self.assertEqual(ga.num_blocks, 2)
+    self.assertEqual(ga.get_blocks("chr22", 1711, 1720)[0]["hg19.chr22"],
+                     self.b1_hg19)
+    self.assertEqual(ga.get_blocks("chr22", 1770, 1780)[0]["hg19.chr22"],
+                     self.b2_hg19)
 
 
 ###############################################################################
