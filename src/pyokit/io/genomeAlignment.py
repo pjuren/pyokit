@@ -1,25 +1,25 @@
 """
-  Date of Creation: 11th Dec 2014
+Date of Creation: 11th Dec 2014.
 
-  Description:   ...
+Description:   Code for reading/writing genome alignments.
 
-  Copyright (C) 2010-2014
-  Philip J. Uren,
+Copyright (C) 2010-2014
+Philip J. Uren,
 
-  Authors: Philip J. Uren
+Authors: Philip J. Uren
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 # standard python imports
@@ -118,7 +118,11 @@ def load_jit_genome_alignment(alignment_fn, index_fn):
 ###############################################################################
 
 class TestGenomeAlignment(unittest.TestCase):
+
+  """Unit tests for genome alignment IO code."""
+
   def setUp(self):
+    """Set up a few MAF files with whole genome alignments for testing."""
     b1_hg19_seq = "atctccaagagggcataaaacac-tgagtaaacagctcttttatatgtgtttcctgga"
     b1_panTro_s = "atctccaagagggcataaaacac-tgagtaaacagctctt--atatgtgtttcctgga"
     b1_panTro_q = "99999999999999999999999-9999999999999999--9999999999999999"
@@ -197,6 +201,7 @@ class TestGenomeAlignment(unittest.TestCase):
     self.b2 = b2
 
   def test_genome_alignment_iterator(self):
+    """Unit tests for iterating over a genome alignment in an MAF file."""
     g_iter = genome_alignment_iterator(StringIO.StringIO(self.maf1), "hg19")
     blocks = [x for x in g_iter]
 
@@ -232,6 +237,7 @@ class TestGenomeAlignment(unittest.TestCase):
   @mock.patch('__builtin__.open')
   def test_build_genome_alignment_from_directory(self, mock_open, mock_isfile,
                                                  mock_listdir):
+    """Test building a genome alignment from a whole directory of MAF files."""
     mock_listdir.return_value = ["one.maf", "two.maf", "some_sub_dir"]
 
     def open_side_effect(*args, **kwargs):
@@ -252,9 +258,9 @@ class TestGenomeAlignment(unittest.TestCase):
     ga = build_genome_alignment_from_directory("the_dir", "hg19")
     self.assertEqual(ga.num_blocks, 2)
     self.assertEqual(ga.get_blocks("chr22", 1711, 1720)[0]["hg19.chr22"],
-                                   self.b1_hg19)
+                     self.b1_hg19)
     self.assertEqual(ga.get_blocks("chr22", 1770, 1780)[0]["hg19.chr22"],
-                                   self.b2_hg19)
+                     self.b2_hg19)
 
   @mock.patch('__builtin__.open')
   def test_build_genome_alignment_from_file(self, mock_open):
