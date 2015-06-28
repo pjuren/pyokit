@@ -106,7 +106,8 @@ class IndexedFile(object):
   @property
   def indexed_file(self):
     """
-    Getter for information on the file that this object indexes
+    Getter for information on the file that this object indexes.
+
     :return: the tuple (filename, handle) -- either of which might be None.
     """
     return (self._indexed_filename, self._indexed_file_handle)
@@ -115,6 +116,7 @@ class IndexedFile(object):
   def indexed_file(self, f):
     """
     Setter for information about the file this object indexes.
+
     :param f: a tuple of (filename, handle), either (or both) of which can be
               None. If the handle is None, but filename is provided, then
               handle is created from the filename. If both handle and filename
@@ -177,9 +179,9 @@ class IndexedFile(object):
     if hash_value not in self._index:
       fn = (" (" + str(self._indexed_filename) + ") "
             if self._indexed_filename is not None else "")
-      raise IndexError("Unable to retrieve record (" + str(hash_value)
-                       + ") from indexed file" + fn
-                       + "; reason: no such record found")
+      raise IndexError("Unable to retrieve record (" + str(hash_value) +
+                       ") from indexed file" + fn +
+                       "; reason: no such record found")
 
     # we got a match to the hash_value, attempt to seek to this location and
     # return the next element
@@ -191,8 +193,8 @@ class IndexedFile(object):
     except StopIteration:
       fn = (" (for " + str(self._indexed_filename) + ")"
             if self._indexed_filename is None else "")
-      raise IndexError("Fatal error, index" + fn
-                       + " specifies location beyond end of indexed file")
+      raise IndexError("Fatal error, index" + fn +
+                       " specifies location beyond end of indexed file")
     finally:
       self._indexed_file_handle.seek(orig_pos)
 
