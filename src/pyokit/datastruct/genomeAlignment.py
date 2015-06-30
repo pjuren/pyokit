@@ -253,8 +253,14 @@ class JustInTimeGenomeAlignmentBlock(GenomeAlignmentBlock):
       return self.item.end
 
   @staticmethod
-  def build_hash(chrom, start, end):
+  def build_hash(alig):
     """Build an index hash for an alignment at a given genomic locus."""
+    return JustInTimeGenomeAlignmentBlock.build_hash_raw(alig.chrom,
+                                                         alig.start, alig.end)
+
+  @staticmethod
+  def build_hash_raw(chrom, start, end):
+    """Build a hash string for an alignment from raw chrom, start, end."""
     return chrom + "\t" + str(start) + "\t" + str(end)
 
   @staticmethod
@@ -366,7 +372,7 @@ class TestGenomeAlignmentDS(unittest.TestCase):
 
   def test_jit_genome_alig_block(self):
     """Test wrapping a block with JIT wrapper."""
-    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash("chr1", 11, 18)
+    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash_raw("chr1", 11, 18)
     factory = {b1_hash: self.block1}
     b1_jit = JustInTimeGenomeAlignmentBlock(factory, b1_hash)
     expect = {"s1.c1": "T", "s2.c1": "A", "s3.c2": "A", "s4.c1": "A"}
@@ -384,7 +390,7 @@ class TestGenomeAlignmentDS(unittest.TestCase):
       return b.end
 
     # for our sanity, check that it works when everything is given correctly.
-    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash("c1", 11, 18)
+    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash_raw("c1", 11, 18)
     factory = {b1_hash: self.block1}
     b1_jit = JustInTimeGenomeAlignmentBlock(factory, b1_hash)
     self.assertEqual(b1_jit.chrom, "c1")
@@ -396,7 +402,7 @@ class TestGenomeAlignmentDS(unittest.TestCase):
     self.assertEqual(b1_jit.end, 18)
 
     # wrong chrom
-    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash("chr2", 11, 18)
+    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash_raw("chr2", 11, 18)
     factory = {b1_hash: self.block1}
     b1_jit = JustInTimeGenomeAlignmentBlock(factory, b1_hash)
     self.assertEqual(b1_jit.chrom, "chr2")
@@ -406,7 +412,7 @@ class TestGenomeAlignmentDS(unittest.TestCase):
     self.assertEqual(b1_jit.end, 18)    # should still be okay though
 
     # wrong start
-    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash("c1", 10, 18)
+    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash_raw("c1", 10, 18)
     factory = {b1_hash: self.block1}
     b1_jit = JustInTimeGenomeAlignmentBlock(factory, b1_hash)
     self.assertEqual(b1_jit.chrom, "c1")
@@ -416,7 +422,7 @@ class TestGenomeAlignmentDS(unittest.TestCase):
     self.assertEqual(b1_jit.end, 18)    # should still be okay though
 
     # wrong end
-    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash("c1", 11, 17)
+    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash_raw("c1", 11, 17)
     factory = {b1_hash: self.block1}
     b1_jit = JustInTimeGenomeAlignmentBlock(factory, b1_hash)
     self.assertEqual(b1_jit.chrom, "c1")
@@ -431,7 +437,7 @@ class TestGenomeAlignmentDS(unittest.TestCase):
       def __getitem__(self, k):
         raise ValueError()
 
-    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash("chr1", 11, 18)
+    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash_raw("chr1", 11, 18)
     b1_jit = JustInTimeGenomeAlignmentBlock(SimpleFactory(), b1_hash)
 
     # these should be fine
