@@ -41,10 +41,15 @@ from pyokit.util.progressIndicator import ProgressIndicator
 ###############################################################################
 
 class IndexError(Exception):
+
+  """Exceptions that are raised when manipulating indexed files."""
+
   def __init__(self, msg):
+    """:param msg: message for this exception."""
     self.value = msg
 
   def __str__(self):
+    """:return: a string representation of this exception."""
     return repr(self.value)
 
 
@@ -53,6 +58,7 @@ class IndexError(Exception):
 ###############################################################################
 
 class IndexedFile(object):
+
   """
   An IndexedFile is a data structure that indexes a large file that is made up
   of many individual records. Any file for which an iterator exists to iterate
@@ -239,16 +245,19 @@ class IndexedFile(object):
                          part of the index already constructed is written
                          (which might be nothing...)
     """
-    handle = fh
     try:
       handle = open(fh, "w")
     except TypeError:
       # okay, not a filename, try to treat it as a stream to write to.
-      pass
+      handle = fh
     if generate:
       self.__build_index()
     for key in self._index:
       handle.write(to_str_func(key) + "\t" + str(self._index[key]) + "\n")
+
+  def __iter__(self):
+    """:return: an iterator over the index keys."""
+    return self._index.__iter__()
 
   def read_index(self, fh, indexed_fh, rec_iterator=None,
                  rec_hash_func=None, parse_hash=str, flush=True,
@@ -367,15 +376,12 @@ class TestIndexedFile(unittest.TestCase):
 
   def setUp(self):
     """
-    We will test indexing a simple file where records have the following
-    structure:
+    Test indexing a simple file format.
 
-      3 A B C D E
-
+    Records in the indexed files have the following structure: 3 A B C D E
     Here, all data about each record is on a single line -- white-space
     separated. The first item on the data line is a unique ID for the element.
     """
-
     def dummy_iterator(strm):
       for line in strm:
         line = line.strip()
@@ -401,9 +407,7 @@ class TestIndexedFile(unittest.TestCase):
                        "10 T U V W X"
 
   def test_indexedFile_raw(self):
-    """
-    test grabbing an item when nothing has been indexed yet.
-    """
+    """Test grabbing an item when nothing has been indexed yet."""
     index = IndexedFile(StringIO.StringIO(self.test_case_0), self.r_iter,
                         self.r_hash)
     self.assertEqual(index[5], (5, ["U", "V", "W", "X", "Y"]))
@@ -415,18 +419,14 @@ class TestIndexedFile(unittest.TestCase):
     self.assertEqual(index[10], (10, ["T", "U", "V", "W", "X"]))
 
   def test_indexedFile_already_indexed(self):
-    """
-    test grabbing an item that has already been indexed.
-    """
+    """Test grabbing an item that has already been indexed."""
     index = IndexedFile(StringIO.StringIO(self.test_case_0), self.r_iter,
                         self.r_hash)
     self.assertEqual(index[5], (5, ["U", "V", "W", "X", "Y"]))
     self.assertEqual(index[5], (5, ["U", "V", "W", "X", "Y"]))
 
   def test_indexedFile_not_present(self):
-    """
-    test asking for an item that does not exist in the file
-    """
+    """Test asking for an item that does not exist in the file."""
     index = IndexedFile(StringIO.StringIO(self.test_case_0), self.r_iter,
                         self.r_hash)
     self.assertRaises(IndexError, index.__getitem__, 11)
@@ -443,9 +443,7 @@ class TestIndexedFile(unittest.TestCase):
     self.assertEqual(index[6], (6, ["Z", "A", "B", "C", "D"]))
 
   def test_indexedFile_write_read_equality(self):
-    """
-    test writing an index to file, reading it back and checking equality.
-    """
+    """Test writing an index to file, reading it back and checking equality."""
     # create dummy files
     indexed_fh = StringIO.StringIO(self.test_case_0)
     index_fh = StringIO.StringIO()
