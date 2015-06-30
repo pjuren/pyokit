@@ -26,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import StringIO
 import os
 import os.path
+import functools
 
 # import for unit testing
 import mock
@@ -33,10 +34,12 @@ import unittest
 
 # pyokit imports
 from pyokit.datastruct.genomeAlignment import GenomeAlignmentBlock
+from pyokit.datastruct.genomeAlignment import JustInTimeGenomeAlignmentBlock
 from pyokit.datastruct.genomeAlignment import GenomeAlignment
 from pyokit.datastruct.sequence import Sequence
 from pyokit.datastruct.sequence import UnknownSequence
 from pyokit.io import maf
+from pyokit.io.indexedFile import IndexedFile
 
 
 def genome_alignment_block_hash(b):
@@ -77,12 +80,17 @@ def build_genome_alignment_from_file(ga_path, ref_spec, idx_path=None):
   :param idx_path: if provided, use this index to generate a just-in-time
                    genome alignment, instead of loading the file immediately.
   """
-  if (idx_path is not None):
-    raise ValueError("Sorry, index support for genome alignment not yet " +
-                     "implemented")
   blocks = []
-  for b in genome_alignment_iterator(ga_path, ref_spec):
-    blocks.append(b)
+  if (idx_path is not None):
+    bound_iter = functools.partial(genome_alignment_iterator,
+                                   reference_species=ref_spec)
+    factory = IndexedFile(None, bound_iter, genome_alignment_block_hash)
+    factory.read_index(idx_path, ga_path)
+    for k in factory:
+      blocks.append(JustInTimeGenomeAlignmentBlock(factory, k))
+  else:
+    for b in genome_alignment_iterator(ga_path, ref_spec):
+      blocks.append(b)
   return GenomeAlignment(blocks)
 
 
@@ -100,17 +108,6 @@ def genome_alignment_iterator(fn, reference_species):
   for e in maf.maf_iterator(fn, yield_class=GenomeAlignmentBlock,
                             yield_kw_args=kw_args):
     yield e
-
-
-def load_jit_genome_alignment(alignment_fn, index_fn):
-  """
-  load a genome alignment from an index.
-
-  :return: a just-in-time genome alignment, where access to any of the blocks
-           causes them to be loaded from the alignment file
-  """
-  pass
-  # factory = IndexFile(None, maf_iterator, genome_alignment_block_hash)
 
 
 ###############################################################################
@@ -278,6 +275,74 @@ class TestGenomeAlignment(unittest.TestCase):
                      self.b1_hg19)
     self.assertEqual(ga.get_blocks("chr22", 1770, 1780)[0]["hg19.chr22"],
                      self.b2_hg19)
+
+  @mock.patch('__builtin__.open')
+  def test_build_genome_alignment_from_indexed_file(self, mock_open):
+    """Test building GA from single MAF file which is indexed."""
+    class WrappedStringIO(object):
+      def __init__(self, in_str):
+        self.io = StringIO.StringIO(in_str)
+        self.reads = 0
+
+      def tell(self):
+        return self.io.tell()
+
+      def seek(self, x):
+        self.io.seek(x)
+
+      def __iter__(self):
+        for l in self.io:
+          self.reads += 1
+          yield l
+        raise StopIteration()
+
+      def read(self):
+        self.reads += 1
+        return self.io.read()
+
+    ga_in_2 = WrappedStringIO(self.maf1)
+    idx_strm = StringIO.StringIO()
+
+    # replace open with mock
+    def open_side_effect(*args, **kwargs):
+      if not isinstance(args[0], basestring):
+        raise TypeError()
+      if args[0] == "one.maf":
+        return ga_in_2
+      elif args[0] == "one.idx":
+        return idx_strm
+      raise IOError("No such file")
+
+    mock_open.side_effect = open_side_effect
+
+    # build an index and store it in a StringIO object
+    bound_iter = functools.partial(genome_alignment_iterator,
+                                   reference_species="hg19")
+    hash_func = JustInTimeGenomeAlignmentBlock.build_hash
+    idx = IndexedFile(StringIO.StringIO(self.maf1), bound_iter, hash_func)
+    idx.write_index(idx_strm)
+    idx_strm.seek(0)  # seek to the start
+    del idx
+
+    ga = build_genome_alignment_from_file("one.maf", "hg19", "one.idx")
+    b1_res = ga.get_blocks("chr22", 1711, 1720)[0]
+    b2_res = ga.get_blocks("chr22", 1770, 1780)[0]
+    num_blocks_res = ga.num_blocks
+    # check that accessing num blocks and getting the blocks gave right answer,
+    # but did not require a read from the MAF file.
+    self.assertEqual(num_blocks_res, 2)
+    self.assertEqual(b1_res.chrom, "chr22")
+    self.assertEqual(b2_res.chrom, "chr22")
+    self.assertEqual(b1_res.start, 1711)
+    self.assertEqual(b2_res.start, 1772)
+    self.assertEqual(b1_res.end, 1711 + 57)
+    self.assertEqual(b2_res.end, 1772 + 53)
+    self.assertEqual(ga_in_2.reads, 0)
+
+    # check that full equality is correct, and requires loading from MAF
+    self.assertEqual(b1_res["hg19.chr22"], self.b1_hg19)
+    self.assertEqual(b2_res["hg19.chr22"], self.b2_hg19)
+    self.assertGreater(ga_in_2.reads, 0)
 
 
 ###############################################################################
