@@ -27,6 +27,7 @@ import sys
 
 # pyokit imports
 from pyokit.scripts import fdr
+from pyokit.scripts import index
 
 
 def main():
@@ -41,6 +42,8 @@ def main():
   try:
     if sys.argv[1] == "fdr":
       fdr.main(sys.argv[2:])
+    elif sys.argv[1] == "index":
+      index.main(sys.argv[2:], "pyokit index")
     else:
       sys.stderr.write("Pyokit: I don't recognise the option '" + sys.argv[1] +
                        "'.\n")
