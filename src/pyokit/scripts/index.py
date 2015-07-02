@@ -1,5 +1,5 @@
 """
-Date of Creation: 1st July 2015
+Date of Creation: 1st July 2015.
 
 Description:    Build an index for a file
 
@@ -26,28 +26,85 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # standard python imports
 import sys
+import os
 import unittest
+import StringIO
+import functools
 
-# pyokit imports
+# pyokit imports -- general
 from pyokit.interface.cli import CLI, Option
+from pyokit.io.indexedFile import IndexedFile
+from pyokit.io.indexedFile import IndexError
+
+# pyokit imports -- for indexing repeat-masker alignments
+from pyokit.datastruct import multipleAlignment
+from pyokit.io.repeatmaskerAlignments import repeat_masker_alignment_iterator
+
+# pyokit imports -- for indexing genome alignments in maf format
+from pyokit.io.genomeAlignment import GATestHelper
+from pyokit.io.genomeAlignment import genome_alignment_iterator
+from pyokit.datastruct.genomeAlignment import JustInTimeGenomeAlignmentBlock
+from pyokit.io.genomeAlignment import build_genome_alignment_from_file
 
 # support for enumerations in python 2
 from enum import Enum
 
+# for unit tests
+import mock
+
 
 ###############################################################################
-#                        CONSTANTS AND ENUMERATIONS                           #
+#                            CONSTANTS AND ENUMS                              #
 ###############################################################################
 
 DEFAULT_VERBOSITY = False
 
 
-class SupportedFileTypes(Enum):
+class FileType(Enum):
 
   """An enumeration of the possible file types supported by the script."""
 
-  maf = 1
-  reapeat_masker = 2
+  genome_alignment = 1
+  reapeat_masker_alignment_file = 2
+
+
+###############################################################################
+#                                 INDEXERS                                    #
+###############################################################################
+
+def index_repeatmasker_alignment_by_id(fh, out_fh, vebrose=False):
+  """Build an index for a repeat-masker alignment file by repeat-masker ID."""
+  def extract_UID(rm_alignment):
+    return rm_alignment.meta[multipleAlignment.RM_ID_KEY]
+
+  index = IndexedFile(fh, repeat_masker_alignment_iterator, extract_UID)
+  index.write_index(out_fh)
+
+
+def index_genome_alignment_by_locus(fh, out_fh, verbose=False):
+  """Build an index for a genome alig. using coords in ref genome as keys."""
+  bound_iter = functools.partial(genome_alignment_iterator,
+                                 reference_species="hg19")
+  hash_func = JustInTimeGenomeAlignmentBlock.build_hash
+  idx = IndexedFile(fh, bound_iter, hash_func)
+  idx.write_index(out_fh)
+
+
+def get_indexer_by_filetype(fileType):
+  """Find the right indexer for a user-specified filetype."""
+  try:
+    if fileType is FileType.genome_alignment:
+      return index_genome_alignment_by_locus
+  finally:
+    raise ValueError("Unsupported file type: " + str(fileType))
+
+
+def get_indexer_by_file_extension(ext):
+  """Find right indexer using file extension."""
+  if ext == ".maf" or ext == "maf":
+    return index_genome_alignment_by_locus
+  else:
+    raise ValueError("Unsupported file type: " + str(ext))
 
 
 ###############################################################################
@@ -66,7 +123,7 @@ def getUI(prog_name, args):
 
   ui = CLI(programName, short_description, long_description)
   ui.minArgs = 0
-  ui.maxArgs = 1
+  ui.maxArgs = -1
   ui.addOption(Option(short="o", long="output", argName="filename",
                       description="output to given file, else stdout",
                       required=False, type=str))
@@ -74,7 +131,7 @@ def getUI(prog_name, args):
                       description="the type of the file. If missing, " +
                       "the script will try to guess the file type. " +
                       "Supported file types are: " +
-                      ", ".join([f.name for f in SupportedFileTypes]),
+                      ", ".join([f.name for f in FileType]),
                       default=4, required=False, type=int))
   ui.addOption(Option(short="v", long="verbose",
                       description="output additional messages to stderr " +
@@ -93,6 +150,27 @@ def getUI(prog_name, args):
 ################################################################################
 #                     COMMAND LINE PROCESSING AND DISPATCH                     #
 ################################################################################
+
+def __get_indexer(in_fns, selected_type=None):
+  """Determine which indexer to use based on input files and type option."""
+  indexer = None
+  if selected_type is not None:
+    indexer = get_indexer_by_filetype(selected_type)
+  else:
+    if len(in_fns) == 0:
+      raise IndexError("reading from stdin, unable to guess input file " +
+                       "type, use -t option to set manually.\n")
+    else:
+      extension = set([os.path.splitext(f)[1] for f in in_fns])
+      assert(len(extension) >= 1)
+      if len(extension) > 1:
+        raise IndexError("more than one file extension present, unable " +
+                         "to get input type, use -t option to set manually.\n")
+      else:
+        indexer = get_indexer_by_file_extension(list(extension)[0])
+  assert(indexer is not None)
+  return indexer
+
 
 def main(args=[], prog_name=sys.argv[0]):
   """
@@ -119,10 +197,10 @@ def main(args=[], prog_name=sys.argv[0]):
   verbose = (ui.optionIsSet("verbose") == True) or DEFAULT_VERBOSITY
 
   # get input file-handle(s); fall back to stdin if none found.
-  in_fhs = [open(x) for x in ui.getArguments()]
+  in_fhs = [open(x) for x in ui.getAllArguments()]
   if in_fhs == []:
     if sys.stdin.isatty():
-      sys.stderr.write("[NO INPUT FILE FOUND; WAITING FOR INPUT FROM STDIN]")
+      sys.stderr.write("[NO INPUT FILE FOUND; WAITING FOR INPUT FROM STDIN]\n")
     in_fhs = [sys.stdin]
 
   # Get output handle(s). If only one input file, and no output file, output
@@ -133,6 +211,56 @@ def main(args=[], prog_name=sys.argv[0]):
   if len(in_fhs) != len(out_fhs):
     sys.stderr.write("mismatch between number of input files and output files")
     sys.exit(0)
+
+  # figure out which indexer to use and then index each file
+  op_val = ui.getValue("type") if ui.optionIsSet("type") else None
+  indexer = __get_indexer(ui.getAllArguments(), op_val)
+
+  for in_fh, out_fh in zip(in_fhs, out_fhs):
+    indexer(in_fh, out_fh, verbose)
+
+
+###############################################################################
+#                                UNIT TESTS                                   #
+###############################################################################
+
+class TestIndex(unittest.TestCase):
+
+  """Unit tests for the index script."""
+
+  def setUp(self):
+    """Set up a few MAF files with whole genome alignments for testing."""
+    # these are used for testing indexing of whole genome alignments
+    # we'll borrow a genome alignment from the tests in the IO module
+    self.b1_hg19 = GATestHelper.b1_hg19
+    self.ga_maf1 = GATestHelper.maf1
+    self.b2_hg19 = GATestHelper.b2_hg19
+
+  @mock.patch('__builtin__.open')
+  def test_index_genome_alig(self, mock_open):
+    """Do a full round trip test for a simple whole-genome alignment."""
+    in_strm = StringIO.StringIO(self.ga_maf1)
+    idx_strm = StringIO.StringIO()
+
+    # replace open with mock
+    def open_side_effect(*args, **kwargs):
+      if not isinstance(args[0], basestring):
+        raise TypeError()
+      if args[0] == "one.maf":
+        return in_strm
+      elif args[0] == "one.idx":
+        return idx_strm
+      raise IOError("No such file")
+
+    mock_open.side_effect = open_side_effect
+    main(["-o", "one.idx", "one.maf"])
+    idx_strm.seek(0)
+    in_strm.seek(0)
+    ga = build_genome_alignment_from_file("one.maf", "hg19", "one.idx")
+    b1_res = ga.get_blocks("chr22", 1711, 1720)[0]
+    b2_res = ga.get_blocks("chr22", 1770, 1780)[0]
+    self.assertEqual(b1_res["hg19.chr22"], self.b1_hg19)
+    self.assertEqual(b2_res["hg19.chr22"], self.b2_hg19)
 
 
 ###############################################################################

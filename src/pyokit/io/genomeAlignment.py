@@ -114,88 +114,108 @@ def genome_alignment_iterator(fn, reference_species):
 #                                UNIT TESTS                                   #
 ###############################################################################
 
+class GATestHelper(object):
+
+  """Helper for tests involving genome alignments in concrete MAF syntax."""
+
+  # this defines a single genome alignmnet block
+  b1_hg19_seq = "atctccaagagggcataaaacac-tgagtaaacagctcttttatatgtgtttcctgga"
+  b1_panTro_s = "atctccaagagggcataaaacac-tgagtaaacagctctt--atatgtgtttcctgga"
+  b1_panTro_q = "99999999999999999999999-9999999999999999--9999999999999999"
+  b1_tarSyr_s = "atctccaagagggctgaaaatgc-caaatga-----------tcacacgtttcctgga"
+  b1_tarSyr_q = "79295966999999999999998-9999799-----------9999999999765775"
+  b1_tupBel_s = "ttcaggaagggggcccaaaacgcttgagtggtcagctctta-ttttgcgtttactgga"
+  b1_tupBel_q = "79648579699867994997775679665662767577569-6998745597677632"
+  b1 = "a score=28680.000000\n" +\
+       "s hg19.chr22             1711 57 + 51304566 " + b1_hg19_seq + "\n" +\
+       "s panTro2.chrUn          1110 59 + 58616431 " + b1_panTro_s + "\n" +\
+       "q panTro2.chrUn                             " + b1_panTro_q + "\n" +\
+       "i panTro2.chrUn          C 0 C 0                          " + "\n" +\
+       "s tarSyr1.scaffold_5923  2859 50 -     8928 " + b1_tarSyr_s + "\n" +\
+       "q tarSyr1.scaffold_5923                     " + b1_tarSyr_q + "\n" +\
+       "i tarSyr1.scaffold_5923  N 0 C 0                          " + "\n" +\
+       "s tupBel1.scaffold_803   33686 61 +   85889 " + b1_tupBel_s + "\n" +\
+       "q tupBel1.scaffold_803                      " + b1_tupBel_q + "\n" +\
+       "i tupBel1.scaffold_803   I 1 C 0                          " + "\n" +\
+       "e mm4.chr6            53310102 58 + 151104725 I"
+  b1_hg19 = Sequence("hg19.chr22", b1_hg19_seq, 1711, 1768,
+                     "+", 51302798)
+  b1_panTro = Sequence("panTro2.chrUn", b1_panTro_s, 1110, 1169, "+",
+                       58616431 - 1169,
+                       {maf.QUALITY_META_KEY: b1_panTro_q,
+                        maf.LEFT_STATUS_KEY: "C",
+                        maf.LEFT_COUNT_KEY: 0,
+                        maf.RIGHT_STATUS_KEY: "C",
+                        maf.RIGHT_COUNT_KEY: 0})
+  b1_tarSyr = Sequence("tarSyr1.scaffold_5923", b1_tarSyr_s,
+                       8928 - 2859 - 50, 8928 - 2859, "-",
+                       2859, {maf.QUALITY_META_KEY: b1_tarSyr_q,
+                              maf.LEFT_STATUS_KEY: "N",
+                              maf.LEFT_COUNT_KEY: 0,
+                              maf.RIGHT_STATUS_KEY: "C",
+                              maf.RIGHT_COUNT_KEY: 0})
+  b1_mm4 = UnknownSequence("mm4.chr6", 53310102, 53310102 + 58, "+",
+                           151104725 - (53310102 + 58),
+                           {maf.EMPTY_ALIGNMENT_STATUS_KEY: "I"})
+
+  # this defines a second genome alignmnet block
+  b2_hg19_seq = "ccttcttttaattaattttgttaagg----gatttcctctagggccactgcacgtca"
+  b2_panTro_s = "ccttcttttaattaattttgttatgg----gatttcgtctagggtcactgcacatca"
+  b2_panTro_q = "99999999999999999999999999----999999099999999999999999999"
+  b2_tarSyr_s = "tcttcttttaattaattttattgagggattgattccttattgggccactacacatta"
+  b2_tarSyr_q = "999999899978999999999999999977989997998678865952859999899"
+  b2_tupBel_s = "cct--gtttaaattactgtattg-gg----gatttcctatagggccgcttctcgtcc"
+  b2_tupBel_q = "666--958759455555746366-68----656846556554745443677468565"
+  b2 = "a score=31725.000000\n" +\
+       "s hg19.chr22             1772 53 + 51304566 " + b2_hg19_seq + "\n" +\
+       "s panTro2.chrUn          1169 53 + 58616431 " + b2_panTro_s + "\n" +\
+       "q panTro2.chrUn                             " + b2_panTro_q + "\n" +\
+       "i panTro2.chrUn          C 0 C 0                          " + "\n" +\
+       "s tarSyr1.scaffold_5923  2909 124 -    8928 " + b2_tarSyr_s + "\n" +\
+       "q tarSyr1.scaffold_5923                     " + b2_tarSyr_q + "\n" +\
+       "i tarSyr1.scaffold_5923  C 0 N 0                          " + "\n" +\
+       "s tupBel1.scaffold_803   33747 113 +  85889 " + b2_tupBel_s + "\n" +\
+       "q tupBel1.scaffold_803                      " + b2_tupBel_q + "\n" +\
+       "i tupBel1.scaffold_803 C 0 N 0              "
+
+  # define a maf 'file' by stitching the two blocks together
+  maf1 = b1 + "\n\n" + b2
+
+  # abstract repr. of some parts of the above data.
+  b2_hg19 = Sequence("hg19.chr22", b2_hg19_seq, 1772, 1825,
+                     "+", 51302741)
+  b2_panTro = Sequence("panTro2.chrUn", b2_panTro_s, 1169, 1169 + 53,
+                       "+", 58616431 - (1169 + 53),
+                       {maf.QUALITY_META_KEY: b2_panTro_q,
+                        maf.LEFT_STATUS_KEY: "C",
+                        maf.LEFT_COUNT_KEY: 0,
+                        maf.RIGHT_STATUS_KEY: "C",
+                        maf.RIGHT_COUNT_KEY: 0})
+  b2_tarSyr = Sequence("tarSyr1.scaffold_5923", b2_tarSyr_s,
+                       8928 - 2909 - 124, 8928 - 2909, "-",
+                       2909, {maf.QUALITY_META_KEY: b2_tarSyr_q,
+                              maf.LEFT_STATUS_KEY: "C",
+                              maf.LEFT_COUNT_KEY: 0,
+                              maf.RIGHT_STATUS_KEY: "N",
+                              maf.RIGHT_COUNT_KEY: 0})
+
+
 class TestGenomeAlignment(unittest.TestCase):
 
   """Unit tests for genome alignment IO code."""
 
   def setUp(self):
     """Set up a few MAF files with whole genome alignments for testing."""
-    b1_hg19_seq = "atctccaagagggcataaaacac-tgagtaaacagctcttttatatgtgtttcctgga"
-    b1_panTro_s = "atctccaagagggcataaaacac-tgagtaaacagctctt--atatgtgtttcctgga"
-    b1_panTro_q = "99999999999999999999999-9999999999999999--9999999999999999"
-    b1_tarSyr_s = "atctccaagagggctgaaaatgc-caaatga-----------tcacacgtttcctgga"
-    b1_tarSyr_q = "79295966999999999999998-9999799-----------9999999999765775"
-    b1_tupBel_s = "ttcaggaagggggcccaaaacgcttgagtggtcagctctta-ttttgcgtttactgga"
-    b1_tupBel_q = "79648579699867994997775679665662767577569-6998745597677632"
-    b1 = "a score=28680.000000\n" +\
-         "s hg19.chr22             1711 57 + 51304566 " + b1_hg19_seq + "\n" +\
-         "s panTro2.chrUn          1110 59 + 58616431 " + b1_panTro_s + "\n" +\
-         "q panTro2.chrUn                             " + b1_panTro_q + "\n" +\
-         "i panTro2.chrUn          C 0 C 0                          " + "\n" +\
-         "s tarSyr1.scaffold_5923  2859 50 -     8928 " + b1_tarSyr_s + "\n" +\
-         "q tarSyr1.scaffold_5923                     " + b1_tarSyr_q + "\n" +\
-         "i tarSyr1.scaffold_5923  N 0 C 0                          " + "\n" +\
-         "s tupBel1.scaffold_803   33686 61 +   85889 " + b1_tupBel_s + "\n" +\
-         "q tupBel1.scaffold_803                      " + b1_tupBel_q + "\n" +\
-         "i tupBel1.scaffold_803   I 1 C 0                          " + "\n" +\
-         "e mm4.chr6            53310102 58 + 151104725 I"
-    self.b1_hg19 = Sequence("hg19.chr22", b1_hg19_seq, 1711, 1768,
-                            "+", 51302798)
-    self.b1_panTro = Sequence("panTro2.chrUn", b1_panTro_s, 1110, 1169, "+",
-                              58616431 - 1169,
-                              {maf.QUALITY_META_KEY: b1_panTro_q,
-                               maf.LEFT_STATUS_KEY: "C",
-                               maf.LEFT_COUNT_KEY: 0,
-                               maf.RIGHT_STATUS_KEY: "C",
-                               maf.RIGHT_COUNT_KEY: 0})
-    self.b1_tarSyr = Sequence("tarSyr1.scaffold_5923", b1_tarSyr_s,
-                              8928 - 2859 - 50, 8928 - 2859, "-",
-                              2859, {maf.QUALITY_META_KEY: b1_tarSyr_q,
-                                     maf.LEFT_STATUS_KEY: "N",
-                                     maf.LEFT_COUNT_KEY: 0,
-                                     maf.RIGHT_STATUS_KEY: "C",
-                                     maf.RIGHT_COUNT_KEY: 0})
-    self.b1_mm4 = UnknownSequence("mm4.chr6", 53310102, 53310102 + 58, "+",
-                                  151104725 - (53310102 + 58),
-                                  {maf.EMPTY_ALIGNMENT_STATUS_KEY: "I"})
-
-    b2_hg19_seq = "ccttcttttaattaattttgttaagg----gatttcctctagggccactgcacgtca"
-    b2_panTro_s = "ccttcttttaattaattttgttatgg----gatttcgtctagggtcactgcacatca"
-    b2_panTro_q = "99999999999999999999999999----999999099999999999999999999"
-    b2_tarSyr_s = "tcttcttttaattaattttattgagggattgattccttattgggccactacacatta"
-    b2_tarSyr_q = "999999899978999999999999999977989997998678865952859999899"
-    b2_tupBel_s = "cct--gtttaaattactgtattg-gg----gatttcctatagggccgcttctcgtcc"
-    b2_tupBel_q = "666--958759455555746366-68----656846556554745443677468565"
-    b2 = "a score=31725.000000\n" +\
-         "s hg19.chr22             1772 53 + 51304566 " + b2_hg19_seq + "\n" +\
-         "s panTro2.chrUn          1169 53 + 58616431 " + b2_panTro_s + "\n" +\
-         "q panTro2.chrUn                             " + b2_panTro_q + "\n" +\
-         "i panTro2.chrUn          C 0 C 0                          " + "\n" +\
-         "s tarSyr1.scaffold_5923  2909 124 -    8928 " + b2_tarSyr_s + "\n" +\
-         "q tarSyr1.scaffold_5923                     " + b2_tarSyr_q + "\n" +\
-         "i tarSyr1.scaffold_5923  C 0 N 0                          " + "\n" +\
-         "s tupBel1.scaffold_803   33747 113 +  85889 " + b2_tupBel_s + "\n" +\
-         "q tupBel1.scaffold_803                      " + b2_tupBel_q + "\n" +\
-         "i tupBel1.scaffold_803 C 0 N 0              "
-    self.maf1 = b1 + "\n\n" + b2
-    self.b2_hg19 = Sequence("hg19.chr22", b2_hg19_seq, 1772, 1825,
-                            "+", 51302741)
-    self.b2_panTro = Sequence("panTro2.chrUn", b2_panTro_s, 1169, 1169 + 53,
-                              "+", 58616431 - (1169 + 53),
-                              {maf.QUALITY_META_KEY: b2_panTro_q,
-                               maf.LEFT_STATUS_KEY: "C",
-                               maf.LEFT_COUNT_KEY: 0,
-                               maf.RIGHT_STATUS_KEY: "C",
-                               maf.RIGHT_COUNT_KEY: 0})
-    self.b2_tarSyr = Sequence("tarSyr1.scaffold_5923", b2_tarSyr_s,
-                              8928 - 2909 - 124, 8928 - 2909, "-",
-                              2909, {maf.QUALITY_META_KEY: b2_tarSyr_q,
-                                     maf.LEFT_STATUS_KEY: "C",
-                                     maf.LEFT_COUNT_KEY: 0,
-                                     maf.RIGHT_STATUS_KEY: "N",
-                                     maf.RIGHT_COUNT_KEY: 0})
-    self.b1 = b1
-    self.b2 = b2
+    self.b1_hg19 = GATestHelper.b1_hg19
+    self.b1_panTro = GATestHelper.b1_panTro
+    self.b1_tarSyr = GATestHelper.b1_tarSyr
+    self.b1_mm4 = GATestHelper.b1_mm4
+    self.maf1 = GATestHelper.maf1
+    self.b2_hg19 = GATestHelper.b2_hg19
+    self.b2_panTro = GATestHelper.b2_panTro
+    self.b2_tarSyr = GATestHelper.b2_tarSyr
+    self.b1 = GATestHelper.b1
+    self.b2 = GATestHelper.b2
 
   def test_genome_alignment_iterator(self):
     """Unit tests for iterating over a genome alignment in an MAF file."""
