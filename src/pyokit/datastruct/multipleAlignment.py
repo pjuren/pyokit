@@ -1,26 +1,26 @@
 """
-  Date of Creation: 11th Dec 2014
+Date of Creation: 11th Dec 2014.
 
-  Description:   Classes and for representing pairwise and multiple sequence
-                 alignments.
+Description:   Classes and for representing pairwise and multiple sequence
+               alignments.
 
-  Copyright (C) 2010-2014
-  Philip J. Uren,
+Copyright (C) 2010-2014
+Philip J. Uren,
 
-  Authors: Philip J. Uren
+Authors: Philip J. Uren
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 # standard python imports
@@ -36,21 +36,23 @@ from pyokit.datastruct.sequence import InvalidSequenceCoordinatesError
 from pyokit.datastruct.sequence import GAP_CHAR
 from pyokit.util.meta import decorate_all_methods_and_properties
 from pyokit.util.meta import just_in_time_method, just_in_time_property
+from pyokit.common.pyokitError import PyokitError
 
 
 ###############################################################################
 #                             EXCEPTION CLASSES                               #
 ###############################################################################
 
-class MultipleAlignmentError(Exception):
-  """
-  Class representing errors that occur when manipulating pairwise or multiple
-  alignment objects
-  """
+class MultipleAlignmentError(PyokitError):
+
+  """Errors that occur when manipulating pairwise or multiple alig. objects."""
+
   def __init__(self, msg):
+    """Constructor for MSA errors."""
     self.value = msg
 
   def __str__(self):
+    """:return: string representation of this exception."""
     return repr(self.value)
 
 
@@ -59,21 +61,24 @@ class InvalidSequenceError(MultipleAlignmentError):
   """Throw when provided an invalid sequence index into the MSA."""
 
   def __init__(self, msg):
+    """Constructor for InvalidSequenceErrors."""
     self.value = msg
 
   def __str__(self):
+    """:return: string representation of this exception."""
     return repr(self.value)
 
 
 class InvalidAlignmentCoordinatesError(MultipleAlignmentError):
-  """
-  Thrown when providing invalid coordinates into the multiple alignment or a
-  sequence within it.
-  """
+
+  """Thrown when providing invalid coords. into an MSA or a sequence in it."""
+
   def __init__(self, msg):
+    """Constructor for InvalidAlignmentCoordinatesErrors."""
     self.value = msg
 
   def __str__(self):
+    """:return: string representation of this exception."""
     return repr(self.value)
 
 
@@ -100,22 +105,29 @@ class MultipleSequenceAlignment(object):
   :param sequences: a list of sequence objects; all have to be the same length
   """
 
-  def __init__(self, sequences, meta_data=None):
+  def __init__(self, sequences, meta_data=None, permit_one_seq=True):
     """Constructor for MSAs; see class docstring for param descriptions."""
     # must get at least 2 sequences
-    if len(sequences) < 2:
-      raise MultipleAlignmentError("Constructing multiple alignment object " +
-                                   "failed; expected at least 2 sequences, " +
-                                   "but found only " + str(len(sequences)))
+    if len(sequences) == 0:
+      msg = "Constructing multiple alignment object failed; no sequences"
+      raise MultipleAlignmentError(msg)
+    if len(sequences) == 1 and not permit_one_seq:
+      msg = "Constructing multiple alignment object failed; expected at " +\
+            "least 2 sequences, found one sequence: " +\
+            str(sequences[0].name) + " --> " + str(sequences[0].sequenceData)
+      raise MultipleAlignmentError(msg)
 
     # make sure they're all the same length
     lengths = set()
     for s in sequences:
+      if isinstance(s, UnknownSequence):
+        continue
       lengths.add(len(s))
     if len(lengths) != 1:
-      raise MultipleAlignmentError("Invalid multiple alignment, sequences "
-                                   "have different lengths: '" +
-                                   ", ".join(lengths))
+      msg = "Invalid multiple alignment, sequences have different lengths: " +\
+            ", ".join([str(x) for x in lengths]) + "; sequences are " +\
+            ",".join(str(x.sequenceData) for x in sequences)
+      raise MultipleAlignmentError(msg)
     self.length = list(lengths)[0]
 
     # internally we store the sequences in a dictionary indexed by seq name
@@ -300,7 +312,7 @@ class MultipleSequenceAlignment(object):
         break
       if num_non_gaps > start - s_start:  # within ROI still
         if seq[i] != GAP_CHAR:
-          if current_start == None and current_end == None:
+          if current_start is None and current_end is None:
             current_start = i
             current_end = i + 1
           else:
@@ -320,9 +332,7 @@ class MultipleSequenceAlignment(object):
     return res
 
   def liftover(self, origin, dest, o_start, o_end, trim=False):
-    """
-    liftover an interval in one sequence of this pairwise alignment to the
-    other.
+    """liftover interval in one seq. of this pairwise alignment to the other.
 
     :param origin:  name of the origin seq (seq the input coordinates are for)
     :param dest:    name of the dest. seq (seq the result will be for)
@@ -345,8 +355,8 @@ class MultipleSequenceAlignment(object):
 ###############################################################################
 
 class PairwiseAlignment(MultipleSequenceAlignment):
-  """
-  An alignment of two sequences (DNA, RNA, protein...).
+
+  """An alignment of two sequences (DNA, RNA, protein...).
 
   :param s1: the first sequence, with gaps
   :param s2: the second sequence, with gaps
@@ -355,22 +365,23 @@ class PairwiseAlignment(MultipleSequenceAlignment):
   """
 
   def __init__(self, s1, s2, meta_data=None):
+    """Constructor for pairwise alig. see class dostring for param details."""
     MultipleSequenceAlignment.__init__(self, [s1, s2], meta_data)
     self.s1_name = s1.name
     self.s2_name = s2.name
 
   @property
   def s1(self):
+    """:return the first sequences in the alignment."""
     return self[self.s1_name]
 
   @property
   def s2(self):
+    """:return the second sequences in the alignment."""
     return self[self.s2_name]
 
   def __str__(self):
-    """
-    return a string representation of this pairwise alignment
-    """
+    """:return: a string representation of this pairwise alignment."""
     return self.to_repeat_masker_string()
 
 
@@ -381,9 +392,10 @@ class PairwiseAlignment(MultipleSequenceAlignment):
 @decorate_all_methods_and_properties(just_in_time_method,
                                      just_in_time_property)
 class JustInTimePairwiseAlignment(PairwiseAlignment):
-  """
-  A pairwise alignment that is loaded just-in-time from some factory object; a
-  common pattern would be to provide an IndexedFile as the factory object
+
+  """A pairwise alignment that is loaded just-in-time from some factory object.
+
+  A common pattern would be to provide an IndexedFile as the factory object
 
   :param factory: any object that implements the subscript operator such that
                   it accept the key as a unique identifier and returns the
@@ -391,7 +403,9 @@ class JustInTimePairwiseAlignment(PairwiseAlignment):
   :param key:     any object which uniquely identifies this pariwise alignment
                   to the factory; i.e. a hash key
   """
+
   def __init__(self, factory, key):
+    """Constructor for JIT pairwise aligs; see class doc. for param details."""
     self.factory = factory
     self.key = key
     self.item = None
@@ -401,11 +415,11 @@ class JustInTimePairwiseAlignment(PairwiseAlignment):
 #                         UNIT TESTS FOR THIS MODULE                          #
 ###############################################################################
 class TestAlignments(unittest.TestCase):
-  def setUp(self):
-    """
-    Set up a few alignments to use in the tests
-    """
 
+  """Unit tests for the multiple alignment module."""
+
+  def setUp(self):
+    """Set up a few alignments to use in the tests."""
     s1 = Sequence("s1", "-TCGCGTAGC---CGC-TAGCTGATGCGAT-CTGA", 100, 129)
     s2 = Sequence("s2", "ATCGCGTAGCTAGCGCG-AGCTG---CGATGCT--", 1000, 1029)
     s3 = Sequence("s3", "ATCGCGTAGCTAGCGCG-AGCTG---CGATGCT--", 969, 998, "-")
@@ -434,10 +448,7 @@ class TestAlignments(unittest.TestCase):
     self.assertEqual(self.pa1.get_column(11), {"s1": "-", "s2": "T"})
 
   def test_sequence_to_alig_coord(self):
-    """
-    test converting co-ordinates for an interval within a component sequence
-    of a pairwise alignment into co-ordinates within the alignment itself
-    """
+    """Test converting sequence coords into alig. coords."""
     # CGTAGC---CGC
     # CGTAGCTAGCGC
     self.assertEqual(self.pa1.sequence_to_alignment_coords("s1", 103, 112),
@@ -460,10 +471,7 @@ class TestAlignments(unittest.TestCase):
     self.assertEqual(r, [(30, 31), (32, 36)])
 
   def test_alig_to_sequence_coords(self):
-    """
-    test converting co-ordinates within an alignment into co-ordinates within
-    one of the sequences.
-    """
+    """Test convert alig coords into sequence coords."""
     #  index 9 --> GC---CGC-T <-- index 18 (intervals are half closed)
     #              GCTAGCGCG- <-- the G is index 981
     self.assertEqual(self.pa1.alignment_to_sequence_coords("s1", 9, 19),
@@ -506,10 +514,7 @@ class TestAlignments(unittest.TestCase):
     self.assertEqual(r, (126, 129))
 
   def test_liftover_coords(self):
-    """
-    test converting cordinates of one sequence in a pairwise alignment into
-    coordinates in the other
-    """
+    """Convert coords of one seq. in pairwise alig. into coords of other."""
     #  103 --> CGTAGC---CGC-T   <-- 112
     # 1014 --> CGTAGCTAGCGCG-   <-- 1016
     #  993 -->                  <-- 981
@@ -528,6 +533,29 @@ class TestAlignments(unittest.TestCase):
     # unless it is entriely outside the sequence
     self.assertRaises(InvalidSequenceCoordinatesError, self.pa1.liftover,
                       "s1", "s2", 95, 99, trim=True)
+
+  def test_failure_on_different_lengths(self):
+    """Test failure when sequences passed to constructor are ragged."""
+    s1 = Sequence("s1", "-TCGCGTAGC---CGC-TAGGATGCGAT-CTGA", 100, 127)
+    s2 = Sequence("s2", "ATCGCGTAGCTAGCGCG-AGCTG---CGATGCT--", 1000, 1029)
+    args = [s1, s2]
+    self.assertRaises(MultipleAlignmentError, MultipleSequenceAlignment, args)
+
+  def test_empty_seq_with_diff_length(self):
+    """Test using set of sequences where an empty seq doesn't match in size."""
+    s1 = Sequence("s1", "-TCGCGTAGC---CGC-TAGCTGATGCGAT-CTGA", 100, 129)
+    s2 = Sequence("s2", "ATCGCGTAGCTAGCGCG-AGCTG---CGATGCT--", 1000, 1029)
+    s3 = UnknownSequence("s3", 25049, 25049 + 1601, "+", 50103)
+    msa = MultipleSequenceAlignment([s1, s2, s3])
+    self.assertEqual(msa.get_column(1), {"s1": "-", "s2": "A"})
+
+  def test_different_ungapped_legnths(self):
+    """Test that we can build an MSA with seqs of diff ungapped length."""
+    s1 = Sequence("s1", "------TCGCGTAGC", 100, 129)
+    s2 = Sequence("s2", "---------CGCAGC", 1000, 1006)
+    s3 = Sequence("s3", "ATCGCGT--------", 120, 127)
+    msa = MultipleSequenceAlignment([s1, s2, s3])
+    self.assertEqual(msa.get_column(7), {"s1": "T", "s2": "-", "s3": "T"})
 
 
 ###############################################################################
