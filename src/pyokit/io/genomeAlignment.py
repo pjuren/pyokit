@@ -98,14 +98,21 @@ def build_genome_alignment_from_file(ga_path, ref_spec, idx_path=None):
 #                                ITERATORS                                    #
 ###############################################################################
 
-def genome_alignment_iterator(fn, reference_species):
+def genome_alignment_iterator(fn, reference_species, index_friendly=False):
   """
   build an iterator for an MAF file of genome alignment blocks.
+
+  :param fn:                 filename or stream-like object to iterate over.
+  :param reference_species:  which species in the alignment should be treated
+                             as the reference?
+  :param index_friendly:     if True, buffering is disabled to support using
+                             the iterator to build an index.
 
   :return an iterator that yields GenomeAlignment objects
   """
   kw_args = {"reference_species": reference_species}
-  for e in maf.maf_iterator(fn, yield_class=GenomeAlignmentBlock,
+  for e in maf.maf_iterator(fn, index_friendly=index_friendly,
+                            yield_class=GenomeAlignmentBlock,
                             yield_kw_args=kw_args):
     yield e
 
