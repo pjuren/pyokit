@@ -182,7 +182,11 @@ class MultipleSequenceAlignment(object):
   def __str__(self):
     """:return: a string representation of the alignment."""
     res = ""
-    for k in self.sequences:
+    keys = self.sequences.keys()
+    for i in range(0, len(keys)):
+      if i != 0:
+        res += "\n"
+      k = keys[i]
       res += str(self.sequences[k])
     return res
 
