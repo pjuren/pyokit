@@ -28,6 +28,7 @@ import unittest
 import StringIO
 
 # pyokit imports
+from pyokit.io.ioError import PyokitIOError
 from pyokit.datastruct.sequence import Sequence
 from pyokit.datastruct.sequence import UnknownSequence
 from pyokit.datastruct.multipleAlignment import MultipleSequenceAlignment
@@ -61,15 +62,16 @@ RIGHT_COUNT_KEY = "RIGHT_COUNT"
 #                             EXCEPTION CLASSES                               #
 ###############################################################################
 
-class MAFError(Exception):
-  """
-  Class representing errors that occur when manipulating pairwise or multiple
-  alignment objects
-  """
+class MAFError(PyokitIOError):
+
+  """Errors that occur when performing IO on .maf format files."""
+
   def __init__(self, msg):
+    """Constructor for MAFErrors."""
     self.value = msg
 
   def __str__(self):
+    """:return: string representation of this MAFError."""
     return repr(self.value)
 
 
@@ -78,8 +80,7 @@ class MAFError(Exception):
 ###############################################################################
 
 def merge_dictionaries(a, b):
-  """
-  """
+  """Merge two dictionaries; duplicate keys get value from b."""
   res = {}
   for k in a:
     res[k] = a[k]
@@ -88,12 +89,39 @@ def merge_dictionaries(a, b):
   return res
 
 
+def __build_sequence(parts):
+  """Build a sequence object using the pre-tokenized parts from a MAF line."""
+  strand = parts[4]
+  seq_length = int(parts[3])
+  total_seq_len = int(parts[5])
+  start = (int(parts[2]) if strand == "+"
+           else total_seq_len - int(parts[2]) - seq_length)
+  end = start + seq_length
+  remain = total_seq_len - end
+  return Sequence(parts[1], parts[6], start, end, strand, remain)
+
+
+def __build_unknown_sequence(parts):
+  """Build unknown seq (e lines) using pre-tokenized parts from MAF line."""
+  strand = parts[4]
+  seq_length = int(parts[3])
+  total_seq_len = int(parts[5])
+  start = (int(parts[2]) if strand == "+"
+           else total_seq_len - int(parts[2]) - seq_length)
+  end = start + seq_length
+  remain = total_seq_len - end
+  return UnknownSequence(parts[1], start, end, strand, remain,
+                         {EMPTY_ALIGNMENT_STATUS_KEY: parts[6]})
+
+
 ###############################################################################
 #                                 ITERATORS                                   #
 ###############################################################################
 
 def maf_iterator(fn, yield_class=MultipleSequenceAlignment, yield_kw_args={}):
   """
+  Iterate of MAF format file and yield <yield_class> objects for each block.
+
   MAF files are arranged in blocks. Each block is a multiple alignment. Within
   a block, the first character of a line indicates what kind of line it is:
 
@@ -164,7 +192,7 @@ def maf_iterator(fn, yield_class=MultipleSequenceAlignment, yield_kw_args={}):
   meta_data = {}
   for line in fh:
     line = line.strip()
-    if line == "":
+    if line == "" or line[0] == "#":
       continue
     parts = line.split()
     line_type = parts[0].strip()
@@ -182,15 +210,7 @@ def maf_iterator(fn, yield_class=MultipleSequenceAlignment, yield_kw_args={}):
         piv = parts[i].find("=")
         meta_data[parts[i][:piv]] = parts[i][piv + 1:]
     elif line_type == S_LINE:
-      strand = parts[4]
-      seq_length = int(parts[3])
-      total_seq_len = int(parts[5])
-      start = (int(parts[2]) if strand == "+"
-               else total_seq_len - int(parts[2]) - seq_length)
-      end = start + seq_length
-      remain = total_seq_len - end
-      sequences.append(Sequence(parts[1], parts[6], start, end,
-                                strand, remain))
+      sequences.append(__build_sequence(parts))
     elif line_type == I_LINE:
       if len(sequences) < 1:
         raise MAFError("found information line with no preceeding sequence " +
@@ -206,15 +226,7 @@ def maf_iterator(fn, yield_class=MultipleSequenceAlignment, yield_kw_args={}):
       sequences[-1].meta_data[RIGHT_STATUS_KEY] = parts[4]
       sequences[-1].meta_data[RIGHT_COUNT_KEY] = int(parts[5])
     elif line_type == E_LINE:
-      strand = parts[4]
-      seq_length = int(parts[3])
-      total_seq_len = int(parts[5])
-      start = (int(parts[2]) if strand == "+"
-               else total_seq_len - int(parts[2]) - seq_length)
-      end = start + seq_length
-      remain = total_seq_len - end
-      sequences.append(UnknownSequence(parts[1], start, end, strand, remain,
-                                       {EMPTY_ALIGNMENT_STATUS_KEY: parts[6]}))
+      sequences.append(__build_unknown_sequence(parts))
     elif line_type == Q_LINE:
       if len(sequences) < 1:
         raise MAFError("found quality line with no preceeding sequence in " +
@@ -308,7 +320,11 @@ def write_maf(alig_iterable, output_stream):
 ###############################################################################
 
 class TestMAF(unittest.TestCase):
+
+  """Unit tests for MAF IO."""
+
   def setUp(self):
+    """Set up some MAF files to use in unit tests."""
     b1_hg19_seq = "atctccaagagggcataaaacac-tgagtaaacagctcttttatatgtgtttcctgga"
     b1_panTro_s = "atctccaagagggcataaaacac-tgagtaaacagctctt--atatgtgtttcctgga"
     b1_panTro_q = "99999999999999999999999-9999999999999999--9999999999999999"
@@ -386,6 +402,7 @@ class TestMAF(unittest.TestCase):
     self.b2 = b2
 
   def test_maf_iterator(self):
+    """Test iterating over a MAF file."""
     blocks = [x for x in maf_iterator(StringIO.StringIO(self.maf1))]
     self.assertEqual(len(blocks), 2)
     self.assertEqual(blocks[0]["hg19.chr22"], self.b1_hg19)
@@ -401,6 +418,12 @@ class TestMAF(unittest.TestCase):
     out = StringIO.StringIO()
     write_maf(maf_iterator(StringIO.StringIO(self.maf1)), out)
     self.assertEqual(self.maf1.split(), out.getvalue().split())
+
+  def test_maf_comment_lines(self):
+    """Simple test of MAF file that contains comment header line."""
+    head = "##maf version=1 scoring=autoMZ.v1\n"
+    blocks = [x for x in maf_iterator(StringIO.StringIO(head + self.maf1))]
+    self.assertEqual(blocks[0]["hg19.chr22"], self.b1_hg19)
 
 
 ###############################################################################
