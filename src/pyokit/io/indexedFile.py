@@ -146,7 +146,7 @@ class IndexedFile(object):
     self._indexed_filename = filename
     self._indexed_file_handle = handle
 
-  def __build_index(self, until=None, flush=False):
+  def __build_index(self, until=None, flush=False, verbose=False):
     """
     build/expand the index for this file.
 
@@ -159,13 +159,26 @@ class IndexedFile(object):
     assert(self._indexed_file_handle is not None)
     if flush:
       self._index = {}
+
     file_loc = self._indexed_file_handle.tell()
+
+    if verbose:
+      self._indexed_file_handle.seek(0, 2)  # seek to end
+      total = self._indexed_file_handle.tell() - file_loc
+      self._indexed_file_handle.seek(file_loc)  # back to where we were
+      pind = ProgressIndicator(totalToDo=total,
+                               messagePrefix="completed",
+                               messageSuffix="of building out index")
+
     for item in self.record_iterator(self._indexed_file_handle):
       hash_val = self.record_hash_function(item)
       self._index[hash_val] = file_loc
       file_loc = self._indexed_file_handle.tell()
       if until is not None and hash_val == until:
         break
+      if verbose:
+        pind.done = file_loc
+        pind.showProgress()
 
   def __getitem__(self, hash_value):
     """
@@ -218,32 +231,37 @@ class IndexedFile(object):
 
   def __str__(self):
     """
-    Produce a string representation of this index. Use this with caution,
-    as the full index is converted to string, which might be quite large.
+    Produce a string representation of this index.
+
+    Use this with caution, as the full index is converted to string, which
+    might be quite large.
     """
     res = ""
     for key in self._index:
       res += (str(key) + "\t" + str(self._index[key]) + "\n")
     return res
 
-  def write_index(self, fh, to_str_func=str, generate=True):
+  def write_index(self, fh, to_str_func=str, generate=True, verbose=False):
     """
-    Write this index to a file. Only the index dictionary itself is stored,
-    no informatiom about the indexed file, or the open filehandle is retained.
-    The Output format is just a tab-separated file, one record per line. The
-    last column is the file location for the record and all columns before that
-    are collectively considered to be the hash key for that record (which is
-    probably only 1 column, but this allows us to permit tabs in hash keys).
+    Write this index to a file.
+
+    Only the index dictionary itself is stored, no informatiom about the
+    indexed file, or the open filehandle is retained. The Output format is
+    just a tab-separated file, one record per line. The last column is the
+    file location for the record and all columns before that are collectively
+    considered to be the hash key for that record (which is probably only 1
+    column, but this allows us to permit tabs in hash keys).
 
     :param fh:           either a string filename or a stream-like object to
                          write to.
     :param to_str_func:  a function to convert hash values to strings. We'll
                          just use str() if this isn't provided.
-    :generate:           build the full index from the indexed file if it
+    :param generate:     build the full index from the indexed file if it
                          hasn't already been built. This is the default, and
                          almost certainly what you want, otherwise just the
                          part of the index already constructed is written
                          (which might be nothing...)
+    :param verbose:      if True, output progress messages to stderr.
     """
     try:
       handle = open(fh, "w")
@@ -251,7 +269,7 @@ class IndexedFile(object):
       # okay, not a filename, try to treat it as a stream to write to.
       handle = fh
     if generate:
-      self.__build_index()
+      self.__build_index(verbose=verbose)
     for key in self._index:
       handle.write(to_str_func(key) + "\t" + str(self._index[key]) + "\n")
 
