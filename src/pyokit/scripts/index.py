@@ -87,7 +87,7 @@ def index_genome_alignment_by_locus(fh, out_fh, verbose=False):
                                  reference_species="hg19")
   hash_func = JustInTimeGenomeAlignmentBlock.build_hash
   idx = IndexedFile(fh, bound_iter, hash_func)
-  idx.write_index(out_fh)
+  idx.write_index(out_fh, verbose=verbose)
 
 
 def get_indexer_by_filetype(fileType):
