@@ -40,6 +40,7 @@ from pyokit.datastruct.sequence import Sequence
 from pyokit.datastruct.sequence import UnknownSequence
 from pyokit.io import maf
 from pyokit.io.indexedFile import IndexedFile
+from pyokit.util.progressIndicator import ProgressIndicator
 
 
 def genome_alignment_block_hash(b):
@@ -71,7 +72,8 @@ def build_genome_alignment_from_directory(d_name, ref_spec):
   return GenomeAlignment(blocks)
 
 
-def build_genome_alignment_from_file(ga_path, ref_spec, idx_path=None):
+def build_genome_alignment_from_file(ga_path, ref_spec, idx_path=None,
+                                     verbose=False):
   """
   build a genome alignment by loading from a single MAF file.
 
@@ -85,11 +87,20 @@ def build_genome_alignment_from_file(ga_path, ref_spec, idx_path=None):
     bound_iter = functools.partial(genome_alignment_iterator,
                                    reference_species=ref_spec)
     factory = IndexedFile(None, bound_iter, genome_alignment_block_hash)
-    factory.read_index(idx_path, ga_path)
+    factory.read_index(idx_path, ga_path, verbose=verbose)
+
+    pind = None
     for k in factory:
+      if verbose:
+        if pind is None:
+          total = len(factory)
+          pind = ProgressIndicator(totalToDo=total, messagePrefix="completed",
+                                   messageSuffix="building alignment blocks ")
+        pind.done += 1
+        pind.showProgress()
       blocks.append(JustInTimeGenomeAlignmentBlock(factory, k))
   else:
-    for b in genome_alignment_iterator(ga_path, ref_spec):
+    for b in genome_alignment_iterator(ga_path, ref_spec, verbose=verbose):
       blocks.append(b)
   return GenomeAlignment(blocks)
 
@@ -98,7 +109,8 @@ def build_genome_alignment_from_file(ga_path, ref_spec, idx_path=None):
 #                                ITERATORS                                    #
 ###############################################################################
 
-def genome_alignment_iterator(fn, reference_species, index_friendly=False):
+def genome_alignment_iterator(fn, reference_species, index_friendly=False,
+                              verbose=False):
   """
   build an iterator for an MAF file of genome alignment blocks.
 

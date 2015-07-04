@@ -180,6 +180,10 @@ class IndexedFile(object):
         pind.done = file_loc
         pind.showProgress()
 
+  def __len__(self):
+    """:return: the current size (number of keys) in the index."""
+    return len(self._index)
+
   def __getitem__(self, hash_value):
     """
     retrieve the record from the file which hashed to the given value.

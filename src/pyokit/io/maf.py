@@ -202,7 +202,8 @@ def __annotate_sequence_with_quality(seq, q_line_parts):
 ###############################################################################
 
 def maf_iterator(fn, index_friendly=False,
-                 yield_class=MultipleSequenceAlignment, yield_kw_args={}):
+                 yield_class=MultipleSequenceAlignment, yield_kw_args={},
+                 verbose=False):
   """
   Iterate of MAF format file and yield <yield_class> objects for each block.
 
@@ -265,7 +266,7 @@ def maf_iterator(fn, index_friendly=False,
     elif line_type == Q_LINE:
       if len(sequences) < 1:
         raise MAFError("found quality line with no preceeding sequence in " +
-                       " block")
+                       "block")
       __annotate_sequence_with_quality(sequences[-1], parts)
     else:
       raise MAFError("Unknown type of MAF line: " + line)
