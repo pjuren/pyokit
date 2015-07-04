@@ -253,7 +253,7 @@ def getUI(prog_name, args):
   # gotta have two args -- MAF dir/file and BED regions.
   # Input by stdin not allowed
   ui.minArgs = 3
-  ui.maxArgs = 3
+  ui.maxArgs = 4
   ui.addOption(Option(short="o", long="output", argName="filename",
                       description="output to given file, else stdout",
                       required=False, type=str))
@@ -282,7 +282,7 @@ def getUI(prog_name, args):
 #                     COMMAND LINE PROCESSING AND DISPATCH                    #
 ###############################################################################
 
-def main(prog_name, args):
+def main(args, prog_name):
   """Process the command line arguments of this script and dispatch."""
   # get options and arguments
   ui = getUI(prog_name, args)
@@ -317,23 +317,29 @@ def main(prog_name, args):
                        str(windowCentre) + "\n")
       sys.exit(1)
 
-  # get paths for the input file of regions and the genome alignment -- we
-  # requried three args in the command line, so we know these will be here.
+  args = ui.getAllArguments()
+  assert(len(args) == 3 or len(args) == 4)
   region_fn = ui.getArgument(0)
   ga_path = ui.getArgument(1)
-
-  # get the name of the reference species; again, we know it'll be there
-  # since we required at least three args.
-  spec = ui.getArgument(2)
+  index_fn = None
+  if len(args) == 3:
+    spec = ui.getArgument(2)
+  else:
+    index_fn = ui.getArgument(2)
+    spec = ui.getArgument(3)
 
   # build the genome alignment
+  if verbose:
+    sys.stderr.write("Loading alignment... \n")
   if os.path.isdir(ga_path):
     raise ValueError("Sorry, directories for MAF files not supported yet :-(")
-  ga_alig = build_genome_alignment_from_file(ga_path, spec)
+  ga_alig = build_genome_alignment_from_file(ga_path, spec, index_fn, verbose)
+  if verbose:
+    sys.stderr.write("Done\n")
 
   # get the profile and write it to the output stream
   profile = processBED(open(region_fn), ga_alig, window_size, CENTRE, verbose)
-  out_fh.write(", ".join(str(x) for x in profile))
+  out_fh.write("\n\n" + ", ".join(str(x) for x in profile))
 
 
 ###############################################################################
@@ -471,7 +477,7 @@ class TestConservationProfile(unittest.TestCase):
 
     mock_open.side_effect = open_side_effect
 
-    main("cons_profile", ["-w", "4", "-o", "out.txt", "in.bed", "in.maf", "A"])
+    main(["-w", "4", "-o", "out.txt", "in.bed", "in.maf", "A"], "cons_profile")
     vals = [float(x) for x in output_stream.getvalue().split(",")]
     expect = [0.53333333, 0.66666666, 0.83333333, 0.73333333]
     self.assertEqual(len(expect), len(vals))
@@ -484,4 +490,4 @@ class TestConservationProfile(unittest.TestCase):
 ###############################################################################
 
 if __name__ == "__main__":
-    main(sys.argv[0], sys.argv[1:])
+    main(sys.argv[1:], sys.argv[0])

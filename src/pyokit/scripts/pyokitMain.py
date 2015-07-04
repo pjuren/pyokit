@@ -32,6 +32,7 @@ from pyokit.common.pyokitError import PyokitError
 # pyokit imports -- scripts
 from pyokit.scripts import fdr
 from pyokit.scripts import index
+from pyokit.scripts import conservationProfile
 
 
 def main():
@@ -48,6 +49,8 @@ def main():
       fdr.main(sys.argv[2:])
     elif sys.argv[1] == "index":
       index.main(sys.argv[2:], "pyokit index")
+    elif sys.argv[1] == "consprofile":
+      conservationProfile.main(sys.argv[2:], "pyokit consprofile")
     else:
       sys.stderr.write("Pyokit: I don't recognise the option '" + sys.argv[1] +
                        "'.\n")
