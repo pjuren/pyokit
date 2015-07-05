@@ -41,6 +41,7 @@ from pyokit.datastruct.sequence import UnknownSequence
 from pyokit.io import maf
 from pyokit.io.indexedFile import IndexedFile
 from pyokit.util.progressIndicator import ProgressIndicator
+from pyokit.io.ioError import PyokitIOError
 
 
 def genome_alignment_block_hash(b):
@@ -49,26 +50,78 @@ def genome_alignment_block_hash(b):
 
 
 ###############################################################################
+#                MANAGING AN ON-DISK MULTI-FILE GENOME ALIGNMENT              #
+###############################################################################
+def load_just_in_time_genome_alignment(path, ref_spec, extensions=None,
+                                       index_exts=None, fail_no_index=True,
+                                       verbose=False):
+    """Constructor; see class docsstring for param details."""
+    raise PyokitIOError("No index file for ")
+    partial_chrom_files = {}
+    whole_chrom_files = {}
+    for fn in os.listdir(path):
+      pth = os.path.join(path, fn)
+      if os.path.isfile(pth):
+        pass
+
+
+###############################################################################
 #                   BULK LOADING GENOME ALIGNMENTS FROM DISK                  #
 ###############################################################################
 
-def build_genome_alignment_from_directory(d_name, ref_spec):
+def __find_index(alig_file_pth, idx_extensions):
+  """
+  Find an index file for a genome alignment file in the same directory.
+
+  :param alig_file_path: path to the alignment file.
+  :param idx_extensions: check for index files with these extensions
+  :return: path to first index file that matches the name of the alignment file
+           and has one of the specified extensions.
+  """
+  if idx_extensions is None:
+    return None
+  base, ext = os.path.splitext(alig_file_pth)
+  for idx_ext in idx_extensions:
+    candidate = os.path.join(base, idx_ext)
+    if os.path.isfile(candidate):
+      return candidate
+  return None
+
+
+def build_genome_alignment_from_directory(d_name, ref_spec, extensions=None,
+                                          index_exts=None, fail_no_index=False,
+                                          verbose=False):
   """
   build a genome aligment by loading all files in a directory.
 
-  Not recursive (i.e. subdirectories are not parsed). Will attempt to load all
-  files regardless of extension. Expects all files to be MAF format genome
-  alignment files.
+  Fiel without indexes are loaded immediately; those with indexes are
+  loaded on-demand. Not recursive (i.e. subdirectories are not parsed).
 
-  :param d_name:   directory to load from.
-  :param ref_spec: which species in the MAF file is the reference?
+  :param d_name:        directory to load from.
+  :param ref_spec:      which species in the alignemnt files is the reference?
+  :param extensions:    list or set of acceptable extensions; treat any files
+                        with these extensions as part of the alignment. If None,
+                        treat any file which has an extension that is NOT in
+                        index_extensions as part of the alignment.
+  :param index_exts:    treat any files with these extensions as index files.
+  :param fail_no_index: fail if index extensions are provided and an alignment
+                        file has not index file.
   """
+  if index_exts is None and fail_no_index:
+    raise ValueError("Failure on no index specified for loading genome " +
+                     "alignment, but no index extensions specified")
+
   blocks = []
   for fn in os.listdir(d_name):
     pth = os.path.join(d_name, fn)
     if os.path.isfile(pth):
-      for b in genome_alignment_iterator(pth, ref_spec):
-        blocks.append(b)
+      base, ext = os.path.splitext(pth)
+      if extensions is None or ext in extensions:
+        idx_path = __find_index(pth, index_exts)
+        if idx_path is None and fail_no_index:
+          raise PyokitIOError("No index file for " + fn)
+        for b in genome_alignment_iterator(pth, ref_spec, idx_path):
+          blocks.append(b)
   return GenomeAlignment(blocks)
 
 

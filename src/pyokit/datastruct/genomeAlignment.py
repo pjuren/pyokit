@@ -33,6 +33,7 @@ from pyokit.datastruct.intervalTree import IntervalTree
 from pyokit.util.meta import decorate_all_methods
 from pyokit.util.meta import just_in_time_method
 from pyokit.datastruct.sequence import Sequence
+from pyokit.datastruct.genomicInterval import GenomicInterval
 
 
 ###############################################################################
@@ -317,6 +318,59 @@ class GenomeAlignment(object):
                                 "possible; ambiguous alignment of that locus.")
 
     return blocks[0].get_column_absolute(position)
+
+
+###############################################################################
+#                     DISK-CACHED GNEOME ALIGNMENT CLASS                      #
+###############################################################################
+
+class JustInTimeGenomeAlignment(GenomeAlignment):
+
+  """
+  A genome alignment stored on-dsik over many alignment and index files.
+
+  :param whole_chrom_files:   a dictionary indexed by chrom name where each
+                              value is a tuple of (alig, index) where alig and
+                              index are paths to the alignment and index files
+                              respectively. Index can be None, if there is no
+                              index for a given alignment file.
+  :param partial_chrom_files: a dictionary indexed by tuple of (chrom, start,
+                              end). each value is a tuple of (alig, index)
+                              where alig and index are paths to the alignment
+                              and index files respectively. Index can be None,
+                              if there is no index for a given alignment file.
+  """
+
+  def __init__(self, whole_chrom_files, partial_chrom_files, factory):
+    """Constructor; see class docsstring for param details."""
+    self.current = None
+    self.whole_chrom_files = whole_chrom_files
+    self.partial_trees = {}
+    by_chrom = {}
+    for chrom, start, end in partial_chrom_files:
+      if chrom in whole_chrom_files:
+        raise GenomeAlignmentError("Oops")
+      if chrom not in by_chrom:
+        by_chrom[chrom] = []
+      by_chrom[chrom].append(GenomicInterval(chrom, start, end))
+    for chrom in by_chrom:
+      self.partial_trees[chrom] = IntervalTree(by_chrom[chrom])
+    for chrom, start, end in partial_chrom_files:
+      hits = self.partial_trees[chrom].intersecting_interval(start, end)
+      if len(hits) != 1:
+        raise GenomeAlignmentError("Oops")
+
+  def get_blocks(self, chrom, start, end):
+    """
+    Get any blocks in this alignment that overlap the given location.
+
+    :return: the alignment blocks that overlap a given genomic interval;
+             potentially none, in which case the empty list is returned.
+    """
+    raise GenomeAlignmentError("NOT IMPLEMENTED")
+
+  def get_column(self, chrom, position):
+    raise GenomeAlignmentError("NOT IMPLEMENTED")
 
 
 ###############################################################################
