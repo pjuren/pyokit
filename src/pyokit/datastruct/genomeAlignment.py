@@ -321,13 +321,26 @@ class GenomeAlignment(object):
 
 
 ###############################################################################
-#                    JUST-IN-TIME GNEOME ALIGNMENT CLASS                      #
+#              JUST-IN-TIME GNEOME ALIGNMENT CLASS AND HELPERS                #
 ###############################################################################
-
 class JITGenomeAlignmentKeyInterval(object):
+
+  """Tuple of interval covered and correspoding JIT alig key."""
+
   def __init__(self, interval, key):
+    """Constructor. See class docstring for parameter details."""
     self.interval = interval
     self.key = key
+
+  @property
+  def start(self):
+    """:return: the start of the interval."""
+    return self.interval.start
+
+  @property
+  def end(self):
+    """:return the end of the interval."""
+    return self.interval.end
 
 
 class JustInTimeGenomeAlignment(GenomeAlignment):
@@ -353,6 +366,8 @@ class JustInTimeGenomeAlignment(GenomeAlignment):
   def __init__(self, whole_chrom_files, partial_chrom_files, factory):
     """Constructor; see class docsstring for param details."""
     self.current = None
+    self.current_key = None
+    self.factory = factory
     self.whole_chrom_files = whole_chrom_files
     self.partial_trees = {}
     by_chrom = {}
@@ -368,7 +383,7 @@ class JustInTimeGenomeAlignment(GenomeAlignment):
     for chrom in by_chrom:
       self.partial_trees[chrom] = IntervalTree(by_chrom[chrom])
     for chrom, start, end in partial_chrom_files:
-      hits = self.partial_trees[chrom].intersecting_interval(start, end)
+      hits = self.partial_trees[chrom].intersectingInterval(start, end)
       if len(hits) != 1:
         raise GenomeAlignmentError("Oops")
 
@@ -391,7 +406,9 @@ class JustInTimeGenomeAlignment(GenomeAlignment):
     return keys
 
   def __switch_alig(self, key):
-    self.current = self.factory[key]
+    if self.current_key is None or self.current_key != key:
+      self.current = self.factory(key)
+      self.current_key = key
 
   def get_blocks(self, chrom, start, end):
     """
@@ -426,14 +443,25 @@ class TestGenomeAlignmentDS(unittest.TestCase):
                                         Sequence("s3.c2", "-GGTC-GG", 1, 7),
                                         Sequence("s4.c3", "-GGCCAGG", 3, 11)],
                                        "s1")
-    # this block defines an ambiguous alignment of part of block1
-    self.block3 = GenomeAlignmentBlock([Sequence("s1.c1", "GCACGCT", 15, 22),
-                                        Sequence("s2.c8", "GCAC-CT", 25, 31),
-                                        Sequence("s3.c8", "GC-CGCT", 5, 13),
-                                        Sequence("s4.c8", "GC--GCT", 58, 65)],
+    self.block3 = GenomeAlignmentBlock([Sequence("s1.c1", "CA-TAGC-G", 20, 26),
+                                        Sequence("s2.c1", "CAGTAGC-G", 38, 35),
+                                        Sequence("s3.c2", "C-GT-GCAG", 5, 13),
+                                        Sequence("s4.c1", "CACT-GC-G", 58, 65)],
                                        "s1")
+    self.block4 = GenomeAlignmentBlock([Sequence("s1.c1", "CG-TCGA", 51, 57),
+                                        Sequence("s2.c1", "CGCT-GA", 38, 35),
+                                        Sequence("s3.c2", "AGGTCGC", 5, 13),
+                                        Sequence("s4.c1", "CGCT-GA", 58, 65)],
+                                       "s1")
+    # this block defines an ambiguous alignment of part of block1
+    self.block1p = GenomeAlignmentBlock([Sequence("s1.c1", "GCACGCT", 15, 22),
+                                         Sequence("s2.c8", "GCAC-CT", 25, 31),
+                                         Sequence("s3.c8", "GC-CGCT", 5, 13),
+                                         Sequence("s4.c8", "GC--GCT", 58, 65)],
+                                        "s1")
+
     self.ga1 = GenomeAlignment([self.block1, self.block2])
-    self.ga2 = GenomeAlignment([self.block1, self.block2, self.block3])
+    self.ga2 = GenomeAlignment([self.block1, self.block2, self.block1p])
 
   def test_block_get_column(self):
     """Test getting a single column from a block."""
@@ -535,6 +563,31 @@ class TestGenomeAlignmentDS(unittest.TestCase):
 
     # these should fail
     self.assertRaises(ValueError, b1_jit.get_column_absolute, 11)
+
+  def test_jit_genome_alignment(self):
+    """Test just-in-time loading of genome alignments from a factory."""
+    # block1  --> c1:11-18 ; block2 --> c2:21-23
+    # block3  --> c1:20-26 ; block4 --> c1: 51-57
+    # block1p --> c1:15-22
+    lookup = {"f1": GenomeAlignment([self.block1, self.block3]),
+              "f2": GenomeAlignment([self.block4]),
+              "f3": GenomeAlignment([self.block2])}
+
+    def factory(k):
+      return lookup[k]
+
+    whole_chrom = {"c2": "f3"}
+    part_chrom = {("c1", 11, 26): "f1",
+                  ("c1", 51, 57): "f2"}
+    jit_ga = JustInTimeGenomeAlignment(whole_chrom, part_chrom, factory)
+
+    exp1 = {"s1.c1": "T", "s2.c1": "A", "s3.c2": "A", "s4.c1": "A"}
+    self.assertEqual(jit_ga.get_column("c1", 11), exp1)
+    exp2 = {"s1.c2": "C", "s2.c2": "C", "s3.c2": "-", "s4.c3": "-"}
+    self.assertEqual(jit_ga.get_column("c2", 21), exp2)
+    self.assertRaises(NoSuchAlignmentColumnError, jit_ga.get_column, "c1", 10)
+    self.assertRaises(NoSuchAlignmentColumnError, jit_ga.get_column, "c3", 15)
+
 
 ###############################################################################
 #              MAIN ENTRY POINT WHEN RUN AS STAND-ALONE MODULE                #
