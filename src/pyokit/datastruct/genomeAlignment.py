@@ -321,24 +321,33 @@ class GenomeAlignment(object):
 
 
 ###############################################################################
-#                     DISK-CACHED GNEOME ALIGNMENT CLASS                      #
+#                    JUST-IN-TIME GNEOME ALIGNMENT CLASS                      #
 ###############################################################################
+
+class JITGenomeAlignmentKeyInterval(object):
+  def __init__(self, interval, key):
+    self.interval = interval
+    self.key = key
+
 
 class JustInTimeGenomeAlignment(GenomeAlignment):
 
   """
   A genome alignment stored on-dsik over many alignment and index files.
 
+  Only one file will be loaded at a time, and loading will be done
+  just-in-time to satisfy lookups
+
   :param whole_chrom_files:   a dictionary indexed by chrom name where each
-                              value is a tuple of (alig, index) where alig and
-                              index are paths to the alignment and index files
-                              respectively. Index can be None, if there is no
-                              index for a given alignment file.
+                              value is a hash key that uniquely identifies the
+                              corresponding genome alignment to the factory
   :param partial_chrom_files: a dictionary indexed by tuple of (chrom, start,
-                              end). each value is a tuple of (alig, index)
-                              where alig and index are paths to the alignment
-                              and index files respectively. Index can be None,
-                              if there is no index for a given alignment file.
+                              end). each value is a hash key that uniquely
+                              identifies the corresponding genome alignment to
+                              the factory.
+  :param: factory             A callable that accepts the hash keys from
+                              whole_chrom_files and partial_chrom_files and
+                              returns the corresponding genome alignment.
   """
 
   def __init__(self, whole_chrom_files, partial_chrom_files, factory):
@@ -348,17 +357,41 @@ class JustInTimeGenomeAlignment(GenomeAlignment):
     self.partial_trees = {}
     by_chrom = {}
     for chrom, start, end in partial_chrom_files:
+      k = (chrom, start, end)
+      v = partial_chrom_files[k]
       if chrom in whole_chrom_files:
         raise GenomeAlignmentError("Oops")
       if chrom not in by_chrom:
         by_chrom[chrom] = []
-      by_chrom[chrom].append(GenomicInterval(chrom, start, end))
+      interval = GenomicInterval(chrom, start, end)
+      by_chrom[chrom].append(JITGenomeAlignmentKeyInterval(interval, v))
     for chrom in by_chrom:
       self.partial_trees[chrom] = IntervalTree(by_chrom[chrom])
     for chrom, start, end in partial_chrom_files:
       hits = self.partial_trees[chrom].intersecting_interval(start, end)
       if len(hits) != 1:
         raise GenomeAlignmentError("Oops")
+
+  def __get_keys(self, chrom, start, end=None):
+    """
+    Get the hash keys in whole/partial_chrom_files that overlap the interval.
+
+    :return: list of hash keys.
+    """
+    keys = []
+    if chrom in self.whole_chrom_files:
+      keys.append(self.whole_chrom_files[chrom])
+    if chrom in self.partial_trees:
+      if end is not None:
+        hits = self.partial_trees[chrom].intersectingInterval(start, end)
+      else:
+        hits = self.partial_trees[chrom].intersectingPoint(start, end)
+      for hit in hits:
+        keys.append(hit.key)
+    return keys
+
+  def __switch_alig(self, key):
+    self.current = self.factory[key]
 
   def get_blocks(self, chrom, start, end):
     """
@@ -367,10 +400,11 @@ class JustInTimeGenomeAlignment(GenomeAlignment):
     :return: the alignment blocks that overlap a given genomic interval;
              potentially none, in which case the empty list is returned.
     """
-    raise GenomeAlignmentError("NOT IMPLEMENTED")
-
-  def get_column(self, chrom, position):
-    raise GenomeAlignmentError("NOT IMPLEMENTED")
+    blocks = []
+    for k in self.__get_keys(chrom, start, end):
+      self.__switch_alig(k)
+      blocks += self.current.get_blocks(chrom, start, end)
+    return blocks
 
 
 ###############################################################################
