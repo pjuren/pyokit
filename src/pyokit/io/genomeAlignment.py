@@ -35,6 +35,7 @@ import unittest
 # pyokit imports
 from pyokit.datastruct.genomeAlignment import GenomeAlignmentBlock
 from pyokit.datastruct.genomeAlignment import JustInTimeGenomeAlignmentBlock
+from pyokit.datastruct.genomeAlignment import JustInTimeGenomeAlignment
 from pyokit.datastruct.genomeAlignment import GenomeAlignment
 from pyokit.datastruct.sequence import Sequence
 from pyokit.datastruct.sequence import UnknownSequence
@@ -52,17 +53,58 @@ def genome_alignment_block_hash(b):
 ###############################################################################
 #                MANAGING AN ON-DISK MULTI-FILE GENOME ALIGNMENT              #
 ###############################################################################
+def __split_genomic_interval_filename(fn):
+  """
+  Split a filename of the format chrom:start-end.ext or chrom.ext (full chrom).
+
+  :return: tuple of (chrom, start, end) -- 'start' and 'end' are None if not
+           present in the filename.
+  """
+  if fn is None or fn == "":
+    raise ValueError("invalid filename: " + str(fn))
+  parts = fn.split(":")
+  if len(parts) == 1:
+    return (parts[0].strip(), None, None)
+  else:
+    r_parts = parts[1].split("-")
+    if len(r_parts) != 2:
+      raise ValueError("Invalid filename: " + str(fn))
+    return (parts[0].strip(), int(r_parts[0]), int(r_parts[1]))
+
+
 def load_just_in_time_genome_alignment(path, ref_spec, extensions=None,
                                        index_exts=None, fail_no_index=True,
                                        verbose=False):
-    """Constructor; see class docsstring for param details."""
-    raise PyokitIOError("No index file for ")
+    """Load a just-in-time genome alignment from a directory."""
     partial_chrom_files = {}
     whole_chrom_files = {}
     for fn in os.listdir(path):
       pth = os.path.join(path, fn)
       if os.path.isfile(pth):
-        pass
+        base, ext = os.path.splitext(pth)
+        if extensions is None or ext in extensions:
+          idx_path = __find_index(pth, index_exts)
+          if idx_path is None and fail_no_index:
+            raise PyokitIOError("No index file for " + fn)
+          chrom, start, end = __split_genomic_interval_filename(fn)
+          assert((start is None and end is None) or
+                 (start is not None and end is not None))
+          if start is None:
+            if chrom in whole_chrom_files:
+              raise PyokitIOError("multiple files for chrom " + chrom)
+            whole_chrom_files[chrom] = (pth, idx_path)
+          else:
+            k = (chrom, start, end)
+            if k in partial_chrom_files:
+              raise PyokitIOError("multiple files for " + str(k))
+            partial_chrom_files[k] = (pth, idx_path)
+
+    def factory(k):
+      pth, idx = k
+      return build_genome_alignment_from_file(pth, ref_spec, idx, verbose)
+
+    return JustInTimeGenomeAlignment(whole_chrom_files, partial_chrom_files,
+                                     factory)
 
 
 ###############################################################################
@@ -185,6 +227,48 @@ def genome_alignment_iterator(fn, reference_species, index_friendly=False,
 ###############################################################################
 #                                UNIT TESTS                                   #
 ###############################################################################
+
+class WrappedStringIO(object):
+
+  """A wrapper for a stringIO object that tracks of the number of reads."""
+
+  def __init__(self, in_str):
+    """Constructor for the WrappedStringIO class. in_strm = stream to wrap."""
+    self.io = StringIO.StringIO(in_str)
+    self.reads = 0
+
+  def tell(self):
+    """Wrapper for the StringIO.tell function."""
+    return self.io.tell()
+
+  def seek(self, x):
+    """wrapper for the StringIO.seek function."""
+    self.io.seek(x)
+
+  def __iter__(self):
+    """Wrapper for the StringIO iteration functionality."""
+    for l in self.io:
+      self.reads += 1
+      yield l
+    raise StopIteration()
+
+  def read(self):
+    """Wrapper for the StringIO read function."""
+    self.reads += 1
+    return self.io.read()
+
+
+def __build_index(maf_strm, ref_spec):
+  """Build an index for a MAF genome alig file and return StringIO of it."""
+  idx_strm = StringIO.StringIO()
+  bound_iter = functools.partial(genome_alignment_iterator,
+                                 reference_species=ref_spec)
+  hash_func = JustInTimeGenomeAlignmentBlock.build_hash
+  idx = IndexedFile(maf_strm, bound_iter, hash_func)
+  idx.write_index(idx_strm)
+  idx_strm.seek(0)  # seek to the start
+  return idx_strm
+
 
 class GATestHelper(object):
 
@@ -341,6 +425,7 @@ class TestGenomeAlignment(unittest.TestCase):
           args[0] == os.path.join("the_dir", "two.maf")):
         return True
       return False
+
     mock_open.side_effect = open_side_effect
     mock_isfile.side_effect = isfile_side_effect
 
@@ -371,27 +456,6 @@ class TestGenomeAlignment(unittest.TestCase):
   @mock.patch('__builtin__.open')
   def test_build_genome_alignment_from_indexed_file(self, mock_open):
     """Test building GA from single MAF file which is indexed."""
-    class WrappedStringIO(object):
-      def __init__(self, in_str):
-        self.io = StringIO.StringIO(in_str)
-        self.reads = 0
-
-      def tell(self):
-        return self.io.tell()
-
-      def seek(self, x):
-        self.io.seek(x)
-
-      def __iter__(self):
-        for l in self.io:
-          self.reads += 1
-          yield l
-        raise StopIteration()
-
-      def read(self):
-        self.reads += 1
-        return self.io.read()
-
     ga_in_2 = WrappedStringIO(self.maf1)
     idx_strm = StringIO.StringIO()
 
@@ -435,6 +499,49 @@ class TestGenomeAlignment(unittest.TestCase):
     self.assertEqual(b1_res["hg19.chr22"], self.b1_hg19)
     self.assertEqual(b2_res["hg19.chr22"], self.b2_hg19)
     self.assertGreater(ga_in_2.reads, 0)
+
+  @mock.patch('os.listdir')
+  @mock.patch('os.path.isfile')
+  @mock.patch('__builtin__.open')
+  def test_just_in_time_genome_alig(self, mock_open, mock_isfile,
+                                    mock_listdir):
+    """Test building a JIT genome alignment from a directory."""
+    mock_listdir.return_value = ["chr22:1711-1768.maf", "chr22:1772-1825.maf",
+                                 "chr22:1711-1768.idx", "chr22:1772-1825.idx",
+                                 "some_sub_dir"]
+
+    # replace open with mock
+    def open_side_effect(*args, **kwargs):
+      if not isinstance(args[0], basestring):
+        raise TypeError()
+      if args[0] == "chr22:1711-1768.maf":
+        return StringIO.StringIO(self.b1)
+      elif args[0] == "chr22:1772-1825.maf":
+        return StringIO.StringIO(self.b2)
+      elif args[0] == "chr22:1711-1768.idx":
+        return __build_index(StringIO.StringIO(self.b1), "hg19")
+      elif args[0] == "chr22:1772-1825.idx":
+        return __build_index(StringIO.StringIO(self.b2), "hg19")
+      raise IOError("No such file")
+
+    def isfile_side_effect(*args, **kwargs):
+      if (args[0] == os.path.join("the_dir", "chr22:1711-1768.maf") or
+          args[0] == os.path.join("the_dir", "chr22:1772-1825.maf") or
+          args[0] == os.path.join("the_dir", "chr22:1772-1825.idx") or
+          args[0] == os.path.join("the_dir", "chr22:1711-1768.idx")):
+        return True
+      if args[0] == os.path.join("the_dir", "some_sub_dir"):
+        return False
+      raise IOError("No such file")
+
+    mock_open.side_effect = open_side_effect
+    mock_isfile.side_effect = isfile_side_effect
+
+    # b1 -> chr22:1711-1768
+    # b2 -> chr22:1772-1825
+    ga = load_just_in_time_genome_alignment("the_dir", "hg19",
+                                            extensions=["maf"],
+                                            index_exts=[".idx"])
 
 
 ###############################################################################
