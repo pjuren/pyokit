@@ -45,14 +45,37 @@ from pyokit.util.progressIndicator import ProgressIndicator
 from pyokit.io.ioError import PyokitIOError
 
 
-def genome_alignment_block_hash(b):
-  """Hash a genome alignment block to unique ID: its location in the genome."""
-  return b.chrom + "\t" + str(b.start) + "\t" + str(b.end)
-
+# def genome_alignment_block_hash(b):
+#  """Hash a genome alignment block to unique ID: its location in the genome."""
+#  return b.chrom + "\t" + str(b.start) + "\t" + str(b.end)
 
 ###############################################################################
-#                MANAGING AN ON-DISK MULTI-FILE GENOME ALIGNMENT              #
+#                              HELPER FUNCTIONS                               #
 ###############################################################################
+
+def __trim_extension_dot(ext):
+  """trim leading dots from extension."""
+  if ext is None:
+    return None
+  if ext == "":
+    return ""
+  while ext[0] == ".":
+    ext = ext[1:]
+  return ext
+
+
+def __trim_extensions_dot(exts):
+  """trim leading dots from extensions and drop any empty strings."""
+  if exts is None:
+    return None
+  res = []
+  for i in range(0, len(exts)):
+    if exts[i] == "":
+      continue
+    res.append(__trim_extension_dot(exts[i]))
+  return res
+
+
 def __split_genomic_interval_filename(fn):
   """
   Split a filename of the format chrom:start-end.ext or chrom.ext (full chrom).
@@ -62,6 +85,7 @@ def __split_genomic_interval_filename(fn):
   """
   if fn is None or fn == "":
     raise ValueError("invalid filename: " + str(fn))
+  fn = ".".join(fn.split(".")[:-1])
   parts = fn.split(":")
   if len(parts) == 1:
     return (parts[0].strip(), None, None)
@@ -72,16 +96,24 @@ def __split_genomic_interval_filename(fn):
     return (parts[0].strip(), int(r_parts[0]), int(r_parts[1]))
 
 
+###############################################################################
+#                MANAGING AN ON-DISK MULTI-FILE GENOME ALIGNMENT              #
+###############################################################################
+
 def load_just_in_time_genome_alignment(path, ref_spec, extensions=None,
                                        index_exts=None, fail_no_index=True,
                                        verbose=False):
     """Load a just-in-time genome alignment from a directory."""
+    extensions = __trim_extensions_dot(extensions)
+    index_exts = __trim_extensions_dot(index_exts)
+
     partial_chrom_files = {}
     whole_chrom_files = {}
     for fn in os.listdir(path):
       pth = os.path.join(path, fn)
       if os.path.isfile(pth):
         base, ext = os.path.splitext(pth)
+        ext = __trim_extension_dot(ext)
         if extensions is None or ext in extensions:
           idx_path = __find_index(pth, index_exts)
           if idx_path is None and fail_no_index:
@@ -124,7 +156,7 @@ def __find_index(alig_file_pth, idx_extensions):
     return None
   base, ext = os.path.splitext(alig_file_pth)
   for idx_ext in idx_extensions:
-    candidate = os.path.join(base, idx_ext)
+    candidate = base + os.extsep + idx_ext
     if os.path.isfile(candidate):
       return candidate
   return None
@@ -147,7 +179,7 @@ def build_genome_alignment_from_directory(d_name, ref_spec, extensions=None,
                         index_extensions as part of the alignment.
   :param index_exts:    treat any files with these extensions as index files.
   :param fail_no_index: fail if index extensions are provided and an alignment
-                        file has not index file.
+                        file has no index file.
   """
   if index_exts is None and fail_no_index:
     raise ValueError("Failure on no index specified for loading genome " +
@@ -181,7 +213,8 @@ def build_genome_alignment_from_file(ga_path, ref_spec, idx_path=None,
   if (idx_path is not None):
     bound_iter = functools.partial(genome_alignment_iterator,
                                    reference_species=ref_spec)
-    factory = IndexedFile(None, bound_iter, genome_alignment_block_hash)
+    hash_func = JustInTimeGenomeAlignmentBlock.build_hash
+    factory = IndexedFile(None, bound_iter, hash_func)
     factory.read_index(idx_path, ga_path, verbose=verbose)
 
     pind = None
@@ -258,7 +291,7 @@ class WrappedStringIO(object):
     return self.io.read()
 
 
-def __build_index(maf_strm, ref_spec):
+def _build_index(maf_strm, ref_spec):
   """Build an index for a MAF genome alig file and return StringIO of it."""
   idx_strm = StringIO.StringIO()
   bound_iter = functools.partial(genome_alignment_iterator,
@@ -472,13 +505,7 @@ class TestGenomeAlignment(unittest.TestCase):
     mock_open.side_effect = open_side_effect
 
     # build an index and store it in a StringIO object
-    bound_iter = functools.partial(genome_alignment_iterator,
-                                   reference_species="hg19")
-    hash_func = JustInTimeGenomeAlignmentBlock.build_hash
-    idx = IndexedFile(StringIO.StringIO(self.maf1), bound_iter, hash_func)
-    idx.write_index(idx_strm)
-    idx_strm.seek(0)  # seek to the start
-    del idx
+    idx_strm = _build_index(StringIO.StringIO(self.maf1), "hg19")
 
     ga = build_genome_alignment_from_file("one.maf", "hg19", "one.idx")
     b1_res = ga.get_blocks("chr22", 1711, 1720)[0]
@@ -509,30 +536,37 @@ class TestGenomeAlignment(unittest.TestCase):
     mock_listdir.return_value = ["chr22:1711-1768.maf", "chr22:1772-1825.maf",
                                  "chr22:1711-1768.idx", "chr22:1772-1825.idx",
                                  "some_sub_dir"]
+    ga_in_1 = WrappedStringIO(self.b1)
+    ga_in_2 = WrappedStringIO(self.b2)
 
     # replace open with mock
     def open_side_effect(*args, **kwargs):
       if not isinstance(args[0], basestring):
         raise TypeError()
-      if args[0] == "chr22:1711-1768.maf":
-        return StringIO.StringIO(self.b1)
-      elif args[0] == "chr22:1772-1825.maf":
-        return StringIO.StringIO(self.b2)
-      elif args[0] == "chr22:1711-1768.idx":
-        return __build_index(StringIO.StringIO(self.b1), "hg19")
-      elif args[0] == "chr22:1772-1825.idx":
-        return __build_index(StringIO.StringIO(self.b2), "hg19")
-      raise IOError("No such file")
+      if args[0] == os.path.join("the_dir", "chr22:1711-1768.maf"):
+        return ga_in_1
+      elif args[0] == os.path.join("the_dir", "chr22:1772-1825.maf"):
+        return ga_in_2
+      elif args[0] == os.path.join("the_dir", "chr22:1711-1768.idx"):
+        x = _build_index(StringIO.StringIO(self.b1), "hg19")
+        x.seek(0)
+        return x
+      elif args[0] == os.path.join("the_dir", "chr22:1772-1825.idx"):
+        x = _build_index(StringIO.StringIO(self.b2), "hg19")
+        x.seek(0)
+        return x
+      raise IOError("No such file: " + args[0])
 
     def isfile_side_effect(*args, **kwargs):
-      if (args[0] == os.path.join("the_dir", "chr22:1711-1768.maf") or
-          args[0] == os.path.join("the_dir", "chr22:1772-1825.maf") or
-          args[0] == os.path.join("the_dir", "chr22:1772-1825.idx") or
-          args[0] == os.path.join("the_dir", "chr22:1711-1768.idx")):
+      fn = args[0].strip()
+      if (fn == os.path.join("the_dir", "chr22:1711-1768.maf") or
+          fn == os.path.join("the_dir", "chr22:1772-1825.maf") or
+          fn == os.path.join("the_dir", "chr22:1772-1825.idx") or
+          fn == os.path.join("the_dir", "chr22:1711-1768.idx")):
         return True
-      if args[0] == os.path.join("the_dir", "some_sub_dir"):
+      if fn == os.path.join("the_dir", "some_sub_dir"):
         return False
-      raise IOError("No such file")
+      raise IOError("No such file: " + fn)
 
     mock_open.side_effect = open_side_effect
     mock_isfile.side_effect = isfile_side_effect
@@ -541,7 +575,26 @@ class TestGenomeAlignment(unittest.TestCase):
     # b2 -> chr22:1772-1825
     ga = load_just_in_time_genome_alignment("the_dir", "hg19",
                                             extensions=["maf"],
-                                            index_exts=[".idx"])
+                                            index_exts=["idx"])
+    b1_res = ga.get_blocks("chr22", 1711, 1720)[0]
+    b2_res = ga.get_blocks("chr22", 1770, 1780)[0]
+
+    # check that accessing num blocks and getting the blocks gave right answer,
+    # but did not require a read from the MAF file.
+    self.assertEqual(b1_res.chrom, "chr22")
+    self.assertEqual(b2_res.chrom, "chr22")
+    self.assertEqual(b1_res.start, 1711)
+    self.assertEqual(b2_res.start, 1772)
+    self.assertEqual(b1_res.end, 1711 + 57)
+    self.assertEqual(b2_res.end, 1772 + 53)
+    self.assertEqual(ga_in_1.reads, 0)
+    self.assertEqual(ga_in_2.reads, 0)
+
+    # check that full equality is correct, and requires loading from MAF
+    self.assertEqual(b1_res["hg19.chr22"], self.b1_hg19)
+    self.assertEqual(b2_res["hg19.chr22"], self.b2_hg19)
+    self.assertGreater(ga_in_1.reads, 0)
+    self.assertGreater(ga_in_2.reads, 0)
 
 
 ###############################################################################
