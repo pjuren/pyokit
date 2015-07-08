@@ -73,7 +73,8 @@ from pyokit.util.meta import TestMeta
 #                                  SCRIPTS                                    #
 ###############################################################################
 from pyokit.scripts.fdr import TestFDR
-from pyokit.scripts.conservationProfile import TestConservationProfile
+from pyokit.scripts.conservationProfile import TestConservationProfileIndvFiles
+from pyokit.scripts.conservationProfile import TestConservationProfileDirectory
 from pyokit.scripts.index import TestIndex
 
 
@@ -118,7 +119,8 @@ if __name__ == "__main__":
   sys.stderr.write("registered tests in \n")
   sys.stderr.write("  " + str(TestFDR) + "\n")
   sys.stderr.write("  " + str(TestIndex) + "\n")
-  sys.stderr.write("  " + str(TestConservationProfile) + "\n\n")
+  sys.stderr.write("  " + str(TestConservationProfileDirectory) + "\n")
+  sys.stderr.write("  " + str(TestConservationProfileIndvFiles) + "\n\n")
 
   sys.stderr.write("\n\n RUNNING TESTS \n\n")
   unittest.main()
