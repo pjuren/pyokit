@@ -145,7 +145,7 @@ def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType=int,
                                messagePrefix="completed",
                                messageSuffix="of processing " +
                                              filehandle.name)
-    except (AttributeError, OSError) as e :
+    except (AttributeError, OSError) as e:
       sys.stderr.write("BEDIterator -- warning: " +
                        "unable to show progress for stream")
       verbose = False
@@ -162,10 +162,10 @@ def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType=int,
     # sorting by name?
     if ((sortedby == ITERATOR_SORTED_NAME and prev is not None) and
        (prev.name > e.name)):
-      raise BEDError("bed file " + filehandle.name
-                     + " not sorted by element name"
-                     + " found " + e.name + " after "
-                     + prev.name)
+      raise BEDError("bed file " + filehandle.name +
+                     " not sorted by element name" +
+                     " found " + e.name + " after " +
+                     prev.name)
 
     # first item
     if prev is None:
@@ -188,8 +188,11 @@ def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType=int,
           sortedby == ITERATOR_SORTED_END or
           sortedby == ITERATOR_SORTED_CHROM) and\
          (e.chrom in chromsSeen or prev.chrom > e.chrom):
-        raise BEDError("BED file " + filehandle.name +
-                       " not sorted by chrom")
+        try:
+          e_fn = filehandle.name
+        except AttributeError:
+          e_fn = "UNNAMED STREAM"
+        raise BEDError("BED file " + e_fn + " not sorted by chrom")
       chromsSeen.add(e.chrom)
 
     # all good..
