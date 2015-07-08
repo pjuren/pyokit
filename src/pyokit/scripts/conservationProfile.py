@@ -32,21 +32,29 @@ import sys
 import copy
 import unittest
 import StringIO
+import functools
 
 # for testing
 import mock
 
-# pyokit imports
-from pyokit.interface.cli import CLI
-from pyokit.interface.cli import Option
-from pyokit.io.bedIterators import BEDIterator
-from pyokit.datastruct.genomeAlignment import NoSuchAlignmentColumnError
-from pyokit.datastruct.genomeAlignment import NoUniqueColumnError
-from pyokit.datastruct import sequence
-from pyokit.statistics.online import RollingMean
+# pyokit imports -- IO
 from pyokit.io.genomeAlignment import genome_alignment_iterator
 from pyokit.io.genomeAlignment import build_genome_alignment_from_file
+from pyokit.io.genomeAlignment import load_just_in_time_genome_alignment
+from pyokit.io.indexedFile import IndexedFile
+from pyokit.io.bedIterators import BEDIterator
+from pyokit.io.bedIterators import ITERATOR_SORTED_START
+# pyokit improts - UI
+from pyokit.interface.cli import CLI
+from pyokit.interface.cli import Option
+# pyokit imports data structures
+from pyokit.datastruct.genomeAlignment import NoSuchAlignmentColumnError
+from pyokit.datastruct.genomeAlignment import NoUniqueColumnError
+from pyokit.datastruct.genomeAlignment import JustInTimeGenomeAlignmentBlock
+from pyokit.datastruct import sequence
 from pyokit.datastruct.genomeAlignment import GenomeAlignment
+# pyokit imports -- statistics
+from pyokit.statistics.online import RollingMean
 
 
 ###############################################################################
@@ -222,7 +230,8 @@ def processBED(fh, genome_alig, window_size, window_centre, verbose=False):
   while len(mean_profile) < window_size:
     mean_profile.append(RollingMean())
 
-  for e in BEDIterator(fh, verbose=verbose, scoreType=float):
+  for e in BEDIterator(fh, verbose=verbose, scoreType=float,
+                       sortedby=ITERATOR_SORTED_START):
     # figure out which interval to look at...
     transform_locus(e, window_centre, window_size)
     new_profile = conservtion_profile_pid(e, genome_alig)
@@ -264,6 +273,23 @@ def getUI(prog_name, args):
                                   " to use whole interval. " +
                                   "Default " + str(DEFAULT_WINDOW_SIZE),
                       required=False, type=int))
+  ui.addOption(Option(short="e", long="extensions", argName="extension",
+                      description="if genome-alig specifies a directory, " +
+                                  "treat files with this extension as " +
+                                  "alignment files.", required=False,
+                                  type=str))
+  ui.addOption(Option(short="i", long="index-extensions", argName="extension",
+                      description="if genome-alig specifies a directory, " +
+                                  "treat files with this extension as " +
+                                  "index files for alignments.",
+                                  required=False, type=str))
+  ui.addOption(Option(short="f", long="fail-no-index",
+                      description="fail if an alignment file without an " +
+                                  "index is found; otherwise index-less " +
+                                  "alignment files are loaded whole (which " +
+                                  "might be slow if they're large, and " +
+                                  "might require a lot of memory)",
+                      default=False, required=False))
   ui.addOption(Option(short="v", long="verbose",
                       description="output additional messages to stderr " +
                                   "about run (default: " +
@@ -328,17 +354,24 @@ def main(args, prog_name):
     index_fn = ui.getArgument(2)
     spec = ui.getArgument(3)
 
+  extensions = (ui.getValue("extensions").strip().split(",") if
+                ui.optionIsSet("extensions") else None)
+  index_extensions = (ui.getValue("index-extensions").strip().split(",") if
+                      ui.optionIsSet("index-extensions") else None)
+  fail_no_index = ui.optionIsSet("fail-no-index")
+
   # build the genome alignment
-  if verbose:
-    sys.stderr.write("Loading alignment... \n")
-  if os.path.isdir(ga_path):
-    raise ValueError("Sorry, directories for MAF files not supported yet :-(")
-  ga_alig = build_genome_alignment_from_file(ga_path, spec, index_fn, verbose)
+  alig = (load_just_in_time_genome_alignment(ga_path, spec, extensions,
+                                             index_extensions, fail_no_index,
+                                             verbose)
+          if os.path.isdir(ga_path)
+          else build_genome_alignment_from_file(ga_path, spec, index_fn,
+                                                verbose))
   if verbose:
     sys.stderr.write("Done\n")
 
   # get the profile and write it to the output stream
-  profile = processBED(open(region_fn), ga_alig, window_size, CENTRE, verbose)
+  profile = processBED(open(region_fn), alig, window_size, CENTRE, verbose)
   out_fh.write("\n\n" + ", ".join(str(x) for x in profile))
 
 
@@ -346,71 +379,121 @@ def main(args, prog_name):
 #                         UNIT TESTS FOR THIS MODULE                          #
 ###############################################################################
 
-class TestConservationProfile(unittest.TestCase):
+def _build_index(in_strng, ref_spec):
+  idx_strm = StringIO.StringIO()
+  bound_iter = functools.partial(genome_alignment_iterator,
+                                 reference_species=ref_spec)
+  hash_func = JustInTimeGenomeAlignmentBlock.build_hash
+  idx = IndexedFile(StringIO.StringIO(in_strng), bound_iter, hash_func)
+  idx.write_index(idx_strm)
+  idx_strm.seek(0)  # seek to the start
+  return idx_strm
+
+
+def _build_open_side_effect(lookup):
+  def open_side_effect(*args, **kwargs):
+    if not isinstance(args[0], basestring):
+      raise TypeError()
+    fn = args[0].strip()
+    if fn in lookup:
+      return lookup[fn]
+    raise IOError("No such file: " + args[0])
+  return open_side_effect
+
+
+def _build_isfile_side_effect(files_lookup, dirs_lookup):
+  def isfile_side_effect(*args, **kwargs):
+    fn = args[0].strip()
+    if fn in files_lookup:
+      return True
+    if fn in dirs_lookup:
+      return False
+    raise IOError("No such file or directory: " + fn)
+  return isfile_side_effect
+
+
+def _build_isdir_side_effect(files_lookup, dirs_lookup):
+  def isdir_side_effect(*args, **kwargs):
+    fn = args[0].strip()
+    if fn in files_lookup:
+      return False
+    if fn in dirs_lookup:
+      return True
+    raise IOError("No such file or directory: " + fn)
+  return isdir_side_effect
+
+
+class ConsProfileTestHelper(object):
+
+  """A static class containing a set of genome alignment blocks for testing."""
+
+  b1_A_seq = "CTGATGCAGTC-"
+  b1_B_seq = "TA-ATGCA-ATG"
+  b1_B_qul = "gg-ggggg-ggg"
+  b1_C_seq = "TGGT-GCAGTAA"
+  b1_C_qul = "gg-ggggg-ggg"
+  b1 = "a score=28452.00\n" +\
+       "s A.chr1 10 11 + 51323347 " + b1_A_seq + "\n" +\
+       "s B.chr1 50 10 + 51313456 " + b1_B_seq + "\n" +\
+       "q B.chr1                  " + b1_B_qul + "\n" +\
+       "s C.chr2 31 11 + 50314486 " + b1_C_seq + "\n" +\
+       "q C.chr2                  " + b1_C_qul
+  b2_A_seq = "GTAGTAGC-"
+  b2_B_seq = "-CAAT-GCA"
+  b2_B_qul = "-gggg-ggg"
+  b2_C_seq = "-A-TAAGCC"
+  b2_C_qul = "-g-gggggg"
+  b2 = "a score=45845.2456\n" +\
+       "s A.chr1 88 8 + 51323347 " + b2_A_seq + "\n" +\
+       "s B.chr1 7  7 + 51313456 " + b2_B_seq + "\n" +\
+       "q B.chr1                 " + b2_B_qul + "\n" +\
+       "s C.chr1 62 7 + 50314486 " + b2_C_seq + "\n" +\
+       "q C.chr1                 " + b2_C_qul
+  maf1 = b1 + "\n\n" + b2
+
+  b3_A_seq = "G-CCGATGC"
+  b3_B_seq = "ACCC-CTGA"
+  b3_B_qul = "gggg-gggg"
+  b3_C_seq = "ACCC-GGGA"
+  b3_C_qul = "gggg-gggg"
+  b3 = "a score=15489.458\n" +\
+       "s A.chrX 10 8 + 53347 " + b3_A_seq + "\n" +\
+       "s B.chrX 13 8 + 53456 " + b3_B_seq + "\n" +\
+       "q B.chrX              " + b3_B_qul + "\n" +\
+       "s C.chrX 9  8 - 50486 " + b3_C_seq + "\n" +\
+       "q C.chrX              " + b3_C_qul
+  b4_A_seq = "GGAGTTA"
+  b4_B_seq = "-GA-TTA"
+  b4_B_qul = "-gg-ggg"
+  b4 = "a score=14489.458\n" +\
+       "s A.chr7 10 7 + 53347 " + b4_A_seq + "\n" +\
+       "s B.chr7 33 5 + 53456 " + b4_B_seq + "\n" +\
+       "q B.chr7              " + b4_B_qul + "\n" +\
+       "e C.chr7 54  7 + 50486 I"
+  maf2 = b3 + "\n\n" + b4
+
+  roi = "\t".join(["chr1", "14", "18", "X", "0", "+\n"]) +\
+        "\t".join(["chr1", "19", "22", "X", "0", "+\n"]) +\
+        "\t".join(["chr1", "88", "92", "X", "0", "+\n"]) +\
+        "\t".join(["chr1", "94", "98", "X", "0", "-\n"]) +\
+        "\t".join(["chr7", "10", "12", "X", "0", "+\n"]) +\
+        "\t".join(["chrX", "11", "14", "X", "0", "-\n"]) +\
+        "\t".join(["chrX", "15", "18", "X", "0", "+\n"])
+
+
+class TestConservationProfileIndvFiles(unittest.TestCase):
 
   """Unit tests for this script."""
 
   def setUp(self):
     """Set up a genome alignment and set of query regions for testing."""
-    b1_A_seq = "CTGATGCAGTC-"
-    b1_B_seq = "TA-ATGCA-ATG"
-    b1_B_qul = "gg-ggggg-ggg"
-    b1_C_seq = "TGGT-GCAGTAA"
-    b1_C_qul = "gg-ggggg-ggg"
-    b1 = "a score=28452.00\n" +\
-         "s A.chr1 10 11 + 51323347 " + b1_A_seq + "\n" +\
-         "s B.chr1 50 10 + 51313456 " + b1_B_seq + "\n" +\
-         "q B.chr1                  " + b1_B_qul + "\n" +\
-         "s C.chr2 31 11 + 50314486 " + b1_C_seq + "\n" +\
-         "q C.chr2                  " + b1_C_qul
-    b2_A_seq = "GTAGTAGC-"
-    b2_B_seq = "-CAAT-GCA"
-    b2_B_qul = "-gggg-ggg"
-    b2_C_seq = "-A-TAAGCC"
-    b2_C_qul = "-g-gggggg"
-    b2 = "a score=45845.2456\n" +\
-         "s A.chr1 88 8 + 51323347 " + b2_A_seq + "\n" +\
-         "s B.chr1 7  7 + 51313456 " + b2_B_seq + "\n" +\
-         "q B.chr1                 " + b2_B_qul + "\n" +\
-         "s C.chr1 62 7 + 50314486 " + b2_C_seq + "\n" +\
-         "q C.chr1                 " + b2_C_qul
-    self.maf1 = b1 + "\n\n" + b2
-
-    b3_A_seq = "G-CCGATGC"
-    b3_B_seq = "ACCC-CTGA"
-    b3_B_qul = "gggg-gggg"
-    b3_C_seq = "ACCC-GGGA"
-    b3_C_qul = "gggg-gggg"
-    b3 = "a score=15489.458\n" +\
-         "s A.chrX 10 8 + 53347 " + b3_A_seq + "\n" +\
-         "s B.chrX 13 8 + 53456 " + b3_B_seq + "\n" +\
-         "q B.chrX              " + b3_B_qul + "\n" +\
-         "s C.chrX 9  8 - 50486 " + b3_C_seq + "\n" +\
-         "q C.chrX              " + b3_C_qul
-    b4_A_seq = "GGAGTTA"
-    b4_B_seq = "-GA-TTA"
-    b4_B_qul = "-gg-ggg"
-    b4 = "a score=14489.458\n" +\
-         "s A.chr7 10 7 + 53347 " + b4_A_seq + "\n" +\
-         "s B.chr7 33 5 + 53456 " + b4_B_seq + "\n" +\
-         "q B.chr7              " + b4_B_qul + "\n" +\
-         "e C.chr7 54  7 + 50486 I"
-    self.maf2 = b3 + "\n\n" + b4
-
-    self.roi = "chr1" + "\t" + "14" + "\t" + "18" + "\t" + "X" + "\t" + "0" +\
-               "\t" + "+\n" +\
-               "chr1" + "\t" + "19" + "\t" + "22" + "\t" + "X" + "\t" + "0" +\
-               "\t" + "+\n" +\
-               "chr1" + "\t" + "88" + "\t" + "92" + "\t" + "X" + "\t" + "0" +\
-               "\t" + "+\n" +\
-               "chr1" + "\t" + "94" + "\t" + "98" + "\t" + "X" + "\t" + "0" +\
-               "\t" + "-\n" +\
-               "chrX" + "\t" + "11" + "\t" + "14" + "\t" + "X" + "\t" + "0" +\
-               "\t" + "-\n" +\
-               "chrX" + "\t" + "15" + "\t" + "18" + "\t" + "X" + "\t" + "0" +\
-               "\t" + "+\n" +\
-               "chr7" + "\t" + "10" + "\t" + "12" + "\t" + "X" + "\t" + "0" +\
-               "\t" + "+\n"
+    self.b1 = ConsProfileTestHelper.b1
+    self.b2 = ConsProfileTestHelper.b2
+    self.maf1 = ConsProfileTestHelper.maf1
+    self.b3 = ConsProfileTestHelper.b3
+    self.b4 = ConsProfileTestHelper.b4
+    self.maf2 = ConsProfileTestHelper.maf2
+    self.roi = ConsProfileTestHelper.roi
 
   def test_conservation_profile_pid(self):
     """Test getting conservation profiles (PID) from genome alignments."""
@@ -423,9 +506,9 @@ class TestConservationProfile(unittest.TestCase):
                   [0.66666666, 0.33333333, None],
                   [0.33333333, 0.33333333, 0.66666666, 0.33333333],
                   [None, None, 1.00000000, 1.00000000],
+                  [0.33333333, 0.66666666],
                   [0.33333333, 1.00000000, 1.00000000],
-                  [0.66666666, 1.00000000, 0.66666666],
-                  [0.33333333, 0.66666666]]
+                  [0.66666666, 1.00000000, 0.66666666]]
     in_regions = [r for r in BEDIterator(StringIO.StringIO(self.roi))]
     res = [conservtion_profile_pid(r, ga) for r in in_regions]
     self.assertEqual(len(expect_raw), len(res))
@@ -442,9 +525,9 @@ class TestConservationProfile(unittest.TestCase):
                        [0.66666666, 0.33333333, None, None],
                        [0.33333333, 0.33333333, 0.66666666, 0.33333333],
                        [None, None, 1.00000000, 1.00000000],
+                       [None, 0.33333333, 0.66666666, 0.66666666],
                        [0.33333333, 1.00000000, 1.00000000, 0.66666666],
-                       [0.66666666, 1.00000000, 0.66666666, None],
-                       [None, 0.33333333, 0.66666666, 0.66666666]]
+                       [0.66666666, 1.00000000, 0.66666666, None]]
     self.assertEqual(len(expect_adjusted), len(res_adjusted))
     for i in range(0, len(expect_adjusted)):
       self.assertEqual(len(expect_adjusted[i]), len(res_adjusted[i]))
@@ -478,6 +561,63 @@ class TestConservationProfile(unittest.TestCase):
     mock_open.side_effect = open_side_effect
 
     main(["-w", "4", "-o", "out.txt", "in.bed", "in.maf", "A"], "cons_profile")
+    vals = [float(x) for x in output_stream.getvalue().split(",")]
+    expect = [0.53333333, 0.66666666, 0.83333333, 0.73333333]
+    self.assertEqual(len(expect), len(vals))
+    for i in range(0, len(vals)):
+      self.assertAlmostEqual(vals[i], expect[i])
+
+
+class TestConservationProfileDirectory(unittest.TestCase):
+
+  """Test using a directory of files for alignments."""
+
+  def setUp(self):
+    """Prepare a directory structure and files for tests."""
+    self.b1 = ConsProfileTestHelper.b1
+    self.b2 = ConsProfileTestHelper.b2
+    self.b3 = ConsProfileTestHelper.b3
+    self.b4 = ConsProfileTestHelper.b4
+    self.roi = ConsProfileTestHelper.roi
+
+    # set up a directory structure
+    jn = os.path.join
+    self.lk_up = {jn("the_dir", "chr1:10-21.maf"): StringIO.StringIO(self.b1),
+                  jn("the_dir", "chr1:88-96.maf"): StringIO.StringIO(self.b2),
+                  jn("the_dir", "chrX:10-17.maf"): StringIO.StringIO(self.b3),
+                  jn("the_dir", "chr7:10-17.maf"): StringIO.StringIO(self.b4),
+                  jn("the_dir", "chr1:10-21.idx"): _build_index(self.b1, "A"),
+                  jn("the_dir", "chr1:88-96.idx"): _build_index(self.b2, "A"),
+                  jn("the_dir", "chrX:10-17.idx"): _build_index(self.b3, "A"),
+                  jn("the_dir", "chr7:10-17.idx"): _build_index(self.b4, "A"),
+                  "in.bed": StringIO.StringIO(self.roi)}
+
+  @mock.patch('os.path.isdir')
+  @mock.patch('os.listdir')
+  @mock.patch('os.path.isfile')
+  @mock.patch('__builtin__.open')
+  def test_full_UI_just_in_time_genome_alig(self, mock_open, mock_isfile,
+                                            mock_listdir, mock_isdir):
+    """Test using a JIT genome alignment built from a directory."""
+    # b1 --> chr1 10 21  ;  b2 --> chr1 88 96
+    # b3 --> chrX 10 17  ;  b4 --> chr7 10 17
+    mock_listdir.return_value = ["chr1:10-21.maf", "chr1:88-96.maf",
+                                 "chrX:10-17.maf", "chr7:10-17.maf",
+                                 "chr1:10-21.idx", "chr1:88-96.idx",
+                                 "chrX:10-17.idx", "chr7:10-17.idx",
+                                 "some_sub_dir"]
+    output_stream = StringIO.StringIO()
+    dir_lkup = set(["the_dir", os.path.join("the_dir", "some_sub_dir")])
+    file_lkup = self.lk_up
+    output_stream = StringIO.StringIO()
+    file_lkup["out.txt"] = output_stream
+
+    mock_open.side_effect = _build_open_side_effect(file_lkup)
+    mock_isfile.side_effect = _build_isfile_side_effect(file_lkup, dir_lkup)
+    mock_isdir.side_effect = _build_isdir_side_effect(file_lkup, dir_lkup)
+
+    main(["-w", "4", "-o", "out.txt", "-e", ".maf", "-i", ".idx", "in.bed",
+          "the_dir", "A"], "cons_profile")
     vals = [float(x) for x in output_stream.getvalue().split(",")]
     expect = [0.53333333, 0.66666666, 0.83333333, 0.73333333]
     self.assertEqual(len(expect), len(vals))
