@@ -104,6 +104,10 @@ def load_just_in_time_genome_alignment(path, ref_spec, extensions=None,
                                        index_exts=None, fail_no_index=True,
                                        verbose=False):
     """Load a just-in-time genome alignment from a directory."""
+    if index_exts is None and fail_no_index:
+      raise ValueError("Failure on no index specified for loading genome " +
+                       "alignment, but no index extensions specified")
+
     extensions = __trim_extensions_dot(extensions)
     index_exts = __trim_extensions_dot(index_exts)
 
@@ -128,7 +132,9 @@ def load_just_in_time_genome_alignment(path, ref_spec, extensions=None,
           else:
             k = (chrom, start, end)
             if k in partial_chrom_files:
-              raise PyokitIOError("multiple files for " + str(k))
+              other_pth = partial_chrom_files[k][0]
+              raise PyokitIOError("multiple files for " + str(k) + " --> " +
+                                  pth + " and " + other_pth)
             partial_chrom_files[k] = (pth, idx_path)
 
     def factory(k):
