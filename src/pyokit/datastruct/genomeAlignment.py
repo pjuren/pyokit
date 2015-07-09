@@ -25,13 +25,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # standard imports
 import unittest
+import sys
 
 # pyokit imports
 from pyokit.datastruct.multipleAlignment import MultipleSequenceAlignment
+from pyokit.datastruct.multipleAlignment import MissingSequenceHandler
 from pyokit.datastruct.intervalTree import IntervalTree
-from pyokit.util.meta import decorate_all_methods_and_properties
+from pyokit.util.meta import decorate_all_methods
 from pyokit.util.meta import just_in_time_method
-from pyokit.util.meta import just_in_time_property
+from pyokit.datastruct.sequence import Sequence
+from pyokit.datastruct.genomicInterval import GenomicInterval
 
 
 ###############################################################################
@@ -55,25 +58,61 @@ class GenomeAlignmentError(Exception):
     return repr(self.value)
 
 
+class NoSuchAlignmentColumnError(GenomeAlignmentError):
+
+  """Raised when a column is requested that doesn't exist in the alignment."""
+
+  def __init__(self, msg):
+    """
+    Constructor for GenomeAlignmentErrors.
+
+    :param msg: message to display
+    """
+    self.value = msg
+
+
+class NoUniqueColumnError(GenomeAlignmentError):
+
+  """Raised when no unique alignment present (i.e. ambiguous)."""
+
+  def __init__(self, msg):
+    """
+    Constructor for GenomeAlignmentErrors.
+
+    :param msg: message to display
+    """
+    self.value = msg
+
+
 ###############################################################################
 #                              HELPER FUNCTIONS                               #
 ###############################################################################
 
-def _build_trees_by_chrom(blocks):
+def _build_trees_by_chrom(blocks, verbose=False):
   """
   Construct set of interval trees from an iterable of genome alignment blocks.
 
   :return: a dictionary indexed by chromosome name where each entry is an
            interval tree for that chromosome.
   """
+  if verbose:
+    sys.stderr.write("separating blocks by chromosome... ")
   by_chrom = {}
   for b in blocks:
     if b.chrom not in by_chrom:
       by_chrom[b.chrom] = []
     by_chrom[b.chrom].append(b)
+  if verbose:
+    sys.stderr.write("done\n")
+
+  if verbose:
+    sys.stderr.write("building interval trees by chromosome... ")
   res = {}
   for c in by_chrom:
-    res[c] = IntervalTree(by_chrom[c])
+    res[c] = IntervalTree(by_chrom[c], openEnded=True)
+  if verbose:
+    sys.stderr.write("done\n")
+
   return res
 
 
@@ -116,8 +155,13 @@ class GenomeAlignmentBlock(MultipleSequenceAlignment):
       raise GenomeAlignmentError("invalid name for genome alignment block: " +
                                  sequences[ref_index].name + "; must be " +
                                  "formatted assembly.chrom, e.g. hg19.chr1")
-    self.chrom = name_parts[1]
+    self._chrom = name_parts[1]
     self.reference_species = reference_species
+
+  @property
+  def chrom(self):
+    """:return the chromosome the block is on."""
+    return self._chrom
 
   @property
   def start(self):
@@ -129,34 +173,128 @@ class GenomeAlignmentBlock(MultipleSequenceAlignment):
     """:return: the end of the block on the reference genome sequence."""
     return self[self.reference_sequence_name].end
 
+  def get_column_absolute(self, position,
+                          miss_seqs=MissingSequenceHandler.TREAT_AS_ALL_GAPS,
+                          species=None):
+    """
+    return a column from the block as dictionary indexed by seq. name.
+
+    :param position:  the index to extract from the block; must be absolute
+                      coordinates (i.e. between self.start and self.end, not
+                      inclusive of the end).
+    :param miss_seqs: how to treat sequence with no actual sequence data for
+                      the column.
+    :return: dictionary where keys are sequence names and values are
+             nucleotides (raw strings).
+    """
+    if position < self.start or position >= self.end:
+      raise ValueError("getting column at genomic locus " + self._chrom + " " +
+                       str(position) + " failed; locus is outside of genome " +
+                       "alignment block")
+
+    rel_coord = self.sequence_to_alignment_coords(self.reference_sequence_name,
+                                                  position, position + 1)
+    assert(len(rel_coord) == 1)
+    rel_start, rel_end = rel_coord[0]
+    assert(rel_end == rel_start + 1)
+    raw_col = self.get_column(rel_start, miss_seqs)
+
+    if species is None:
+      return raw_col
+    res = {}
+    for k in raw_col:
+      name_parts = k.split(".")
+      if name_parts[0] in species:
+        res[k] = raw_col[k]
+    return res
+
 
 ###############################################################################
 #                   ON-DEMAND GENOME ALIGNMENT BLOCK CLASS                    #
 ###############################################################################
 
-@decorate_all_methods_and_properties(just_in_time_method,
-                                     just_in_time_property)
+@decorate_all_methods(just_in_time_method)
 class JustInTimeGenomeAlignmentBlock(GenomeAlignmentBlock):
 
   """
   Genome alignment block loaded just-in-time from some factory object.
 
   A common pattern would be to provide an IndexedFile as the factory object.
-  Any access to the genome alignment block's methods will trigger loading
-  the full alignment from the factory, otherwise it is never loaded.
+  The start, end and chrom are provided in the key, which should be
+  constructed using the static method build_hash. Accessing these will not
+  trigger loading the whole algnment, but calls to any other methods or
+  properties will cause a full load.
 
   :param factory: any object that implements the subscript operator such that
                   it accept the key as a unique identifier and returns the
-                  alignment block
-  :param key:     any object which uniquely identifies this pariwise alignment
-                  to the factory; i.e. a hash key
+                  alignment block. Probably an IndexedFile, but doesn't have
+                  to be.
+  :param key:     a hash for this genome alignment; build it using the static
+                  method build_hash.
   """
+
+  HASH_SEP = "\t"
 
   def __init__(self, factory, key):
     """Constructor; see class docstring for parameter details."""
     self.factory = factory
     self.key = key
     self.item = None
+
+    self._chrom, self._start, self._end =\
+        JustInTimeGenomeAlignmentBlock.parse_hash(key)
+
+  @property
+  def chrom(self):
+    """:return: the chromosome this block is one in the reference seq."""
+    if self.item is None:
+      return self._chrom
+    else:
+      if self._chrom != self.item.chrom:
+        raise IndexError("Chromosome mismatch between index and genome " +
+                         "alignment block")
+      return self.item.chrom
+
+  @property
+  def start(self):
+    """:return: the genomic start of this alignment block in ref seq."""
+    if self.item is None:
+      return self._start
+    else:
+      if self._start != self.item.start:
+        raise IndexError("Start mismatch between index and genome " +
+                         "alignment block")
+      return self.item.start
+
+  @property
+  def end(self):
+    """:return: the genomic end of this alignment block in ref seq."""
+    if self.item is None:
+      return self._end
+    else:
+      if self._end != self.item.end:
+        raise IndexError("End mismatch between index and genome " +
+                         "alignment block")
+      return self.item.end
+
+  @staticmethod
+  def build_hash(alig):
+    """Build an index hash for an alignment at a given genomic locus."""
+    return JustInTimeGenomeAlignmentBlock.build_hash_raw(alig.chrom,
+                                                         alig.start, alig.end)
+
+  @staticmethod
+  def build_hash_raw(chrom, start, end):
+    """Build a hash string for an alignment from raw chrom, start, end."""
+    return chrom + "\t" + str(start) + "\t" + str(end)
+
+  @staticmethod
+  def parse_hash(h):
+    """Extract the chrom, start and end coordinates from a hash value."""
+    chrom, start, end = h.split(JustInTimeGenomeAlignmentBlock.HASH_SEP)
+    start = int(start)
+    end = int(end)
+    return chrom, start, end
 
 
 ###############################################################################
@@ -171,11 +309,11 @@ class GenomeAlignment(object):
   :param blocks: genome alignment blocks to build the alignment from.
   """
 
-  def __init__(self, blocks):
+  def __init__(self, blocks, verbose=False):
     """Constructor; see class docstring for description of parameters."""
     # a genome alignment stores blocks internally using one an interval tree
     # for each chromosome
-    self.block_trees = _build_trees_by_chrom(blocks)
+    self.block_trees = _build_trees_by_chrom(blocks, verbose)
     self.num_blocks = len(blocks)
 
   def get_blocks(self, chrom, start, end):
@@ -189,15 +327,292 @@ class GenomeAlignment(object):
       return []
     return self.block_trees[chrom].intersectingInterval(start, end)
 
+  def get_column(self, chrom, position,
+                 missing_seqs=MissingSequenceHandler.TREAT_AS_ALL_GAPS,
+                 species=None):
+    """Get the alignment column at the specified chromosome and position."""
+    blocks = self.get_blocks(chrom, position, position + 1)
+    if len(blocks) == 0:
+      raise NoSuchAlignmentColumnError("Request for column on chrom " +
+                                       chrom + " at position " +
+                                       str(position) + " not possible; " +
+                                       "genome alignment not defined at " +
+                                       "that locus.")
+    if len(blocks) > 1:
+      raise NoUniqueColumnError("Request for column on chrom " + chrom +
+                                " at position " + str(position) + "not " +
+                                "possible; ambiguous alignment of that locus.")
+
+    return blocks[0].get_column_absolute(position, missing_seqs, species)
+
+
+###############################################################################
+#              JUST-IN-TIME GNEOME ALIGNMENT CLASS AND HELPERS                #
+###############################################################################
+class JITGenomeAlignmentKeyInterval(object):
+
+  """Tuple of interval covered and correspoding JIT alig key."""
+
+  def __init__(self, interval, key):
+    """Constructor. See class docstring for parameter details."""
+    self.interval = interval
+    self.key = key
+
+  @property
+  def start(self):
+    """:return: the start of the interval."""
+    return self.interval.start
+
+  @property
+  def end(self):
+    """:return the end of the interval."""
+    return self.interval.end
+
+
+class JustInTimeGenomeAlignment(GenomeAlignment):
+
+  """
+  A genome alignment stored on-disk over many alignment and index files.
+
+  Only one file will be loaded at a time, and loading will be done
+  just-in-time to satisfy lookups
+
+  :param whole_chrom_files:   a dictionary indexed by chrom name where each
+                              value is a hash key that uniquely identifies the
+                              corresponding genome alignment to the factory
+  :param partial_chrom_files: a dictionary indexed by tuple of (chrom, start,
+                              end). each value is a hash key that uniquely
+                              identifies the corresponding genome alignment to
+                              the factory.
+  :param: factory             A callable that accepts the hash keys from
+                              whole_chrom_files and partial_chrom_files and
+                              returns the corresponding genome alignment.
+  """
+
+  def __init__(self, whole_chrom_files, partial_chrom_files, factory):
+    """Constructor; see class docsstring for param details."""
+    self.current = None
+    self.current_key = None
+    self.factory = factory
+    self.whole_chrom_files = whole_chrom_files
+    self.partial_trees = {}
+    by_chrom = {}
+    for chrom, start, end in partial_chrom_files:
+      k = (chrom, start, end)
+      v = partial_chrom_files[k]
+      if chrom in whole_chrom_files:
+        raise GenomeAlignmentError("Oops")
+      if chrom not in by_chrom:
+        by_chrom[chrom] = []
+      interval = GenomicInterval(chrom, start, end)
+      by_chrom[chrom].append(JITGenomeAlignmentKeyInterval(interval, v))
+    for chrom in by_chrom:
+      self.partial_trees[chrom] = IntervalTree(by_chrom[chrom])
+    for chrom, start, end in partial_chrom_files:
+      hits = self.partial_trees[chrom].intersectingInterval(start, end)
+      if len(hits) != 1:
+        raise GenomeAlignmentError("Oops")
+
+  def __get_keys(self, chrom, start, end=None):
+    """
+    Get the hash keys in whole/partial_chrom_files that overlap the interval.
+
+    :return: list of hash keys.
+    """
+    keys = []
+    if chrom in self.whole_chrom_files:
+      keys.append(self.whole_chrom_files[chrom])
+    if chrom in self.partial_trees:
+      if end is not None:
+        hits = self.partial_trees[chrom].intersectingInterval(start, end)
+      else:
+        hits = self.partial_trees[chrom].intersectingPoint(start, end)
+      for hit in hits:
+        keys.append(hit.key)
+    return keys
+
+  def __switch_alig(self, key):
+    if self.current_key is None or self.current_key != key:
+      self.current = self.factory(key)
+      self.current_key = key
+
+  def get_blocks(self, chrom, start, end):
+    """
+    Get any blocks in this alignment that overlap the given location.
+
+    :return: the alignment blocks that overlap a given genomic interval;
+             potentially none, in which case the empty list is returned.
+    """
+    blocks = []
+    for k in self.__get_keys(chrom, start, end):
+      self.__switch_alig(k)
+      blocks += self.current.get_blocks(chrom, start, end)
+    return blocks
+
 
 ###############################################################################
 #                                UNIT TESTS                                   #
 ###############################################################################
-class TestGenomeAlignment(unittest.TestCase):
+class TestGenomeAlignmentDS(unittest.TestCase):
 
   """Unit tests for GenomeAlignment module."""
 
-  pass
+  def setUp(self):
+    """Set up some genome alignment blocks and genome alignments for tests."""
+    self.block1 = GenomeAlignmentBlock([Sequence("s1.c1", "TCTCGC-A", 11, 18),
+                                        Sequence("s2.c1", "ACTGGC--", 25, 31),
+                                        Sequence("s3.c2", "ACTGCCTA", 5, 13),
+                                        Sequence("s4.c1", "ACT-GCTA", 58, 65)],
+                                       "s1")
+    self.block2 = GenomeAlignmentBlock([Sequence("s1.c2", "C------G", 21, 23),
+                                        Sequence("s2.c2", "CGGTCAGG", 85, 94),
+                                        Sequence("s3.c2", "-GGTC-GG", 1, 7),
+                                        Sequence("s4.c3", "-GGCCAGG", 3, 11)],
+                                       "s1")
+    self.block3 = GenomeAlignmentBlock([Sequence("s1.c1", "CA-TAGC-G", 20, 26),
+                                        Sequence("s2.c1", "CAGTAGC-G", 38, 35),
+                                        Sequence("s3.c2", "C-GT-GCAG", 5, 13),
+                                        Sequence("s4.c1", "CACT-GC-G", 58, 65)],
+                                       "s1")
+    self.block4 = GenomeAlignmentBlock([Sequence("s1.c1", "CG-TCGA", 51, 57),
+                                        Sequence("s2.c1", "CGCT-GA", 38, 35),
+                                        Sequence("s3.c2", "AGGTCGC", 5, 13),
+                                        Sequence("s4.c1", "CGCT-GA", 58, 65)],
+                                       "s1")
+    # this block defines an ambiguous alignment of part of block1
+    self.block1p = GenomeAlignmentBlock([Sequence("s1.c1", "GCACGCT", 15, 22),
+                                         Sequence("s2.c8", "GCAC-CT", 25, 31),
+                                         Sequence("s3.c8", "GC-CGCT", 5, 13),
+                                         Sequence("s4.c8", "GC--GCT", 58, 65)],
+                                        "s1")
+
+    self.ga1 = GenomeAlignment([self.block1, self.block2])
+    self.ga2 = GenomeAlignment([self.block1, self.block2, self.block1p])
+
+  def test_block_get_column(self):
+    """Test getting a single column from a block."""
+    exp1 = {"s1.c1": "T", "s2.c1": "A", "s3.c2": "A", "s4.c1": "A"}
+    self.assertEqual(self.block1.get_column_absolute(11), exp1)
+    exp2 = {"s1.c1": "A", "s2.c1": "-", "s3.c2": "A", "s4.c1": "A"}
+    self.assertEqual(self.block1.get_column_absolute(17), exp2)
+    self.assertRaises(ValueError, self.block1.get_column_absolute, 18)
+    self.assertRaises(ValueError, self.block1.get_column_absolute, 10)
+    exp3 = {"s1.c2": "G", "s2.c2": "G", "s3.c2": "G", "s4.c3": "G"}
+    self.assertEqual(self.block2.get_column_absolute(22), exp3)
+
+  def test_genome_alig_get_col(self):
+    """Test getting a single column from a genome alignment."""
+    exp1 = {"s1.c1": "T", "s2.c1": "A", "s3.c2": "A", "s4.c1": "A"}
+    self.assertEqual(self.ga1.get_column("c1", 11), exp1)
+    exp2 = {"s1.c2": "C", "s2.c2": "C", "s3.c2": "-", "s4.c3": "-"}
+    self.assertEqual(self.ga1.get_column("c2", 21), exp2)
+    self.assertRaises(NoUniqueColumnError, self.ga2.get_column, "c1", 15)
+    self.assertRaises(NoSuchAlignmentColumnError, self.ga1.get_column,
+                      "c1", 10)
+    self.assertRaises(NoSuchAlignmentColumnError, self.ga1.get_column,
+                      "c3", 15)
+
+  def test_jit_genome_alig_block(self):
+    """Test wrapping a block with JIT wrapper."""
+    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash_raw("chr1", 11, 18)
+    factory = {b1_hash: self.block1}
+    b1_jit = JustInTimeGenomeAlignmentBlock(factory, b1_hash)
+    expect = {"s1.c1": "T", "s2.c1": "A", "s3.c2": "A", "s4.c1": "A"}
+    self.assertEqual(b1_jit.get_column_absolute(11), expect)
+
+  def test_jit_fail_on_mismatch(self):
+    """Test that JIT genome alig blocks fail when index doesn't match."""
+    def chrom_prop_wrapper(b):
+      return b.chrom
+
+    def start_prop_wrapper(b):
+      return b.start
+
+    def end_prop_wrapper(b):
+      return b.end
+
+    # for our sanity, check that it works when everything is given correctly.
+    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash_raw("c1", 11, 18)
+    factory = {b1_hash: self.block1}
+    b1_jit = JustInTimeGenomeAlignmentBlock(factory, b1_hash)
+    self.assertEqual(b1_jit.chrom, "c1")
+    self.assertEqual(b1_jit.start, 11)
+    self.assertEqual(b1_jit.end, 18)
+    b1_jit.get_column_absolute(11)  # this triggers a full load from factory
+    self.assertEqual(b1_jit.chrom, "c1")
+    self.assertEqual(b1_jit.start, 11)
+    self.assertEqual(b1_jit.end, 18)
+
+    # wrong chrom
+    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash_raw("chr2", 11, 18)
+    factory = {b1_hash: self.block1}
+    b1_jit = JustInTimeGenomeAlignmentBlock(factory, b1_hash)
+    self.assertEqual(b1_jit.chrom, "chr2")
+    b1_jit.get_column_absolute(11)  # this triggers a full load from factory
+    self.assertRaises(IndexError, chrom_prop_wrapper, b1_jit)
+    self.assertEqual(b1_jit.start, 11)  # should still be okay though
+    self.assertEqual(b1_jit.end, 18)    # should still be okay though
+
+    # wrong start
+    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash_raw("c1", 10, 18)
+    factory = {b1_hash: self.block1}
+    b1_jit = JustInTimeGenomeAlignmentBlock(factory, b1_hash)
+    self.assertEqual(b1_jit.chrom, "c1")
+    b1_jit.get_column_absolute(11)  # this triggers a full load from factory
+    self.assertRaises(IndexError, start_prop_wrapper, b1_jit)
+    self.assertEqual(b1_jit.chrom, "c1")  # should still be okay though
+    self.assertEqual(b1_jit.end, 18)    # should still be okay though
+
+    # wrong end
+    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash_raw("c1", 11, 17)
+    factory = {b1_hash: self.block1}
+    b1_jit = JustInTimeGenomeAlignmentBlock(factory, b1_hash)
+    self.assertEqual(b1_jit.chrom, "c1")
+    b1_jit.get_column_absolute(11)  # this triggers a full load from factory
+    self.assertRaises(IndexError, end_prop_wrapper, b1_jit)
+    self.assertEqual(b1_jit.start, 11)  # should still be okay though
+    self.assertEqual(b1_jit.chrom, "c1")    # should still be okay though
+
+  def test_jit_genome_alig_block_no_unneeded_loads(self):
+    """Test using a JIT genome alig block without causing a full load."""
+    class SimpleFactory:
+      def __getitem__(self, k):
+        raise ValueError()
+
+    b1_hash = JustInTimeGenomeAlignmentBlock.build_hash_raw("chr1", 11, 18)
+    b1_jit = JustInTimeGenomeAlignmentBlock(SimpleFactory(), b1_hash)
+
+    # these should be fine
+    self.assertEqual(b1_jit.chrom, "chr1")
+    self.assertEqual(b1_jit.start, 11)
+    self.assertEqual(b1_jit.end, 18)
+
+    # these should fail
+    self.assertRaises(ValueError, b1_jit.get_column_absolute, 11)
+
+  def test_jit_genome_alignment(self):
+    """Test just-in-time loading of genome alignments from a factory."""
+    # block1  --> c1:11-18 ; block2 --> c2:21-23
+    # block3  --> c1:20-26 ; block4 --> c1: 51-57
+    # block1p --> c1:15-22
+    lookup = {"f1": GenomeAlignment([self.block1, self.block3]),
+              "f2": GenomeAlignment([self.block4]),
+              "f3": GenomeAlignment([self.block2])}
+
+    def factory(k):
+      return lookup[k]
+
+    whole_chrom = {"c2": "f3"}
+    part_chrom = {("c1", 11, 26): "f1",
+                  ("c1", 51, 57): "f2"}
+    jit_ga = JustInTimeGenomeAlignment(whole_chrom, part_chrom, factory)
+
+    exp1 = {"s1.c1": "T", "s2.c1": "A", "s3.c2": "A", "s4.c1": "A"}
+    self.assertEqual(jit_ga.get_column("c1", 11), exp1)
+    exp2 = {"s1.c2": "C", "s2.c2": "C", "s3.c2": "-", "s4.c3": "-"}
+    self.assertEqual(jit_ga.get_column("c2", 21), exp2)
+    self.assertRaises(NoSuchAlignmentColumnError, jit_ga.get_column, "c1", 10)
+    self.assertRaises(NoSuchAlignmentColumnError, jit_ga.get_column, "c3", 15)
 
 
 ###############################################################################

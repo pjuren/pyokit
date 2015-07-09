@@ -25,8 +25,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # standard python imports
 import sys
 
-# pyokit imports
+# pyokit imports -- exceptions
+from pyokit.io.ioError import PyokitIOError
+from pyokit.common.pyokitError import PyokitError
+
+# pyokit imports -- scripts
 from pyokit.scripts import fdr
+from pyokit.scripts import index
+from pyokit.scripts import conservationProfile
 
 
 def main():
@@ -41,9 +47,16 @@ def main():
   try:
     if sys.argv[1] == "fdr":
       fdr.main(sys.argv[2:])
+    elif sys.argv[1] == "index":
+      index.main(sys.argv[2:], "pyokit index")
+    elif sys.argv[1] == "consprofile":
+      conservationProfile.main(sys.argv[2:], "pyokit consprofile")
     else:
       sys.stderr.write("Pyokit: I don't recognise the option '" + sys.argv[1] +
                        "'.\n")
-  except IOError as e:
+  except (IOError, PyokitIOError) as e:
     sys.stderr.write("Pyokit - Fatal IOError: " + str(e) + "\n")
+    exit(1)
+  except PyokitError as e:
+    sys.stderr.write("Pyokit - Fatal Error: " + str(e) + "\n")
     exit(1)

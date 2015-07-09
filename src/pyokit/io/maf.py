@@ -1,26 +1,26 @@
 """
-  Date of Creation: 22nd May 2015
+Date of Creation: 22nd May 2015.
 
-  Description:   Classes and for representing pairwise and multiple sequence
-                 alignments.
+Description:   Classes and for representing pairwise and multiple sequence
+               alignments.
 
-  Copyright (C) 2010-2015
-  Philip J. Uren,
+Copyright (C) 2010-2015
+Philip J. Uren,
 
-  Authors: Philip J. Uren
+Authors: Philip J. Uren
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 # standard python imports
@@ -28,6 +28,7 @@ import unittest
 import StringIO
 
 # pyokit imports
+from pyokit.io.ioError import PyokitIOError
 from pyokit.datastruct.sequence import Sequence
 from pyokit.datastruct.sequence import UnknownSequence
 from pyokit.datastruct.multipleAlignment import MultipleSequenceAlignment
@@ -61,15 +62,16 @@ RIGHT_COUNT_KEY = "RIGHT_COUNT"
 #                             EXCEPTION CLASSES                               #
 ###############################################################################
 
-class MAFError(Exception):
-  """
-  Class representing errors that occur when manipulating pairwise or multiple
-  alignment objects
-  """
+class MAFError(PyokitIOError):
+
+  """Errors that occur when performing IO on .maf format files."""
+
   def __init__(self, msg):
+    """Constructor for MAFErrors."""
     self.value = msg
 
   def __str__(self):
+    """:return: string representation of this MAFError."""
     return repr(self.value)
 
 
@@ -78,8 +80,7 @@ class MAFError(Exception):
 ###############################################################################
 
 def merge_dictionaries(a, b):
-  """
-  """
+  """Merge two dictionaries; duplicate keys get value from b."""
   res = {}
   for k in a:
     res[k] = a[k]
@@ -88,26 +89,61 @@ def merge_dictionaries(a, b):
   return res
 
 
-###############################################################################
-#                                 ITERATORS                                   #
-###############################################################################
+def __build_sequence(parts):
+  """Build a sequence object using the pre-tokenized parts from a MAF line.
 
-def maf_iterator(fn, yield_class=MultipleSequenceAlignment, yield_kw_args={}):
-  """
-  MAF files are arranged in blocks. Each block is a multiple alignment. Within
-  a block, the first character of a line indicates what kind of line it is:
-
-  a -- gives key-value pair meta data for the block (should only be one of
-       these lines, and it should be the first line in the block)
   s -- a sequence line; has 6 fields in addition to 's':
           * source sequence,
-          * start coordinate of the sequence, Zero-based. If strand is -'ve,
-            this is relative to the start of the reverse complement of the
-            source sequence.
+          * start coord. of seq., zero-based. If -'ve strand, rel to start of
+            rev. comp.
           * ungapped length of the sequence
           * strand
           * src size -- the full length of the source sequence
           * the sequence itself
+  """
+  strand = parts[4]
+  seq_length = int(parts[3])
+  total_seq_len = int(parts[5])
+  start = (int(parts[2]) if strand == "+"
+           else total_seq_len - int(parts[2]) - seq_length)
+  end = start + seq_length
+  remain = total_seq_len - end
+  return Sequence(parts[1], parts[6], start, end, strand, remain)
+
+
+def __build_unknown_sequence(parts):
+  """Build unknown seq (e lines) using pre-tokenized parts from MAF line.
+
+  e -- indicates that there is no aligning sequence for a species, but that
+       there are blocks before and after this one that do align. Format is the
+       same as the 's' lines, but the start and length indicate the start and
+       size of the non-aligning region in the sequence and the sequence is
+       replaced with a status character:
+       C -- the sequence before and after is contiguous implying that this
+            region was either deleted in the source or inserted in the
+            reference sequence.
+       I -- there are non-aligning bases in the source species between
+            chained alignment blocks before and after this block.
+       M -- there are non-aligning bases in the source and more than 90% of
+            them are Ns in the source. The browser shows a pale yellow bar.
+       n -- there are non-aligning bases in the source and the next aligning
+            block starts in a new chromosome or scaffold that is bridged
+            by a chain between still other blocks.
+  """
+  strand = parts[4]
+  seq_length = int(parts[3])
+  total_seq_len = int(parts[5])
+  start = (int(parts[2]) if strand == "+"
+           else total_seq_len - int(parts[2]) - seq_length)
+  end = start + seq_length
+  remain = total_seq_len - end
+  return UnknownSequence(parts[1], start, end, strand, remain,
+                         {EMPTY_ALIGNMENT_STATUS_KEY: parts[6]})
+
+
+def __annotate_sequence_with_context(seq, i_line_parts):
+  """Extract meta data from pre-tokenized maf i-line and populate sequence.
+
   i -- always come after s lines, and contain information about the context of
        the sequence. Five fields are given, not counting the 'i'
           * source sequence (must match s line before this)
@@ -129,24 +165,60 @@ def maf_iterator(fn, yield_class=MultipleSequenceAlignment, yield_kw_args={}):
                  sequence).
           * T -- the sequence in this block has been used before in a previous
                  block (likely a tandem duplication)
-  e -- indicates that there is no aligning sequence for a species, but that
-       there are blocks before and after this one that do align. Format is the
-       same as the 's' lines, but the start and length indicate the start and
-       size of the non-aligning region in the sequence and the sequence is
-       replaced with a status character:
-       C -- the sequence before and after is contiguous implying that this
-            region was either deleted in the source or inserted in the
-            reference sequence.
-       I -- there are non-aligning bases in the source species between
-            chained alignment blocks before and after this block.
-       M -- there are non-aligning bases in the source and more than 90% of
-            them are Ns in the source. The browser shows a pale yellow bar.
-       n -- there are non-aligning bases in the source and the next aligning
-            block starts in a new chromosome or scaffold that is bridged
-            by a chain between still other blocks.
+  """
+  if i_line_parts[1] != seq.name:
+    raise MAFError("Trying to populate meta data for sequence " + seq.name +
+                   " with i-line information for " +
+                   str(i_line_parts[1]) + "; maflormed MAF file?")
+  if len(i_line_parts) != 6:
+    raise MAFError("i-line with " + str(len(i_line_parts)) + "; expected 6.")
+  seq.meta_data[LEFT_STATUS_KEY] = i_line_parts[2]
+  seq.meta_data[LEFT_COUNT_KEY] = int(i_line_parts[3])
+  seq.meta_data[RIGHT_STATUS_KEY] = i_line_parts[4]
+  seq.meta_data[RIGHT_COUNT_KEY] = int(i_line_parts[5])
+
+
+def __annotate_sequence_with_quality(seq, q_line_parts):
+  """Extract meta data from pre-tokenized maf q-line and populate sequence.
+
   q -- quality information about an aligned base in a species. Two fields after
        the 'q': the source name and a single digit for each nucleotide in its
        sequence (0-9 or F, or - to indicate a gap).
+  """
+  if q_line_parts[1] != seq.name:
+    raise MAFError("trying to populate meta data for sequence " + seq.name +
+                   " with q-line information for " +
+                   str(q_line_parts[1]) + "; maflormed MAF file?")
+  if len(q_line_parts[2]) != len(seq):
+    raise MAFError("trying to populate quality meta data for sequence with " +
+                   "length " + str(len(seq)) + " using quality line with " +
+                   "length " + str(len(q_line_parts[2])) + "; malformed " +
+                   "MAF file?")
+  seq.meta_data[QUALITY_META_KEY] = q_line_parts[2]
+
+
+###############################################################################
+#                                 ITERATORS                                   #
+###############################################################################
+
+def maf_iterator(fn, index_friendly=False,
+                 yield_class=MultipleSequenceAlignment, yield_kw_args={},
+                 verbose=False):
+  """
+  Iterate of MAF format file and yield <yield_class> objects for each block.
+
+  MAF files are arranged in blocks. Each block is a multiple alignment. Within
+  a block, the first character of a line indicates what kind of line it is:
+
+  a -- key-value pair meta data for block; one per block, should be first line
+  s -- a sequence line; see __build_sequence() for details.
+  i -- always come after s lines, and contain information about the context of
+       the sequence; see __annotate_sequence_with_context() for details.
+  e -- indicates that there is no aligning sequence for a species, but that
+       there are blocks before and after this one that do align. See
+       __build_unknown_sequence() for details.
+  q -- quality information about an aligned base in a species. See
+       __annotate_sequence_with_quality()
 
   :param yield_class:   yield objects returned by this function/constructor;
                         must accept key-word args of 'sequences' and
@@ -159,12 +231,14 @@ def maf_iterator(fn, yield_class=MultipleSequenceAlignment, yield_kw_args={}):
     fh = open(fn)
   except (TypeError):
     fh = fn
+  if index_friendly:
+    fh = iter(fh.readline, '')
 
   sequences = []
   meta_data = {}
   for line in fh:
     line = line.strip()
-    if line == "":
+    if line == "" or line[0] == "#":
       continue
     parts = line.split()
     line_type = parts[0].strip()
@@ -172,8 +246,7 @@ def maf_iterator(fn, yield_class=MultipleSequenceAlignment, yield_kw_args={}):
       if sequences != []:
         meta_data[SEQ_ORDER_KEY] = [s.name for s in sequences]
         kw_args = merge_dictionaries({"sequences": sequences,
-                                      "meta_data": meta_data},
-                                     yield_kw_args)
+                                      "meta_data": meta_data}, yield_kw_args)
         yield yield_class(**kw_args)
       sequences = []
       meta_data = {}
@@ -182,51 +255,19 @@ def maf_iterator(fn, yield_class=MultipleSequenceAlignment, yield_kw_args={}):
         piv = parts[i].find("=")
         meta_data[parts[i][:piv]] = parts[i][piv + 1:]
     elif line_type == S_LINE:
-      strand = parts[4]
-      seq_length = int(parts[3])
-      total_seq_len = int(parts[5])
-      start = (int(parts[2]) if strand == "+"
-               else total_seq_len - int(parts[2]) - seq_length)
-      end = start + seq_length
-      remain = total_seq_len - end
-      sequences.append(Sequence(parts[1], parts[6], start, end,
-                                strand, remain))
+      sequences.append(__build_sequence(parts))
     elif line_type == I_LINE:
       if len(sequences) < 1:
         raise MAFError("found information line with no preceeding sequence " +
                        "in block")
-      if parts[1] != sequences[-1].name:
-        raise MAFError("found information line for sequence " + str(parts[1]) +
-                       " after sequence " + sequences[-1].name)
-      if len(parts) != 6:
-        raise MAFError("insufficient items on information line '" + line +
-                       "'. Found " + str(len(parts)) + "; expected 6")
-      sequences[-1].meta_data[LEFT_STATUS_KEY] = parts[2]
-      sequences[-1].meta_data[LEFT_COUNT_KEY] = int(parts[3])
-      sequences[-1].meta_data[RIGHT_STATUS_KEY] = parts[4]
-      sequences[-1].meta_data[RIGHT_COUNT_KEY] = int(parts[5])
+      __annotate_sequence_with_context(sequences[-1], parts)
     elif line_type == E_LINE:
-      strand = parts[4]
-      seq_length = int(parts[3])
-      total_seq_len = int(parts[5])
-      start = (int(parts[2]) if strand == "+"
-               else total_seq_len - int(parts[2]) - seq_length)
-      end = start + seq_length
-      remain = total_seq_len - end
-      sequences.append(UnknownSequence(parts[1], start, end, strand, remain,
-                                       {EMPTY_ALIGNMENT_STATUS_KEY: parts[6]}))
+      sequences.append(__build_unknown_sequence(parts))
     elif line_type == Q_LINE:
       if len(sequences) < 1:
         raise MAFError("found quality line with no preceeding sequence in " +
-                       " block")
-      if parts[1] != sequences[-1].name:
-        raise MAFError("found quality line for sequence " + str(parts[1]) +
-                       " after sequence " + sequences[-1].name)
-      if len(parts[2]) != len(sequences[-1]):
-        raise MAFError("found quality line with length " + str(len(parts[2])) +
-                       " but previous sequence has length " +
-                       str(len(sequences[-1])))
-      sequences[-1].meta_data[QUALITY_META_KEY] = parts[2]
+                       "block")
+      __annotate_sequence_with_quality(sequences[-1], parts)
     else:
       raise MAFError("Unknown type of MAF line: " + line)
 
@@ -308,7 +349,11 @@ def write_maf(alig_iterable, output_stream):
 ###############################################################################
 
 class TestMAF(unittest.TestCase):
+
+  """Unit tests for MAF IO."""
+
   def setUp(self):
+    """Set up some MAF files to use in unit tests."""
     b1_hg19_seq = "atctccaagagggcataaaacac-tgagtaaacagctcttttatatgtgtttcctgga"
     b1_panTro_s = "atctccaagagggcataaaacac-tgagtaaacagctctt--atatgtgtttcctgga"
     b1_panTro_q = "99999999999999999999999-9999999999999999--9999999999999999"
@@ -386,6 +431,7 @@ class TestMAF(unittest.TestCase):
     self.b2 = b2
 
   def test_maf_iterator(self):
+    """Test iterating over a MAF file."""
     blocks = [x for x in maf_iterator(StringIO.StringIO(self.maf1))]
     self.assertEqual(len(blocks), 2)
     self.assertEqual(blocks[0]["hg19.chr22"], self.b1_hg19)
@@ -401,6 +447,12 @@ class TestMAF(unittest.TestCase):
     out = StringIO.StringIO()
     write_maf(maf_iterator(StringIO.StringIO(self.maf1)), out)
     self.assertEqual(self.maf1.split(), out.getvalue().split())
+
+  def test_maf_comment_lines(self):
+    """Simple test of MAF file that contains comment header line."""
+    head = "##maf version=1 scoring=autoMZ.v1\n"
+    blocks = [x for x in maf_iterator(StringIO.StringIO(head + self.maf1))]
+    self.assertEqual(blocks[0]["hg19.chr22"], self.b1_hg19)
 
 
 ###############################################################################

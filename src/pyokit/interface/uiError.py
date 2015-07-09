@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
 """
-Date of Creation: 22nd Dec 2014.
+Date of Creation: 3rd July 2015.
 
-Description:   Generic IO error exception classes
+Description:   Generic user interface error exception classes
 
 Copyright (C) 2010-2014
 Philip J. Uren,
@@ -32,14 +32,14 @@ from pyokit.common.pyokitError import PyokitError
 #                            IO EXCEPTION CLASSES                             #
 ###############################################################################
 
-class PyokitIOError(PyokitError):
+class PyokitUIError(PyokitError):
 
-  """Generic pyokit IO error class."""
+  """Generic pyokit UI error class."""
 
   def __init__(self, msg):
-    """Constructor for IO errors."""
+    """Constructor for UI errors."""
     self.value = msg
 
   def __str__(self):
-    """:return: string representation of this IO error."""
+    """:return: string representation of this UI error."""
     return repr(self.value)

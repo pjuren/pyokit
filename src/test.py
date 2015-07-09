@@ -32,6 +32,7 @@ import unittest
 from pyokit.statistics.probability import ProbabilityTests
 from pyokit.statistics.fisher import FisherTests
 from pyokit.statistics.multipleHypothesisTesting import TestMHT
+from pyokit.statistics.online import TestOnlineStats
 
 ###############################################################################
 #                              I/O LIBRARIES                                  #
@@ -56,6 +57,7 @@ from pyokit.io.wigIterators import WigIteratorUnitTests
 from pyokit.datastruct.multipleAlignment import TestAlignments
 from pyokit.datastruct.retrotransposon import TestRetrotransposon
 from pyokit.datastruct.read import NGSReadUnitTests
+from pyokit.datastruct.genomeAlignment import TestGenomeAlignmentDS
 from pyokit.datastruct.intervalTree import *
 from pyokit.datastruct.genomicInterval import TestGenomicInterval
 from pyokit.datastruct.sequence import *
@@ -71,6 +73,9 @@ from pyokit.util.meta import TestMeta
 #                                  SCRIPTS                                    #
 ###############################################################################
 from pyokit.scripts.fdr import TestFDR
+from pyokit.scripts.conservationProfile import TestConservationProfileIndvFiles
+from pyokit.scripts.conservationProfile import TestConservationProfileDirectory
+from pyokit.scripts.index import TestIndex
 
 
 if __name__ == "__main__":
@@ -80,7 +85,8 @@ if __name__ == "__main__":
   sys.stderr.write("  " + str(NGSReadUnitTests) + "\n")
   sys.stderr.write("  " + str(TestAlignments) + "\n")
   sys.stderr.write("  " + str(TestRetrotransposon) + "\n")
-  sys.stderr.write("  " + str(TestGenomicInterval) + "\n\n")
+  sys.stderr.write("  " + str(TestGenomicInterval) + "\n")
+  sys.stderr.write("  " + str(TestGenomeAlignmentDS) + "\n\n")
 
   head = " ------------------------        IO         --------------------- \n"
   sys.stderr.write(head)
@@ -100,6 +106,7 @@ if __name__ == "__main__":
   sys.stderr.write("registered tests in \n")
   sys.stderr.write("  " + str(ProbabilityTests) + "\n")
   sys.stderr.write("  " + str(FisherTests) + "\n")
+  sys.stderr.write("  " + str(TestOnlineStats) + "\n")
   sys.stderr.write("  " + str(TestMHT) + "\n\n")
 
   head = " ------------------------  TESTING AND UTIL  -------------------- \n"
@@ -111,6 +118,9 @@ if __name__ == "__main__":
   sys.stderr.write(head)
   sys.stderr.write("registered tests in \n")
   sys.stderr.write("  " + str(TestFDR) + "\n")
+  sys.stderr.write("  " + str(TestIndex) + "\n")
+  sys.stderr.write("  " + str(TestConservationProfileDirectory) + "\n")
+  sys.stderr.write("  " + str(TestConservationProfileIndvFiles) + "\n\n")
 
   sys.stderr.write("\n\n RUNNING TESTS \n\n")
   unittest.main()

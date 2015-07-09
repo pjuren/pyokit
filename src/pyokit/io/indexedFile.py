@@ -41,10 +41,15 @@ from pyokit.util.progressIndicator import ProgressIndicator
 ###############################################################################
 
 class IndexError(Exception):
+
+  """Exceptions that are raised when manipulating indexed files."""
+
   def __init__(self, msg):
+    """:param msg: message for this exception."""
     self.value = msg
 
   def __str__(self):
+    """:return: a string representation of this exception."""
     return repr(self.value)
 
 
@@ -53,6 +58,7 @@ class IndexError(Exception):
 ###############################################################################
 
 class IndexedFile(object):
+
   """
   An IndexedFile is a data structure that indexes a large file that is made up
   of many individual records. Any file for which an iterator exists to iterate
@@ -106,7 +112,8 @@ class IndexedFile(object):
   @property
   def indexed_file(self):
     """
-    Getter for information on the file that this object indexes
+    Getter for information on the file that this object indexes.
+
     :return: the tuple (filename, handle) -- either of which might be None.
     """
     return (self._indexed_filename, self._indexed_file_handle)
@@ -115,6 +122,7 @@ class IndexedFile(object):
   def indexed_file(self, f):
     """
     Setter for information about the file this object indexes.
+
     :param f: a tuple of (filename, handle), either (or both) of which can be
               None. If the handle is None, but filename is provided, then
               handle is created from the filename. If both handle and filename
@@ -138,7 +146,7 @@ class IndexedFile(object):
     self._indexed_filename = filename
     self._indexed_file_handle = handle
 
-  def __build_index(self, until=None, flush=False):
+  def __build_index(self, until=None, flush=False, verbose=False):
     """
     build/expand the index for this file.
 
@@ -151,13 +159,30 @@ class IndexedFile(object):
     assert(self._indexed_file_handle is not None)
     if flush:
       self._index = {}
+
     file_loc = self._indexed_file_handle.tell()
+
+    if verbose:
+      self._indexed_file_handle.seek(0, 2)  # seek to end
+      total = self._indexed_file_handle.tell() - file_loc
+      self._indexed_file_handle.seek(file_loc)  # back to where we were
+      pind = ProgressIndicator(totalToDo=total,
+                               messagePrefix="completed",
+                               messageSuffix="of building out index")
+
     for item in self.record_iterator(self._indexed_file_handle):
       hash_val = self.record_hash_function(item)
       self._index[hash_val] = file_loc
       file_loc = self._indexed_file_handle.tell()
       if until is not None and hash_val == until:
         break
+      if verbose:
+        pind.done = file_loc
+        pind.showProgress()
+
+  def __len__(self):
+    """:return: the current size (number of keys) in the index."""
+    return len(self._index)
 
   def __getitem__(self, hash_value):
     """
@@ -177,9 +202,9 @@ class IndexedFile(object):
     if hash_value not in self._index:
       fn = (" (" + str(self._indexed_filename) + ") "
             if self._indexed_filename is not None else "")
-      raise IndexError("Unable to retrieve record (" + str(hash_value)
-                       + ") from indexed file" + fn
-                       + "; reason: no such record found")
+      raise IndexError("Unable to retrieve record (" + str(hash_value) +
+                       ") from indexed file" + fn +
+                       "; reason: no such record found")
 
     # we got a match to the hash_value, attempt to seek to this location and
     # return the next element
@@ -191,8 +216,8 @@ class IndexedFile(object):
     except StopIteration:
       fn = (" (for " + str(self._indexed_filename) + ")"
             if self._indexed_filename is None else "")
-      raise IndexError("Fatal error, index" + fn
-                       + " specifies location beyond end of indexed file")
+      raise IndexError("Fatal error, index" + fn +
+                       " specifies location beyond end of indexed file")
     finally:
       self._indexed_file_handle.seek(orig_pos)
 
@@ -210,43 +235,51 @@ class IndexedFile(object):
 
   def __str__(self):
     """
-    Produce a string representation of this index. Use this with caution,
-    as the full index is converted to string, which might be quite large.
+    Produce a string representation of this index.
+
+    Use this with caution, as the full index is converted to string, which
+    might be quite large.
     """
     res = ""
     for key in self._index:
       res += (str(key) + "\t" + str(self._index[key]) + "\n")
     return res
 
-  def write_index(self, fh, to_str_func=str, generate=True):
+  def write_index(self, fh, to_str_func=str, generate=True, verbose=False):
     """
-    Write this index to a file. Only the index dictionary itself is stored,
-    no informatiom about the indexed file, or the open filehandle is retained.
-    The Output format is just a tab-separated file, one record per line. The
-    last column is the file location for the record and all columns before that
-    are collectively considered to be the hash key for that record (which is
-    probably only 1 column, but this allows us to permit tabs in hash keys).
+    Write this index to a file.
+
+    Only the index dictionary itself is stored, no informatiom about the
+    indexed file, or the open filehandle is retained. The Output format is
+    just a tab-separated file, one record per line. The last column is the
+    file location for the record and all columns before that are collectively
+    considered to be the hash key for that record (which is probably only 1
+    column, but this allows us to permit tabs in hash keys).
 
     :param fh:           either a string filename or a stream-like object to
                          write to.
     :param to_str_func:  a function to convert hash values to strings. We'll
                          just use str() if this isn't provided.
-    :generate:           build the full index from the indexed file if it
+    :param generate:     build the full index from the indexed file if it
                          hasn't already been built. This is the default, and
                          almost certainly what you want, otherwise just the
                          part of the index already constructed is written
                          (which might be nothing...)
+    :param verbose:      if True, output progress messages to stderr.
     """
-    handle = fh
     try:
       handle = open(fh, "w")
     except TypeError:
       # okay, not a filename, try to treat it as a stream to write to.
-      pass
+      handle = fh
     if generate:
-      self.__build_index()
+      self.__build_index(verbose=verbose)
     for key in self._index:
       handle.write(to_str_func(key) + "\t" + str(self._index[key]) + "\n")
+
+  def __iter__(self):
+    """:return: an iterator over the index keys."""
+    return self._index.__iter__()
 
   def read_index(self, fh, indexed_fh, rec_iterator=None,
                  rec_hash_func=None, parse_hash=str, flush=True,
@@ -365,15 +398,12 @@ class TestIndexedFile(unittest.TestCase):
 
   def setUp(self):
     """
-    We will test indexing a simple file where records have the following
-    structure:
+    Test indexing a simple file format.
 
-      3 A B C D E
-
+    Records in the indexed files have the following structure: 3 A B C D E
     Here, all data about each record is on a single line -- white-space
     separated. The first item on the data line is a unique ID for the element.
     """
-
     def dummy_iterator(strm):
       for line in strm:
         line = line.strip()
@@ -399,9 +429,7 @@ class TestIndexedFile(unittest.TestCase):
                        "10 T U V W X"
 
   def test_indexedFile_raw(self):
-    """
-    test grabbing an item when nothing has been indexed yet.
-    """
+    """Test grabbing an item when nothing has been indexed yet."""
     index = IndexedFile(StringIO.StringIO(self.test_case_0), self.r_iter,
                         self.r_hash)
     self.assertEqual(index[5], (5, ["U", "V", "W", "X", "Y"]))
@@ -413,18 +441,14 @@ class TestIndexedFile(unittest.TestCase):
     self.assertEqual(index[10], (10, ["T", "U", "V", "W", "X"]))
 
   def test_indexedFile_already_indexed(self):
-    """
-    test grabbing an item that has already been indexed.
-    """
+    """Test grabbing an item that has already been indexed."""
     index = IndexedFile(StringIO.StringIO(self.test_case_0), self.r_iter,
                         self.r_hash)
     self.assertEqual(index[5], (5, ["U", "V", "W", "X", "Y"]))
     self.assertEqual(index[5], (5, ["U", "V", "W", "X", "Y"]))
 
   def test_indexedFile_not_present(self):
-    """
-    test asking for an item that does not exist in the file
-    """
+    """Test asking for an item that does not exist in the file."""
     index = IndexedFile(StringIO.StringIO(self.test_case_0), self.r_iter,
                         self.r_hash)
     self.assertRaises(IndexError, index.__getitem__, 11)
@@ -441,9 +465,7 @@ class TestIndexedFile(unittest.TestCase):
     self.assertEqual(index[6], (6, ["Z", "A", "B", "C", "D"]))
 
   def test_indexedFile_write_read_equality(self):
-    """
-    test writing an index to file, reading it back and checking equality.
-    """
+    """Test writing an index to file, reading it back and checking equality."""
     # create dummy files
     indexed_fh = StringIO.StringIO(self.test_case_0)
     index_fh = StringIO.StringIO()

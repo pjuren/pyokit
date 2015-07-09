@@ -1,9 +1,7 @@
-#!/usr/bin/python
-
 """
-Date of Creation: 22nd Dec 2014.
+Date of Creation: 2nd July 2014.
 
-Description:   Generic IO error exception classes
+Description:   Base exceptions classes for Pyokit.
 
 Copyright (C) 2010-2014
 Philip J. Uren,
@@ -24,22 +22,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-# pyokit imports
-from pyokit.common.pyokitError import PyokitError
 
+class PyokitError(Exception):
 
-###############################################################################
-#                            IO EXCEPTION CLASSES                             #
-###############################################################################
-
-class PyokitIOError(PyokitError):
-
-  """Generic pyokit IO error class."""
+  """The base class for all Pyokit exceptions."""
 
   def __init__(self, msg):
-    """Constructor for IO errors."""
+    """constructor for PyokitExceptions."""
     self.value = msg
 
   def __str__(self):
-    """:return: string representation of this IO error."""
+    """:return: string representation of this exception."""
     return repr(self.value)
