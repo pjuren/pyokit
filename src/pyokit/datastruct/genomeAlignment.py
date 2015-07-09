@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # standard imports
 import unittest
+import sys
 
 # pyokit imports
 from pyokit.datastruct.multipleAlignment import MultipleSequenceAlignment
@@ -87,21 +88,31 @@ class NoUniqueColumnError(GenomeAlignmentError):
 #                              HELPER FUNCTIONS                               #
 ###############################################################################
 
-def _build_trees_by_chrom(blocks):
+def _build_trees_by_chrom(blocks, verbose=False):
   """
   Construct set of interval trees from an iterable of genome alignment blocks.
 
   :return: a dictionary indexed by chromosome name where each entry is an
            interval tree for that chromosome.
   """
+  if verbose:
+    sys.stderr.write("separating blocks by chromosome... ")
   by_chrom = {}
   for b in blocks:
     if b.chrom not in by_chrom:
       by_chrom[b.chrom] = []
     by_chrom[b.chrom].append(b)
+  if verbose:
+    sys.stderr.write("done\n")
+
+  if verbose:
+    sys.stderr.write("building interval trees by chromosome... ")
   res = {}
   for c in by_chrom:
     res[c] = IntervalTree(by_chrom[c], openEnded=True)
+  if verbose:
+    sys.stderr.write("done\n")
+
   return res
 
 
@@ -162,13 +173,17 @@ class GenomeAlignmentBlock(MultipleSequenceAlignment):
     """:return: the end of the block on the reference genome sequence."""
     return self[self.reference_sequence_name].end
 
-  def get_column_absolute(self, position):
+  def get_column_absolute(self, position,
+                          miss_seqs=MissingSequenceHandler.TREAT_AS_ALL_GAPS,
+                          species=None):
     """
     return a column from the block as dictionary indexed by seq. name.
 
-    :param position: the index to extract from the block; must be absolute
-                     coordinates (i.e. between self.start and self.end, not
-                     inclusive of the end).
+    :param position:  the index to extract from the block; must be absolute
+                      coordinates (i.e. between self.start and self.end, not
+                      inclusive of the end).
+    :param miss_seqs: how to treat sequence with no actual sequence data for
+                      the column.
     :return: dictionary where keys are sequence names and values are
              nucleotides (raw strings).
     """
@@ -182,7 +197,16 @@ class GenomeAlignmentBlock(MultipleSequenceAlignment):
     assert(len(rel_coord) == 1)
     rel_start, rel_end = rel_coord[0]
     assert(rel_end == rel_start + 1)
-    return self.get_column(rel_start, MissingSequenceHandler.TREAT_AS_ALL_GAPS)
+    raw_col = self.get_column(rel_start, miss_seqs)
+
+    if species is None:
+      return raw_col
+    res = {}
+    for k in raw_col:
+      name_parts = k.split(".")
+      if name_parts[0] in species:
+        res[k] = raw_col[k]
+    return res
 
 
 ###############################################################################
@@ -285,11 +309,11 @@ class GenomeAlignment(object):
   :param blocks: genome alignment blocks to build the alignment from.
   """
 
-  def __init__(self, blocks):
+  def __init__(self, blocks, verbose=False):
     """Constructor; see class docstring for description of parameters."""
     # a genome alignment stores blocks internally using one an interval tree
     # for each chromosome
-    self.block_trees = _build_trees_by_chrom(blocks)
+    self.block_trees = _build_trees_by_chrom(blocks, verbose)
     self.num_blocks = len(blocks)
 
   def get_blocks(self, chrom, start, end):
@@ -303,7 +327,9 @@ class GenomeAlignment(object):
       return []
     return self.block_trees[chrom].intersectingInterval(start, end)
 
-  def get_column(self, chrom, position):
+  def get_column(self, chrom, position,
+                 missing_seqs=MissingSequenceHandler.TREAT_AS_ALL_GAPS,
+                 species=None):
     """Get the alignment column at the specified chromosome and position."""
     blocks = self.get_blocks(chrom, position, position + 1)
     if len(blocks) == 0:
@@ -317,7 +343,7 @@ class GenomeAlignment(object):
                                 " at position " + str(position) + "not " +
                                 "possible; ambiguous alignment of that locus.")
 
-    return blocks[0].get_column_absolute(position)
+    return blocks[0].get_column_absolute(position, missing_seqs, species)
 
 
 ###############################################################################
@@ -346,7 +372,7 @@ class JITGenomeAlignmentKeyInterval(object):
 class JustInTimeGenomeAlignment(GenomeAlignment):
 
   """
-  A genome alignment stored on-dsik over many alignment and index files.
+  A genome alignment stored on-disk over many alignment and index files.
 
   Only one file will be loaded at a time, and loading will be done
   just-in-time to satisfy lookups

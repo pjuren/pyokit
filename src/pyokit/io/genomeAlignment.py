@@ -236,7 +236,7 @@ def build_genome_alignment_from_file(ga_path, ref_spec, idx_path=None,
   else:
     for b in genome_alignment_iterator(ga_path, ref_spec, verbose=verbose):
       blocks.append(b)
-  return GenomeAlignment(blocks)
+  return GenomeAlignment(blocks, verbose)
 
 
 ###############################################################################

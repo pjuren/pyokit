@@ -53,6 +53,7 @@ from pyokit.datastruct.genomeAlignment import NoUniqueColumnError
 from pyokit.datastruct.genomeAlignment import JustInTimeGenomeAlignmentBlock
 from pyokit.datastruct import sequence
 from pyokit.datastruct.genomeAlignment import GenomeAlignment
+from pyokit.datastruct.multipleAlignment import MissingSequenceHandler
 # pyokit imports -- statistics
 from pyokit.statistics.online import RollingMean
 
@@ -173,13 +174,17 @@ def pid(col, ignore_gaps=False):
   return max(hist.values()) / float(total)
 
 
-def conservtion_profile_pid(region, genome_alignment):
+def conservtion_profile_pid(region, genome_alignment,
+                            mi_seqs=MissingSequenceHandler.TREAT_AS_ALL_GAPS,
+                            species=None):
   """
   build a conservation profile for the given region using the genome alignment.
 
   The scores in the profile will be the percent of bases identical to the
   reference sequence.
 
+  :param miss_seqs: how to treat sequence with no actual sequence data for
+                    the column.
   :return: a list of the same length as the region where each entry is the
            PID at the corresponding locus.
   """
@@ -189,7 +194,7 @@ def conservtion_profile_pid(region, genome_alignment):
   step = 1 if region.isPositiveStrand() else -1
   for i in range(s, e, step):
     try:
-      col = genome_alignment.get_column(region.chrom, i)
+      col = genome_alignment.get_column(region.chrom, i, mi_seqs, species)
       res.append(pid(col))
     except NoSuchAlignmentColumnError:
       res.append(None)
@@ -211,7 +216,9 @@ def merge_profile(mean_profile, new_profile):
 #                             MAIN SCRIPT LOGIC                               #
 ###############################################################################
 
-def processBED(fh, genome_alig, window_size, window_centre, verbose=False):
+def processBED(fh, genome_alig, window_size, window_centre,
+               mi_seqs=MissingSequenceHandler.TREAT_AS_ALL_GAPS, species=None,
+               verbose=False):
   """
   Process BED file, produce profile of conservation using whole genome alig.
 
@@ -222,6 +229,8 @@ def processBED(fh, genome_alig, window_size, window_centre, verbose=False):
   :param window_center: which part of each interval to place at the center
                         of the profile. Acceptable values are in the module
                         constant WINDOW_CENTRE_OPTIONS.
+  :param miss_seqs:     how to treat sequence with no actual sequence data for
+                        the column.
   :param verbose:       if True, output progress messages to stderr.
 
   :return:
@@ -234,7 +243,7 @@ def processBED(fh, genome_alig, window_size, window_centre, verbose=False):
                        sortedby=ITERATOR_SORTED_START):
     # figure out which interval to look at...
     transform_locus(e, window_centre, window_size)
-    new_profile = conservtion_profile_pid(e, genome_alig)
+    new_profile = conservtion_profile_pid(e, genome_alig, mi_seqs, species)
     merge_profile(mean_profile, new_profile)
   return [m.mean for m in mean_profile]
 
@@ -290,6 +299,15 @@ def getUI(prog_name, args):
                                   "might be slow if they're large, and " +
                                   "might require a lot of memory)",
                       default=False, required=False))
+  ui.addOption(Option(short="m", long="missing", argName="strategy",
+                      description="how to treat missing sequences in " +
+                                  "blocks. Options are " +
+                                  ", ".join([str(x.name) for x in
+                                             MissingSequenceHandler]),
+                                  required=False, type=str))
+  ui.addOption(Option(short="s", long="species", argName="species",
+                      description="consider only these species. Default is " +
+                                  "all.", required=False, type=str))
   ui.addOption(Option(short="v", long="verbose",
                       description="output additional messages to stderr " +
                                   "about run (default: " +
@@ -359,6 +377,11 @@ def main(args, prog_name):
   index_extensions = (ui.getValue("index-extensions").strip().split(",") if
                       ui.optionIsSet("index-extensions") else None)
   fail_no_index = ui.optionIsSet("fail-no-index")
+  mi_seqs = (MissingSequenceHandler[ui.getValue("missing")]
+             if ui.optionIsSet("missing")
+             else MissingSequenceHandler.TREAT_AS_ALL_GAPS)
+  species = ([x.strip() for x in ui.getValue("species").split(",")] if
+             ui.optionIsSet("species") else None)
 
   # build the genome alignment
   alig = (load_just_in_time_genome_alignment(ga_path, spec, extensions,
@@ -367,12 +390,11 @@ def main(args, prog_name):
           if os.path.isdir(ga_path)
           else build_genome_alignment_from_file(ga_path, spec, index_fn,
                                                 verbose))
-  if verbose:
-    sys.stderr.write("Done\n")
 
   # get the profile and write it to the output stream
-  profile = processBED(open(region_fn), alig, window_size, CENTRE, verbose)
-  out_fh.write("\n\n" + ", ".join(str(x) for x in profile))
+  profile = processBED(open(region_fn), alig, window_size, CENTRE,
+                       mi_seqs, species, verbose)
+  out_fh.write("\n\n" + ", ".join(str(x) for x in profile) + "\n")
 
 
 ###############################################################################

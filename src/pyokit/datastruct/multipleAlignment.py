@@ -155,7 +155,7 @@ class MultipleSequenceAlignment(object):
                          has index 1, and the final column has
                          index == size(self).
     :param missing_seqs: how to treat sequence with no actual sequence data for
-                          the column.
+                         the column.
     :return: dictionary where keys are sequence names and values are
              nucleotides (raw strings).
     """
