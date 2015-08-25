@@ -96,7 +96,7 @@ def intervalTreesFromList(inElements, verbose=False, openEnded=False):
   return trees
 
 
-def collapseRegions(s):
+def collapseRegions(s, stranded=False):
   """
   Get the union of a set of genomic intervals.
 
@@ -107,26 +107,63 @@ def collapseRegions(s):
   :note: O(n) time, O(n) space
   :return:  list of intervals that define the collapsed regions. Note that
             these are all new objects, no existing object from s is returned
-            or altered. Returned regions will all have name "X", strand +
-            and score 0
-  :param s: list of genomic regions to collapse
+            or altered. Returned regions will all have name "X" and score 0
+  :param s:        list of genomic regions to collapse
+  :param stranded: if True, regions on positive and negative strands are
+                   collapsed separately. Otherwise, strand is ignored and all
+                   output regions are on positive strand.
   :raise GenomicIntervalError: if the input regions are not correctly sorted
                                (chromosome then start)
   """
-  debug = False
+  if stranded:
+    return __collapse_stranded(s, set("+")) + __collapse_stranded(s, set("-"))
+  else:
+    return __collapse_stranded(s, set(["+", "-"]))
 
-  if len(s) == 0 or len(s) == 1:
-    return copy.deepcopy(s)
+
+def __collapse_stranded(s, proc_strands):
+  """
+  Get the union of a set of genomic intervals.
+
+  given a list of genomic intervals with chromosome, start, end and strand
+  fields, collapse those intervals with strand in the set <proc_strands>
+  into a set of non-overlapping intervals. Other intervals are ignored.
+  Intervals must be sorted by chromosome and then start coordinate.
+
+  :note: O(n) time, O(n) space
+  :return:  list of intervals that define the collapsed regions. Note that
+            these are all new objects, no existing object from s is returned
+            or altered. Returned regions will all have name "X" and score 0
+  :param s:            list of genomic regions to collapse
+  :param proc_strands: set of acceptable strands; ignore input intervals
+                       with strand not found in this set.
+  :raise GenomicIntervalError: if the input regions are not correctly sorted
+                               (chromosome then start)
+  """
+  def get_first_matching_index(s, proc_strands):
+    for i in range(0, len(s)):
+      if s[i].strand in proc_strands:
+        return i
+    return None
+
+  if proc_strands not in [set("+"), set("-"), set(["+", "-"])]:
+    raise GenomicIntervalError("failed collapsing intervals on strands '" +
+                               ",".join(proc_strands) + "''; unrecognised " +
+                               "strand symbols")
+
+  first_index = get_first_matching_index(s, proc_strands)
+  if first_index is None:
+    return []
 
   res = []
-  current = copy.copy(s[0])
-  current.strand = '+'
+  current = copy.copy(s[first_index])
+  current.strand = '+' if (proc_strands == set("+") or
+                           proc_strands == set(["+", "-"])) else '-'
   current.score = 0
   current.name = "X"
-  for i in range(1, len(s)):
-    if debug:
-      sys.stderr.write("processing " + str(s[i]) + "\n")
-      sys.stderr.write("\tcurrent is: " + str(current) + "\n")
+  for i in range(first_index + 1, len(s)):
+    if s[i].strand not in proc_strands:
+      continue
 
     # make sure things are sorted..
     if (s[i].chrom < s[i - 1].chrom) or \
@@ -140,7 +177,8 @@ def collapseRegions(s):
     if s[i].start > current.end or s[i].chrom != current.chrom:
       res.append(current)
       current = copy.copy(s[i])
-      current.strand = '+'
+      current.strand = '+' if (proc_strands == set("+") or
+                               proc_strands == set(["+", "-"])) else '-'
       current.score = 0
       current.name = "X"
     else:
@@ -687,29 +725,53 @@ class GenomicInterval(object):
 class TestGenomicInterval(unittest.TestCase):
 
   """Unit tests for functions and classes in this module."""
+  def setUp(self):
+    self.collapsable_el = ["\t".join(["chr1", "10", "20", "R01", "0", "+"]),
+                           "\t".join(["chr1", "30", "40", "R02", "1", "+"]),
+                           "\t".join(["chr1", "35", "50", "R03", "0", "+"]),
+                           "\t".join(["chr1", "45", "65", "R04", "0", "+"]),
+                           "\t".join(["chr1", "55", "60", "R05", "3", "-"]),
+                           "\t".join(["chr1", "70", "80", "R06", "0", "+"]),
+                           "\t".join(["chr1", "75", "95", "R07", "0", "+"]),
+                           "\t".join(["chr1", "85", "90", "R08", "1", "-"]),
+                           "\t".join(["chr2", "40", "60", "R10", "0", "+"]),
+                           "\t".join(["chr3", "10", "20", "R11", "4", "+"]),
+                           "\t".join(["chr3", "20", "30", "R12", "0", "-"])]
 
   def testCollapse(self):
-    """Test collapsing regions to get union."""
+    """Test collapsing regions to get union without considering strand/name."""
     debug = False
-    elements = ["\t".join(["chr1", "10", "20", "R01", "0", "+"]),
-                "\t".join(["chr1", "30", "40", "R02", "1", "+"]),
-                "\t".join(["chr1", "35", "50", "R03", "0", "+"]),
-                "\t".join(["chr1", "45", "65", "R04", "0", "+"]),
-                "\t".join(["chr1", "55", "60", "R05", "3", "-"]),
-                "\t".join(["chr1", "70", "80", "R06", "0", "+"]),
-                "\t".join(["chr1", "75", "95", "R07", "0", "+"]),
-                "\t".join(["chr1", "85", "90", "R08", "1", "-"]),
-                "\t".join(["chr2", "40", "60", "R10", "0", "+"]),
-                "\t".join(["chr3", "10", "20", "R11", "4", "+"]),
-                "\t".join(["chr3", "20", "30", "R12", "0", "-"])]
+    # ignore strand, ignore names
     expect_str = ["\t".join(["chr1", "10", "20", "X", "0", "+"]),
                   "\t".join(["chr1", "30", "65", "X", "0", "+"]),
                   "\t".join(["chr1", "70", "95", "X", "0", "+"]),
                   "\t".join(["chr2", "40", "60", "X", "0", "+"]),
                   "\t".join(["chr3", "10", "30", "X", "0", "+"])]
-    input_x = [parseBEDString(x) for x in elements]
+
+    input_x = [parseBEDString(x) for x in self.collapsable_el]
     expect = [parseBEDString(x) for x in expect_str]
     got = collapseRegions(input_x)
+    if debug:
+      sys.stderr.write("expect:\n")
+      sys.stderr.write("\n".join([str(x) for x in expect]) + "\n")
+      sys.stderr.write("got:\n")
+      sys.stderr.write("\n".join([str(x) for x in got]) + "\n")
+    self.assertEqual(expect, got)
+
+  def test_collapse_with_strand(self):
+    debug = False
+    # seperate strands, ignore names
+    expect_str = ["\t".join(["chr1", "10", "20", "X", "0", "+"]),
+                  "\t".join(["chr1", "30", "65", "X", "0", "+"]),
+                  "\t".join(["chr1", "70", "95", "X", "0", "+"]),
+                  "\t".join(["chr2", "40", "60", "X", "0", "+"]),
+                  "\t".join(["chr3", "10", "20", "X", "0", "+"]),
+                  "\t".join(["chr1", "55", "60", "X", "0", "-"]),
+                  "\t".join(["chr1", "85", "90", "X", "0", "-"]),
+                  "\t".join(["chr3", "20", "30", "X", "0", "-"])]
+    input_x = [parseBEDString(x) for x in self.collapsable_el]
+    expect = [parseBEDString(x) for x in expect_str]
+    got = collapseRegions(input_x, stranded=True)
     if debug:
       sys.stderr.write("expect:\n")
       sys.stderr.write("\n".join([str(x) for x in expect]) + "\n")
