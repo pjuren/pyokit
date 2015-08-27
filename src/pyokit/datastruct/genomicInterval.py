@@ -96,7 +96,7 @@ def intervalTreesFromList(inElements, verbose=False, openEnded=False):
   return trees
 
 
-def collapseRegions(s, stranded=False):
+def collapseRegions(s, stranded=False, names=False, verbose=False):
   """
   Get the union of a set of genomic intervals.
 
@@ -116,12 +116,13 @@ def collapseRegions(s, stranded=False):
                                (chromosome then start)
   """
   if stranded:
-    return __collapse_stranded(s, set("+")) + __collapse_stranded(s, set("-"))
+    return (__collapse_stranded(s, set("+"), names, verbose) +
+            __collapse_stranded(s, set("-"), names, verbose))
   else:
-    return __collapse_stranded(s, set(["+", "-"]))
+    return __collapse_stranded(s, set(["+", "-"]), names, verbose)
 
 
-def __collapse_stranded(s, proc_strands):
+def __collapse_stranded(s, proc_strands, names=False, verbose=False):
   """
   Get the union of a set of genomic intervals.
 
@@ -137,6 +138,9 @@ def __collapse_stranded(s, proc_strands):
   :param s:            list of genomic regions to collapse
   :param proc_strands: set of acceptable strands; ignore input intervals
                        with strand not found in this set.
+  :param names:        if True, accumulate region names. If false, all output
+                       regions have name "X"
+  :param verbose:      if True, output progress message to stderr.
   :raise GenomicIntervalError: if the input regions are not correctly sorted
                                (chromosome then start)
   """
@@ -160,7 +164,7 @@ def __collapse_stranded(s, proc_strands):
   current.strand = '+' if (proc_strands == set("+") or
                            proc_strands == set(["+", "-"])) else '-'
   current.score = 0
-  current.name = "X"
+  current.name = "X" if not names else set(s[first_index].name)
   for i in range(first_index + 1, len(s)):
     if s[i].strand not in proc_strands:
       continue
@@ -175,16 +179,22 @@ def __collapse_stranded(s, proc_strands):
     # because of sorting order, we know that nothing else exists with
     # start less than s[i] which we haven't already seen.
     if s[i].start > current.end or s[i].chrom != current.chrom:
+      if names:
+        current.name = ";".join(current.name)
       res.append(current)
       current = copy.copy(s[i])
       current.strand = '+' if (proc_strands == set("+") or
                                proc_strands == set(["+", "-"])) else '-'
       current.score = 0
-      current.name = "X"
+      current.name = "X" if not names else set(s[i].name)
     else:
       current.end = max(s[i].end, current.end)
+      if names:
+        current.name.add(s[i].name)
 
   # don't forget the last one...
+  if names:
+    current.name = ";".join(current.name)
   res.append(current)
 
   return res
@@ -314,7 +324,7 @@ def bucketIterator(elements, buckets):
     # that once we see an element that has a start index greater than the end
     # of this bucket, we can stop -- everything else after it will also start
     # after the end of this bucket.
-    while (elementIterator.peek() != None) and \
+    while (elementIterator.peek() is not None) and \
           ((elementIterator.peek().chrom < bucketChrom) or
            ((elementIterator.peek().chrom == bucketChrom) and
             (elementIterator.peek().start < bucketEnd))):
@@ -782,24 +792,15 @@ class TestGenomicInterval(unittest.TestCase):
   def testRegionsIntersection(self):
     """Test getting the intersection of a set of regions."""
     debug = False
-    s1_elements = ["chr1" + "\t" + "40" + "\t" + "90" + "\t" + "R11" + "\t" +
-                   "0" + "\t" + "+",
-                   "chr1" + "\t" + "100" + "\t" + "120" + "\t" + "R12" +
-                   "\t" + "3" + "\t" + "+",
-                   "chr1" + "\t" + "160" + "\t" + "190" + "\t" + "R13" +
-                   "\t" + "1" + "\t" + "-",
-                   "chr1" + "\t" + "200" + "\t" + "210" + "\t" + "R14" +
-                   "\t" + "0" + "\t" + "-",
-                   "chr2" + "\t" + "10" + "\t" + "20" + "\t" + "R15" + "\t" +
-                   "0" + "\t" + "-",
-                   "chr3" + "\t" + "10" + "\t" + "80" + "\t" + "R16" + "\t" +
-                   "1" + "\t" + "+",
-                   "chr4" + "\t" + "20" + "\t" + "30" + "\t" + "R17" + "\t" +
-                   "1" + "\t" + "+",
-                   "chr4" + "\t" + "40" + "\t" + "50" + "\t" + "R18" + "\t" +
-                   "1" + "\t" + "-",
-                   "chr5" + "\t" + "40" + "\t" + "50" + "\t" + "R19" + "\t" +
-                   "1" + "\t" + "-"]
+    s1_elements = ["\t".join(["chr1", "40", "90", "R11", "0", "+"]),
+                   "\t".join(["chr1", "100", "120", "R12", "3", "+"]),
+                   "\t".join(["chr1", "160", "190", "R13", "1", "-"]),
+                   "\t".join(["chr1", "200", "210", "R14", "0", "-"]),
+                   "\t".join(["chr2", "10", "20", "R15", "0", "-"]),
+                   "\t".join(["chr3", "10", "80", "R16", "1", "+"]),
+                   "\t".join(["chr4", "20", "30", "R17", "1", "+"]),
+                   "\t".join(["chr4", "40", "50", "R18", "1", "-"]),
+                   "\t".join(["chr5", "40", "50", "R19", "1", "-"])]
     s2_elements = ["chr1" + "\t" + "10" + "\t" + "20" + "\t" + "R21" + "\t" +
                    "0" + "\t" + "+",
                    "chr1" + "\t" + "30" + "\t" + "50" + "\t" + "R22" + "\t" +
