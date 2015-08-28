@@ -204,10 +204,8 @@ class TestCollapseRegions(unittest.TestCase):
                       "\t".join(["chr3", "10", "20", "R12", "0", "-"])]
 
   @mock.patch('__builtin__.open')
-  def test_maintain_names(self, mock_open):
-    """
-    Test that names are properly maintinaed when that option is used.
-    """
+  def test_maintain_names_exact(self, mock_open):
+    """Test that names are properly maintinaed with exact matching."""
 
     dummy_output = StringIO.StringIO()
 
@@ -243,8 +241,32 @@ class TestCollapseRegions(unittest.TestCase):
       self.assertEqual(set(e_lst[3].split(";")), set(r_lst[3].split(";")))
 
     # with exact matches, separate strands
-    # dummy_output = StringIO.StringIO()
-    # main(["-a", "-s", "-e", "-o", "output.bed", "input.bed"], "regionCollapse")
+    dummy_output = StringIO.StringIO()
+    main(["-a", "-s", "-e", "-o", "output.bed", "input.bed"], "regionCollapse")
+    r2 = dummy_output.getvalue().strip().split("\n")
+    r2.sort()
+    expct2 = ["\t".join(["chr1", "10", "20", "R01;R02", "0", "+"]),
+              "\t".join(["chr1", "45", "65", "R04", "0", "+"]),
+              "\t".join(["chr1", "55", "60", "R05", "3", "-"]),
+              "\t".join(["chr1", "55", "60", "R06", "0", "+"]),
+              "\t".join(["chr1", "75", "95", "R07", "0", "+"]),
+              "\t".join(["chr1", "85", "90", "R08", "1", "-"]),
+              "\t".join(["chr2", "40", "60", "R10", "0", "+"]),
+              "\t".join(["chr3", "10", "20", "R11", "4", "+"]),
+              "\t".join(["chr3", "10", "20", "R12", "0", "-"])]
+    self.assertEqual(len(r2), len(expct2))
+    for i in range(0, len(r2)):
+      e_lst = expct2[i].split("\t")
+      r_lst = r2[i].split("\t")
+      self.assertEqual(len(e_lst), 6)
+      self.assertEqual(len(r_lst), 6)
+      for j in [0, 1, 2, 4, 5]:
+        self.assertEqual(e_lst[j], r_lst[j])
+      self.assertEqual(set(e_lst[3].split(";")), set(r_lst[3].split(";")))
+
+  @mock.patch('__builtin__.open')
+  def test_maintain_names_intersect(self, mock_open):
+    """Test that names are properly maintinaed with intersectional matching."""
 
     # with overlapping matches, ignore strands
     # dummy_output = StringIO.StringIO()
@@ -253,6 +275,7 @@ class TestCollapseRegions(unittest.TestCase):
     # with overlapping matches, separate strands
     # dummy_output = StringIO.StringIO()
     # main(["-a", "-s", "-o", "output.bed", "input.bed"], "regionCollapse")
+    pass
 
 
 ###############################################################################
