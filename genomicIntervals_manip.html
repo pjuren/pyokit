@@ -61,7 +61,7 @@ associated functions for manipulating collections of genomic intervals.</p>
 <h2>Collapsing interval sets<a class="headerlink" href="#collapsing-interval-sets" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="pyokit.datastruct.genomicInterval.collapseRegions">
-<code class="descclassname">pyokit.datastruct.genomicInterval.</code><code class="descname">collapseRegions</code><span class="sig-paren">(</span><em>s</em>, <em>stranded=False</em>, <em>names=False</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.genomicInterval.collapseRegions" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.datastruct.genomicInterval.</code><code class="descname">collapseRegions</code><span class="sig-paren">(</span><em>s</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.datastruct.genomicInterval.collapseRegions" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the union of a set of genomic intervals.</p>
 <p>given a list of genomic intervals with chromosome, start and end field,
 collapse into a set of non-overlapping intervals. Intervals must be sorted by
@@ -70,26 +70,18 @@ chromosome and then start coordinate.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Note:</th><td class="field-body"><p class="first">O(n) time, O(n) space</p>
-</td>
+<tr class="field-odd field"><th class="field-name">Note:</th><td class="field-body">O(n) time, O(n) space</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">list of intervals that define the collapsed regions. Note that
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">list of intervals that define the collapsed regions. Note that
 these are all new objects, no existing object from s is returned
-or altered. Returned regions will all have name &#8220;X&#8221; and score 0</p>
-</td>
+or altered. Returned regions will all have name &#8220;X&#8221;, strand +
+and score 0</td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>s</strong> &#8211; list of genomic regions to collapse</li>
-<li><strong>stranded</strong> &#8211; if True, regions on positive and negative strands are
-collapsed separately. Otherwise, strand is ignored and all
-output regions are on positive strand.</li>
-</ul>
-</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>s</strong> &#8211; list of genomic regions to collapse</td>
 </tr>
 <tr class="field-even field"><th class="field-name" colspan="2">Raises GenomicIntervalError:</th></tr>
-<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first last">if the input regions are not correctly sorted
-(chromosome then start)</p>
-</td>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">if the input regions are not correctly sorted
+(chromosome then start)</td>
 </tr>
 </tbody>
 </table>
