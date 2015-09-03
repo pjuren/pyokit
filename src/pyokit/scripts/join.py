@@ -198,26 +198,26 @@ def _main(args, prog_name):
     outfh = open(ui.getValue("output"), "w")
 
   # get key field in file one
-  key_one = 1
-  key_one_is_field_number = False
+  key_one = 0
+  key_one_is_field_number = True
   if ui.optionIsSet("field-one"):
     key_one = ui.getValue("field-one")
     try:
       key_one = int(key_one) - 1
       key_one_is_field_number = True
     except ValueError:
-      pass
+      key_one_is_field_number = False
 
   # get key field in file two
-  key_two = 1
-  key_two_is_field_number = False
+  key_two = 0
+  key_two_is_field_number = True
   if ui.optionIsSet("field-two"):
     key_two = ui.getValue("field-two")
     try:
       key_two = int(key_two) - 1
       key_two_is_field_number = True
     except ValueError:
-      pass
+      key_two_is_field_number = False
 
   # get missing value
   missing_val = None
@@ -375,6 +375,28 @@ class TestJoin(unittest.TestCase):
                         "\t".join(["A4", "B4", "C4", "D4", "X4", "Y4", "Z4"]),
                         "\t".join(["A5", "B5", "C5", "D5", "X5", "Y5", "Z5"])])
     self.assertEqual(expect + "\n", out_strm.getvalue())
+
+  @mock.patch('__builtin__.open')
+  def test_default_keys(self, mock_open):
+    """Test using the default keys (first field in each file)."""
+    out_strm = StringIO.StringIO()
+
+    def open_side_effect(*args, **kwargs):
+      if args[0] == "one.dat" or args[0] == "two.dat":
+        return StringIO.StringIO("\n".join(self.test_file_one))
+      if args[0] == "out.dat":
+        return out_strm
+      raise IOError("No such file")
+
+    mock_open.side_effect = open_side_effect
+
+    _main(["-o", "out.dat", "one.dat", "two.dat"], "join")
+    expect = ["\t".join(["A1", "B1", "C1", "D1", "B1", "C1", "D1"]),
+              "\t".join(["A2", "B2", "C2", "D2", "B2", "C2", "D2"]),
+              "\t".join(["A3", "B3", "C3", "D3", "B3", "C3", "D3"]),
+              "\t".join(["A4", "B4", "C4", "D4", "B4", "C4", "D4"]),
+              "\t".join(["A5", "B5", "C5", "D5", "B5", "C5", "D5"])]
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
 
   def test_with_non_matching_header(self):
     # The program should fail if one file has a header and the other doesn't
