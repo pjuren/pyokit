@@ -89,7 +89,10 @@ def file_iterator(filehandle, verbose=False):
       verbose = False
 
   for line in filehandle:
-    line = line.strip()
+    # chomp just the newline char, leave eveerything else alone, so we can
+    # handle empty columns in the first and last positions
+    line = line.rstrip('\n')
+
     if verbose:
       pind.done = filehandle.tell()
       pind.showProgress()
@@ -99,19 +102,29 @@ def file_iterator(filehandle, verbose=False):
 
 
 def load_file(fn_or_strm, key, key_is_field_number, require_unique_key=True,
-              delim="\t", verbose=False):
+              delim="\t", missing_val=None, ignore_missing_keys=False,
+              verbose=False):
   res = {}
   header = None
   key_field_num = key if key_is_field_number else None
   for line in file_iterator(fn_or_strm, verbose):
     parts = line.split(delim)
+    if missing_val is not None:
+      parts = [parts[i] if parts[i].strip() != "" else missing_val
+               for i in range(0, len(parts))]
     if header is None and not key_is_field_number:
+      if any(i.strip() == "" for i in parts):
+        raise InvalidHeaderError("header for file has empty fields")
       header = parts
       key_field_num = header.index(key)
       # TODO deal with case where key is not in the header
       # TODO deal with case where key occurs more than once in the header
     else:
       key_val = parts[key_field_num]
+      if key_val.strip() == "":
+        if ignore_missing_keys:
+          continue
+        raise MissingKeyError("missing key value")
       if key_val in res:
         raise ValueError("Oops")
       if key_is_field_number:
@@ -164,9 +177,13 @@ def getUI(prog_name, args):
                       default=1, required=False, type=str))
   ui.addOption(Option(short="m", long="missing", argName="value",
                       description="populate missing fields with this value. " +
-                                  "If not provided, missing fields cause " +
-                                  "the program to exit with an error.",
+                                  "Any field that contains only whitespace " +
+                                  "is considered missing",
                       required=False, type=str))
+  ui.addOption(Option(short="i", long="ignore-missing-key",
+                      description="skip lines in input files that are " +
+                                  "missing a value for the key field ",
+                      required=False))
   ui.addOption(Option(short="h", long="help",
                       description="show this help message ", special=True))
   ui.addOption(Option(short="v", long="verbose",
@@ -237,9 +254,12 @@ def _main(args, prog_name):
   if ui.optionIsSet("missing"):
     missing_val = ui.getValue("missing")
 
+  # ignore lines with missing values in the key field?
+  ignore_missing_keys = ui.optionIsSet("ignore-missing-key")
+
   # do our thing..
   process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
-          key_two_is_field_number, missing_val, verbose)
+          key_two_is_field_number, missing_val, ignore_missing_keys, verbose)
 
 
 ###############################################################################
@@ -247,7 +267,8 @@ def _main(args, prog_name):
 ###############################################################################
 
 def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
-            key_two_is_field_number, missing_val, verbose=False):
+            key_two_is_field_number, missing_val, ignore_missing_keys,
+            verbose=False):
   delim = "\t"
 
   mixed_headers = (key_one_is_field_number != key_two_is_field_number)
@@ -258,12 +279,19 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
                              "(to be placed in the resultant header)")
 
   f2_dictionary, f2_header = load_file(infh2, key_two, key_two_is_field_number,
+                                       missing_val=missing_val,
+                                       ignore_missing_keys=ignore_missing_keys,
                                        verbose=verbose)
   f1_header = None
   key_field_num = key_one if key_one_is_field_number else None
   for line in file_iterator(infh1, verbose):
     parts = line.split(delim)
+    if missing_val is not None:
+      parts = [parts[i] if parts[i].strip() != "" else missing_val
+               for i in range(0, len(parts))]
     if f1_header is None and not key_one_is_field_number:
+      if any(i.strip() == "" for i in parts):
+        raise InvalidHeaderError("header for first file has empty fields")
       f1_header = parts
       key_field_num = f1_header.index(key_one)
       # TODO deal with case where key is not in the header
@@ -282,10 +310,14 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
                     delim.join(dummy_h) + "\n")
     else:
       key_val = parts[key_field_num]
+      if key_val.strip() == "":
+        if ignore_missing_keys:
+          continue
+        raise MissingKeyError("missing key value")
       outfh.write(delim.join(parts) + delim)
 
       if f2_header is not None:
-        # f1_dictionary entry is another dictionary indexed by header value
+        # f2_dictionary entry is another dictionary indexed by header value
         first = True
         for h_val in f2_header:
           if h_val == key_two:
@@ -474,6 +506,8 @@ class TestJoin(unittest.TestCase):
     out_strm = StringIO.StringIO()
 
     def open_side_effect(*args, **kwargs):
+      if args[0] == "one_good.dat" or args[0] == "two_good.dat":
+        return StringIO.StringIO("\n".join(self.test_file_one))
       if args[0] == "one.dat" or args[0] == "two.dat":
         return StringIO.StringIO("\n".join(self.test_file_one_gapped))
       if args[0] == "one_head.dat" or args[0] == "two_head.dat":
@@ -487,26 +521,53 @@ class TestJoin(unittest.TestCase):
 
     # should fail gracefully when there is an empty field in the header
     # of either file, or both
-    # args = ["-o", "out.dat", "-a", "BB", "one_head.dat", "two.dat"]
-    # self.assertRaises(InvalidHeaderError, _main, args, "join")
+    args = ["-o", "out.dat", "-a", "BB", "one_head.dat", "two.dat"]
+    self.assertRaises(InvalidHeaderError, _main, args, "join")
+    args = ["-o", "out.dat", "-b", "BB", "one.dat", "two_head.dat"]
+    self.assertRaises(InvalidHeaderError, _main, args, "join")
+    args = ["-o", "out.dat", "-a", "BB", "-b", "BB",
+            "one_head.dat", "two_head.dat"]
+    self.assertRaises(InvalidHeaderError, _main, args, "join")
 
     # should fail gracefully when there is an empty field in the key column
     # unless the option to ignore those rows is given.
+    args = ["-o", "out.dat", "-a", "2", "-b", "2", "one.dat", "two.dat"]
+    self.assertRaises(MissingKeyError, _main, args, "join")
+    args = ["-o", "out.dat", "-a", "2", "-b", "2", "one_good.dat", "two.dat"]
+    self.assertRaises(MissingKeyError, _main, args, "join")
+    args = ["-o", "out.dat", "-a", "2", "-b", "2", "one.dat", "two_good.dat"]
+    self.assertRaises(MissingKeyError, _main, args, "join")
 
-    # _main(["-o", "out.dat", "one.dat", "two.dat"], "join")
-    # expect = ["\t".join(["A1", "B1", "C1", "D1", "B1", "C1", "D1"]),
-    #          "\t".join(["A2", "B2", "C2", "D2", "B2", "C2", "D2"]),
-    #          "\t".join(["A3", "B3", "C3", "D3", "B3", "C3", "D3"]),
-    #          "\t".join(["A4", "B4", "C4", "D4", "B4", "C4", "D4"]),
-    #          "\t".join(["A5", "B5", "C5", "D5", "B5", "C5", "D5"])]
-    # self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
+    out_strm = StringIO.StringIO()
+    _main(["-i", "-o", "out.dat", "-a", "2", "-b", "2", "one.dat", "two.dat"],
+          "join")
+    expect = ["\t".join(["A1", "B1", "C1", "D1", "A1", "C1", "D1"]),
+              "\t".join(["", "B4", "C4", "D4", "", "C4", "D4"]),
+              "\t".join(["  ", "B5", "C5", "D5", "  ", "C5", "D5"])]
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
 
-  def test_with_non_matching_header(self):
-    # The program should fail if one file has a header and the other doesn't
-    # and we don't know the missing value. If the missing value is provided,
-    # then it should use this to populate the missing header values in the
-    # output.
-    pass
+    # should work when gaps are not in the key field, regardless of whether
+    # missing value is provided or not
+    out_strm = StringIO.StringIO()
+    _main(["-o", "out.dat", "-a", "3", "-b", "3", "one.dat", "two.dat"],
+          "join")
+    expect = ["\t".join(["A1", "B1", "C1", "D1", "A1", "B1", "D1"]),
+              "\t".join(["A2", "", "C2", "D2", "A2", "", "D2"]),
+              "\t".join(["A3", "", "C3", "D3", "A3", "", "D3"]),
+              "\t".join(["", "B4", "C4", "D4", "", "B4", "D4"]),
+              "\t".join(["  ", "B5", "C5", "D5", "  ", "B5", "D5"])]
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
+
+    out_strm = StringIO.StringIO()
+    _main(["-o", "out.dat", "-a", "3", "-b", "3", "-m", "UNKNOWN",
+           "one.dat", "two.dat"],
+          "join")
+    expect = ["\t".join(["A1", "B1", "C1", "D1", "A1", "B1", "D1"]),
+              "\t".join(["A2", "UNKNOWN", "C2", "D2", "A2", "UNKNOWN", "D2"]),
+              "\t".join(["A3", "UNKNOWN", "C3", "D3", "A3", "UNKNOWN", "D3"]),
+              "\t".join(["UNKNOWN", "B4", "C4", "D4", "UNKNOWN", "B4", "D4"]),
+              "\t".join(["UNKNOWN", "B5", "C5", "D5", "UNKNOWN", "B5", "D5"])]
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
 
   def test_missing_key(self):
     """Program should gracefully handle user giving a key
@@ -516,6 +577,10 @@ class TestJoin(unittest.TestCase):
 
   def test_duplicate_col_headers(self):
     """If headers are present, each column must have a unique name."""
+    pass
+
+  def test_failure_on_ragged_data_frame(self):
+    # number of elements should be the same on each line...
     pass
 
 
