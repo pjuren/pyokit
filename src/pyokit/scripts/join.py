@@ -56,6 +56,19 @@ class MissingKeyError(Exception):
     return repr(self.value)
 
 
+class InvalidHeaderError(Exception):
+
+  """..."""
+
+  def __init__(self, msg):
+    """..."""
+    self.value = msg
+
+  def __str__(self):
+    """Get string representation of this exception."""
+    return repr(self.value)
+
+
 ###############################################################################
 #                              HELPER FUNCTIONS                               #
 ###############################################################################
@@ -237,6 +250,13 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
             key_two_is_field_number, missing_val, verbose=False):
   delim = "\t"
 
+  mixed_headers = (key_one_is_field_number != key_two_is_field_number)
+  if mixed_headers and missing_val is None:
+    raise InvalidHeaderError("Cannot join one file with a header to " +
+                             "another without one unless you specify " +
+                             "a missing-value string for the output " +
+                             "(to be placed in the resultant header)")
+
   f2_dictionary, f2_header = load_file(infh2, key_two, key_two_is_field_number,
                                        verbose=verbose)
   f1_header = None
@@ -251,7 +271,15 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
 
       # TODO exception if header is missing and we have no missing val
       # TODO join missing vals otherwise..
-      outfh.write(delim.join(f1_header) + delim + delim.join(f2_header) + "\n")
+
+      # we know that file one has a header, or we wouldn't be here...
+      if not key_two_is_field_number:
+        outfh.write(delim.join(f1_header) + delim +
+                    delim.join(f2_header) + "\n")
+      else:
+        dummy_h = len(f2_dictionary[f2_dictionary.keys()[0]]) * [missing_val]
+        outfh.write(delim.join(f1_header) + delim +
+                    delim.join(dummy_h) + "\n")
     else:
       key_val = parts[key_field_num]
       outfh.write(delim.join(parts) + delim)
@@ -290,6 +318,14 @@ class TestJoin(unittest.TestCase):
                           "\t".join(["A3", "B3", "C3", "D3"]),
                           "\t".join(["A4", "B4", "C4", "D4"]),
                           "\t".join(["A5", "B5", "C5", "D5"])]
+
+    # same as test_file_one, but with empty fields
+    self.test_headr_one_gapped = "\t".join(["AA", "BB", "", "DD"])
+    self.test_file_one_gapped = ["\t".join(["A1", "B1", "C1", "D1"]),
+                                 "\t".join(["A2", "", "C2", "D2"]),
+                                 "\t".join(["A3", "", "C3", "D3"]),
+                                 "\t".join(["", "B4", "C4", "D4"]),
+                                 "\t".join(["  ", "B5", "C5", "D5"])]
 
     # matches cleanly with test_file_one
     self.test_headr_two = "\t".join(["XX", "BX", "YY", "ZZ"])
@@ -377,6 +413,40 @@ class TestJoin(unittest.TestCase):
     self.assertEqual(expect + "\n", out_strm.getvalue())
 
   @mock.patch('__builtin__.open')
+  def test_join_header_non_header(self, mock_open):
+    """Test joining a file with a header to a file without one."""
+    out_strm = StringIO.StringIO()
+
+    def open_side_effect(*args, **kwargs):
+      if args[0] == "one.dat":
+        return StringIO.StringIO(self.test_headr_one + "\n" +
+                                 "\n".join(self.test_file_one))
+      if args[0] == "two.dat":
+        return StringIO.StringIO("\n".join(self.test_file_two))
+      if args[0] == "out.dat":
+        return out_strm
+      raise IOError("No such file")
+
+    mock_open.side_effect = open_side_effect
+
+    # fails if the missing value is not provided...
+    args = ["-a", "BB", "-b", "2", "-o", "out.dat", "one.dat", "two.dat"]
+    self.assertRaises(InvalidHeaderError, _main, args, "join")
+
+    # okay if it is.
+    _main(["-a", "BB", "-b", "2", "-o", "out.dat", "-m",
+           "UNKNOWN", "one.dat", "two.dat"],
+          "join")
+    expect = "\t".join(["AA", "BB", "CC", "DD",
+                        "UNKNOWN", "UNKNOWN", "UNKNOWN"]) + "\n" +\
+             "\n".join(["\t".join(["A1", "B1", "C1", "D1", "X1", "Y1", "Z1"]),
+                        "\t".join(["A2", "B2", "C2", "D2", "X2", "Y2", "Z2"]),
+                        "\t".join(["A3", "B3", "C3", "D3", "X3", "Y3", "Z3"]),
+                        "\t".join(["A4", "B4", "C4", "D4", "X4", "Y4", "Z4"]),
+                        "\t".join(["A5", "B5", "C5", "D5", "X5", "Y5", "Z5"])])
+    self.assertEqual(expect + "\n", out_strm.getvalue())
+
+  @mock.patch('__builtin__.open')
   def test_default_keys(self, mock_open):
     """Test using the default keys (first field in each file)."""
     out_strm = StringIO.StringIO()
@@ -397,6 +467,39 @@ class TestJoin(unittest.TestCase):
               "\t".join(["A4", "B4", "C4", "D4", "B4", "C4", "D4"]),
               "\t".join(["A5", "B5", "C5", "D5", "B5", "C5", "D5"])]
     self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
+
+  @mock.patch('__builtin__.open')
+  def test_empty_fields(self, mock_open):
+    """Test joining files where there are empty fields."""
+    out_strm = StringIO.StringIO()
+
+    def open_side_effect(*args, **kwargs):
+      if args[0] == "one.dat" or args[0] == "two.dat":
+        return StringIO.StringIO("\n".join(self.test_file_one_gapped))
+      if args[0] == "one_head.dat" or args[0] == "two_head.dat":
+        return StringIO.StringIO(self.test_headr_one_gapped + "\n" +
+                                 "\n".join(self.test_file_one_gapped))
+      if args[0] == "out.dat":
+        return out_strm
+      raise IOError("No such file")
+
+    mock_open.side_effect = open_side_effect
+
+    # should fail gracefully when there is an empty field in the header
+    # of either file, or both
+    # args = ["-o", "out.dat", "-a", "BB", "one_head.dat", "two.dat"]
+    # self.assertRaises(InvalidHeaderError, _main, args, "join")
+
+    # should fail gracefully when there is an empty field in the key column
+    # unless the option to ignore those rows is given.
+
+    # _main(["-o", "out.dat", "one.dat", "two.dat"], "join")
+    # expect = ["\t".join(["A1", "B1", "C1", "D1", "B1", "C1", "D1"]),
+    #          "\t".join(["A2", "B2", "C2", "D2", "B2", "C2", "D2"]),
+    #          "\t".join(["A3", "B3", "C3", "D3", "B3", "C3", "D3"]),
+    #          "\t".join(["A4", "B4", "C4", "D4", "B4", "C4", "D4"]),
+    #          "\t".join(["A5", "B5", "C5", "D5", "B5", "C5", "D5"])]
+    # self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
 
   def test_with_non_matching_header(self):
     # The program should fail if one file has a header and the other doesn't
