@@ -33,6 +33,7 @@ from pyokit.common.pyokitError import PyokitError
 from pyokit.scripts import fdr
 from pyokit.scripts import index
 from pyokit.scripts import conservationProfile
+from pyokit.scripts import join
 
 
 def main():
@@ -51,6 +52,8 @@ def main():
       index.main(sys.argv[2:], "pyokit index")
     elif sys.argv[1] == "consprofile":
       conservationProfile.main(sys.argv[2:], "pyokit consprofile")
+    elif sys.argv[1] == "join":
+      join._main(sys.argv[2:], "join")
     else:
       sys.stderr.write("Pyokit: I don't recognise the option '" + sys.argv[1] +
                        "'.\n")

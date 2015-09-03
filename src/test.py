@@ -76,6 +76,7 @@ from pyokit.scripts.fdr import TestFDR
 from pyokit.scripts.conservationProfile import TestConservationProfileIndvFiles
 from pyokit.scripts.conservationProfile import TestConservationProfileDirectory
 from pyokit.scripts.index import TestIndex
+from pyokit.scripts.join import TestJoin
 
 
 if __name__ == "__main__":
@@ -112,13 +113,14 @@ if __name__ == "__main__":
   head = " ------------------------  TESTING AND UTIL  -------------------- \n"
   sys.stderr.write(head)
   sys.stderr.write("registered tests in \n")
-  sys.stderr.write("  " + str(TestMeta) + "\n")
+  sys.stderr.write("  " + str(TestMeta) + "\n\n")
 
   head = " -----------------------------  SCRIPTS  ------------------------ \n"
   sys.stderr.write(head)
   sys.stderr.write("registered tests in \n")
   sys.stderr.write("  " + str(TestFDR) + "\n")
   sys.stderr.write("  " + str(TestIndex) + "\n")
+  sys.stderr.write("  " + str(TestJoin) + "\n")
   sys.stderr.write("  " + str(TestConservationProfileDirectory) + "\n")
   sys.stderr.write("  " + str(TestConservationProfileIndvFiles) + "\n\n")
 

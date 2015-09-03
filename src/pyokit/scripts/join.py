@@ -278,7 +278,7 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
 #                         UNIT TESTS FOR THIS MODULE                          #
 ###############################################################################
 
-class TestConservationProfileIndvFiles(unittest.TestCase):
+class TestJoin(unittest.TestCase):
 
   """Unit tests for this script."""
 
