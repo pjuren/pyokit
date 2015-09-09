@@ -115,6 +115,8 @@ def load_file(fn_or_strm, key, key_is_field_number, require_unique_key=True,
     if header is None and not key_is_field_number:
       if any(i.strip() == "" for i in parts):
         raise InvalidHeaderError("header for file has empty fields")
+      if len(parts) != len(set(parts)):
+        raise InvalidHeaderError("head for file has duplicate names")
       header = parts
       key_field_num = header.index(key)
       # TODO deal with case where key is not in the header
@@ -292,6 +294,8 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
     if f1_header is None and not key_one_is_field_number:
       if any(i.strip() == "" for i in parts):
         raise InvalidHeaderError("header for first file has empty fields")
+      if len(parts) != len(set(parts)):
+        raise InvalidHeaderError("header for first file has duplicate names")
       f1_header = parts
       key_field_num = f1_header.index(key_one)
       # TODO deal with case where key is not in the header
@@ -345,6 +349,7 @@ class TestJoin(unittest.TestCase):
   def setUp(self):
     # matches cleanly with test_file_two
     self.test_headr_one = "\t".join(["AA", "BB", "CC", "DD"])
+    self.test_headr_one_dup = "\t".join(["AA", "BB", "AA", "DD"])
     self.test_file_one = ["\t".join(["A1", "B1", "C1", "D1"]),
                           "\t".join(["A2", "B2", "C2", "D2"]),
                           "\t".join(["A3", "B3", "C3", "D3"]),
@@ -575,12 +580,40 @@ class TestJoin(unittest.TestCase):
     """
     pass
 
-  def test_duplicate_col_headers(self):
+  @mock.patch('__builtin__.open')
+  def test_duplicate_col_headers(self, mock_open):
     """If headers are present, each column must have a unique name."""
-    pass
+    out_strm = StringIO.StringIO()
+
+    def open_side_effect(*args, **kwargs):
+      if args[0] == "one.dat":
+        return StringIO.StringIO(self.test_headr_one_dup + "\n" +
+                                 "\n".join(self.test_file_one))
+      if args[0] == "two.dat":
+        return StringIO.StringIO(self.test_headr_two + "\n" +
+                                 "\n".join(self.test_file_two))
+      if args[0] == "out.dat":
+        return out_strm
+      raise IOError("No such file")
+
+    mock_open.side_effect = open_side_effect
+    args = ["-o", "out.dat", "-a", "BB", "-b", "BX", "one.dat", "two.dat"]
+    self.assertRaises(InvalidHeaderError, _main, args, "join")
+    args = ["-o", "out.dat", "-a", "BX", "-b", "BB", "two.dat", "one.dat"]
+    self.assertRaises(InvalidHeaderError, _main, args, "join")
 
   def test_failure_on_ragged_data_frame(self):
     # number of elements should be the same on each line...
+    pass
+
+  def test_duplicate_key_value_all_combinations(self):
+    # if a key value appears more than once, by default the program will just
+    # exit with an error, but there is an option to process all combinations
+    pass
+
+  def test_duplicate_key_value_join_fields(self):
+    # if a key value appears more than once, by default the program will just
+    # exit with an error, but there is an option to join the mismatched fields
     pass
 
 
