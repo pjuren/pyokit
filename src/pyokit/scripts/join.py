@@ -342,6 +342,25 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
 #                         UNIT TESTS FOR THIS MODULE                          #
 ###############################################################################
 
+def build_mock_open_side_effect(string_d, stream_d):
+  """
+  Build a mock open side effect using a dictionary of content for the files.
+
+  :param string_d: keys are file names, values are string file contents
+  :param stream_d: keys are file names, values are stream of contents
+  """
+  assert(len(set(string_d.keys()).intersection(set(stream_d.keys()))) == 0)
+
+  def mock_open_side_effect(*args, **kwargs):
+    if args[0] in string_d:
+      return StringIO.StringIO(string_d[args[0]])
+    elif args[0] in stream_d:
+      return stream_d[args[0]]
+    else:
+      raise IOError("No such file: " + args[0])
+  return mock_open_side_effect
+
+
 class TestJoin(unittest.TestCase):
 
   """Unit tests for this script."""
@@ -396,21 +415,24 @@ class TestJoin(unittest.TestCase):
                            "\t".join(["A4", "B4", "C4", "D4"]),
                            "\t".join(["A5", "B5", "C5", "D5"])]
 
+    self.strs = {"one.dat": "\n".join(self.test_file_one),
+                 "two.dat": "\n".join(self.test_file_two),
+                 "one_hdr.dat": (self.test_headr_one + "\n" +
+                                 "\n".join(self.test_file_one)),
+                 "two_hdr.dat": (self.test_headr_two + "\n" +
+                                 "\n".join(self.test_file_two)),
+                 "one_gpd.dat": "\n".join(self.test_file_one_gapped),
+                 "one_hdr_gpd.dat": (self.test_headr_one_gapped + "\n" +
+                                     "\n".join(self.test_file_one_gapped))}
+
   @mock.patch('__builtin__.open')
   def test_simple_headerless_join(self, mock_open):
     """Test joining two files where all keys are present in both, no header."""
     out_strm = StringIO.StringIO()
-
-    def open_side_effect(*args, **kwargs):
-      if args[0] == "one.dat":
-        return StringIO.StringIO("\n".join(self.test_file_one))
-      if args[0] == "two.dat":
-        return StringIO.StringIO("\n".join(self.test_file_two))
-      if args[0] == "out.dat":
-        return out_strm
-      raise IOError("No such file")
-
-    mock_open.side_effect = open_side_effect
+    strings = {"one.dat": "\n".join(self.test_file_one),
+               "two.dat": "\n".join(self.test_file_two)}
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(strings, streams)
 
     _main(["-a", "2", "-b", "2", "-o", "out.dat", "one.dat", "two.dat"],
           "join")
@@ -425,22 +447,11 @@ class TestJoin(unittest.TestCase):
   def test_simple_header_join(self, mock_open):
     """Test joining two files where all keys present in both, with header."""
     out_strm = StringIO.StringIO()
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
 
-    def open_side_effect(*args, **kwargs):
-      if args[0] == "one.dat":
-        return StringIO.StringIO(self.test_headr_one + "\n" +
-                                 "\n".join(self.test_file_one))
-      if args[0] == "two.dat":
-        return StringIO.StringIO(self.test_headr_two + "\n" +
-                                 "\n".join(self.test_file_two))
-      if args[0] == "out.dat":
-        return out_strm
-      raise IOError("No such file")
-
-    mock_open.side_effect = open_side_effect
-
-    _main(["-a", "BB", "-b", "BX", "-o", "out.dat", "one.dat", "two.dat"],
-          "join")
+    _main(["-a", "BB", "-b", "BX", "-o", "out.dat",
+           "one_hdr.dat", "two_hdr.dat"], "join")
     expect = "\t".join(["AA", "BB", "CC", "DD", "XX", "YY", "ZZ"]) + "\n" +\
              "\n".join(["\t".join(["A1", "B1", "C1", "D1", "X1", "Y1", "Z1"]),
                         "\t".join(["A2", "B2", "C2", "D2", "X2", "Y2", "Z2"]),
@@ -453,26 +464,16 @@ class TestJoin(unittest.TestCase):
   def test_join_header_non_header(self, mock_open):
     """Test joining a file with a header to a file without one."""
     out_strm = StringIO.StringIO()
-
-    def open_side_effect(*args, **kwargs):
-      if args[0] == "one.dat":
-        return StringIO.StringIO(self.test_headr_one + "\n" +
-                                 "\n".join(self.test_file_one))
-      if args[0] == "two.dat":
-        return StringIO.StringIO("\n".join(self.test_file_two))
-      if args[0] == "out.dat":
-        return out_strm
-      raise IOError("No such file")
-
-    mock_open.side_effect = open_side_effect
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
 
     # fails if the missing value is not provided...
-    args = ["-a", "BB", "-b", "2", "-o", "out.dat", "one.dat", "two.dat"]
+    args = ["-a", "BB", "-b", "2", "-o", "out.dat", "one_hdr.dat", "two.dat"]
     self.assertRaises(InvalidHeaderError, _main, args, "join")
 
     # okay if it is.
     _main(["-a", "BB", "-b", "2", "-o", "out.dat", "-m",
-           "UNKNOWN", "one.dat", "two.dat"],
+           "UNKNOWN", "one_hdr.dat", "two.dat"],
           "join")
     expect = "\t".join(["AA", "BB", "CC", "DD",
                         "UNKNOWN", "UNKNOWN", "UNKNOWN"]) + "\n" +\
@@ -487,17 +488,10 @@ class TestJoin(unittest.TestCase):
   def test_default_keys(self, mock_open):
     """Test using the default keys (first field in each file)."""
     out_strm = StringIO.StringIO()
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
 
-    def open_side_effect(*args, **kwargs):
-      if args[0] == "one.dat" or args[0] == "two.dat":
-        return StringIO.StringIO("\n".join(self.test_file_one))
-      if args[0] == "out.dat":
-        return out_strm
-      raise IOError("No such file")
-
-    mock_open.side_effect = open_side_effect
-
-    _main(["-o", "out.dat", "one.dat", "two.dat"], "join")
+    _main(["-o", "out.dat", "one.dat", "one.dat"], "join")
     expect = ["\t".join(["A1", "B1", "C1", "D1", "B1", "C1", "D1"]),
               "\t".join(["A2", "B2", "C2", "D2", "B2", "C2", "D2"]),
               "\t".join(["A3", "B3", "C3", "D3", "B3", "C3", "D3"]),
@@ -509,43 +503,32 @@ class TestJoin(unittest.TestCase):
   def test_empty_fields(self, mock_open):
     """Test joining files where there are empty fields."""
     out_strm = StringIO.StringIO()
-
-    def open_side_effect(*args, **kwargs):
-      if args[0] == "one_good.dat" or args[0] == "two_good.dat":
-        return StringIO.StringIO("\n".join(self.test_file_one))
-      if args[0] == "one.dat" or args[0] == "two.dat":
-        return StringIO.StringIO("\n".join(self.test_file_one_gapped))
-      if args[0] == "one_head.dat" or args[0] == "two_head.dat":
-        return StringIO.StringIO(self.test_headr_one_gapped + "\n" +
-                                 "\n".join(self.test_file_one_gapped))
-      if args[0] == "out.dat":
-        return out_strm
-      raise IOError("No such file")
-
-    mock_open.side_effect = open_side_effect
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
 
     # should fail gracefully when there is an empty field in the header
     # of either file, or both
-    args = ["-o", "out.dat", "-a", "BB", "one_head.dat", "two.dat"]
+    args = ["-o", "out.dat", "-a", "BB", "one_hdr.dat", "one_hdr_gpd.dat"]
     self.assertRaises(InvalidHeaderError, _main, args, "join")
-    args = ["-o", "out.dat", "-b", "BB", "one.dat", "two_head.dat"]
+    args = ["-o", "out.dat", "-b", "BB", "one_hdr_gpd.dat", "one_hdr.dat"]
     self.assertRaises(InvalidHeaderError, _main, args, "join")
     args = ["-o", "out.dat", "-a", "BB", "-b", "BB",
-            "one_head.dat", "two_head.dat"]
+            "one_hdr_gpd.dat", "one_hdr_gpd.dat"]
     self.assertRaises(InvalidHeaderError, _main, args, "join")
 
     # should fail gracefully when there is an empty field in the key column
     # unless the option to ignore those rows is given.
-    args = ["-o", "out.dat", "-a", "2", "-b", "2", "one.dat", "two.dat"]
+    args = ["-o", "out.dat", "-a", "2", "-b", "2", "one_gpd.dat", "one.dat"]
     self.assertRaises(MissingKeyError, _main, args, "join")
-    args = ["-o", "out.dat", "-a", "2", "-b", "2", "one_good.dat", "two.dat"]
+    args = ["-o", "out.dat", "-a", "2", "-b", "2", "one.dat", "one_gpd.dat"]
     self.assertRaises(MissingKeyError, _main, args, "join")
-    args = ["-o", "out.dat", "-a", "2", "-b", "2", "one.dat", "two_good.dat"]
+    args = ["-o", "out.dat", "-a", "2", "-b", "2", "one_gpd.dat",
+            "one_gpd.dat"]
     self.assertRaises(MissingKeyError, _main, args, "join")
-
-    out_strm = StringIO.StringIO()
-    _main(["-i", "-o", "out.dat", "-a", "2", "-b", "2", "one.dat", "two.dat"],
-          "join")
+    out_strm.truncate(0)
+    out_strm.seek(0)
+    _main(["-i", "-o", "out.dat", "-a", "2", "-b", "2", "one_gpd.dat",
+           "one_gpd.dat"], "join")
     expect = ["\t".join(["A1", "B1", "C1", "D1", "A1", "C1", "D1"]),
               "\t".join(["", "B4", "C4", "D4", "", "C4", "D4"]),
               "\t".join(["  ", "B5", "C5", "D5", "  ", "C5", "D5"])]
@@ -553,20 +536,20 @@ class TestJoin(unittest.TestCase):
 
     # should work when gaps are not in the key field, regardless of whether
     # missing value is provided or not
-    out_strm = StringIO.StringIO()
-    _main(["-o", "out.dat", "-a", "3", "-b", "3", "one.dat", "two.dat"],
-          "join")
+    out_strm.truncate(0)
+    out_strm.seek(0)
+    _main(["-o", "out.dat", "-a", "3", "-b", "3", "one_gpd.dat",
+           "one_gpd.dat"], "join")
     expect = ["\t".join(["A1", "B1", "C1", "D1", "A1", "B1", "D1"]),
               "\t".join(["A2", "", "C2", "D2", "A2", "", "D2"]),
               "\t".join(["A3", "", "C3", "D3", "A3", "", "D3"]),
               "\t".join(["", "B4", "C4", "D4", "", "B4", "D4"]),
               "\t".join(["  ", "B5", "C5", "D5", "  ", "B5", "D5"])]
     self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
-
-    out_strm = StringIO.StringIO()
+    out_strm.truncate(0)
+    out_strm.seek(0)
     _main(["-o", "out.dat", "-a", "3", "-b", "3", "-m", "UNKNOWN",
-           "one.dat", "two.dat"],
-          "join")
+           "one_gpd.dat", "one_gpd.dat"], "join")
     expect = ["\t".join(["A1", "B1", "C1", "D1", "A1", "B1", "D1"]),
               "\t".join(["A2", "UNKNOWN", "C2", "D2", "A2", "UNKNOWN", "D2"]),
               "\t".join(["A3", "UNKNOWN", "C3", "D3", "A3", "UNKNOWN", "D3"]),
