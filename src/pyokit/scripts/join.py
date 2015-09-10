@@ -56,6 +56,19 @@ class MissingKeyError(Exception):
     return repr(self.value)
 
 
+class DuplicateKeyError(Exception):
+
+  """..."""
+
+  def __init__(self, msg):
+    """..."""
+    self.value = msg
+
+  def __str__(self):
+    """Get string representation of this exception."""
+    return repr(self.value)
+
+
 class InvalidHeaderError(Exception):
 
   """..."""
@@ -101,12 +114,68 @@ def file_iterator(filehandle, verbose=False):
     yield line
 
 
+def _build_entry(parts, existing_list_d, key_value, key_field_num,
+                 key_is_field_number, header=None, allow_duplicates=False,
+                 ignore_missing_keys=False):
+  """
+  Build and add an entry to existing_list_d.
+
+  If the key is a field number, the entry added will be a list of lists. The
+  inner list contains one item per column. and the outer list allows more than
+  one entry to be stored per key (but if allow_duplicates is false, an
+  exception will be raised if more than one needs to be stored).
+
+  :param parts:               the (already tokenized) list of column entries.
+  :param existing_list_d:     a dictionary indexed by key value containing the
+                              the already processed entries. The new entry will
+                              be added to this using <key_value> as a key
+  :param key_value:           the key value to use to add the new entry to
+                              <existing_list_d>
+  :param key_field_num:       which column is the key_value from (number,
+                              indexed from 0)
+  :param key_is_field_number: True if the <key_value> is actually the column
+                              index, rather than a column name
+  :param header:              list giving the names of the columns. Can be None
+                              if columns have no names (no header)
+  :param allow_duplicates:    ...
+  :param ignore_missing_keys: ...
+  """
+  if key_value.strip() == "":
+    if ignore_missing_keys:
+      return
+    raise MissingKeyError("missing key value")
+
+  if key_value in existing_list_d:
+    if not allow_duplicates:
+      raise DuplicateKeyError(key_value + " appears multiple times as key")
+  else:
+    existing_list_d[key_value] = []
+
+  if key_is_field_number:
+    # the entry in the dictionary is a list, minus the key field, in the
+    # order they occur.
+    ne = [parts[i] for i in range(0, len(parts)) if i != key_field_num]
+    existing_list_d[key_value].append(ne)
+  else:
+    # the entry in the dictionary is another dictionary indexed by
+    # the header value
+    ne = {}
+    for i in range(0, len(parts)):
+      if i == key_field_num:
+        continue
+      else:
+        ne[header[i]] = parts[i]
+    existing_list_d[key_value].append(ne)
+
+
 def load_file(fn_or_strm, key, key_is_field_number, require_unique_key=True,
               delim="\t", missing_val=None, ignore_missing_keys=False,
-              verbose=False):
+              allow_duplicates=False, verbose=False):
   res = {}
   header = None
   key_field_num = key if key_is_field_number else None
+  expected_cols_per_line = None
+
   for line in file_iterator(fn_or_strm, verbose):
     parts = line.split(delim)
     if missing_val is not None:
@@ -118,33 +187,22 @@ def load_file(fn_or_strm, key, key_is_field_number, require_unique_key=True,
       if len(parts) != len(set(parts)):
         raise InvalidHeaderError("head for file has duplicate names")
       header = parts
+      if key not in header:
+        raise InvalidHeaderError(key + " does not name a column")
       key_field_num = header.index(key)
-      # TODO deal with case where key is not in the header
+
       # TODO deal with case where key occurs more than once in the header
     else:
+      if expected_cols_per_line is None:
+        expected_cols_per_line = len(parts) if header is None else len(header)
+      if expected_cols_per_line != len(parts):
+        raise ValueError("oops")
+
       key_val = parts[key_field_num]
-      if key_val.strip() == "":
-        if ignore_missing_keys:
-          continue
-        raise MissingKeyError("missing key value")
-      if key_val in res:
-        raise ValueError("Oops")
-      if key_is_field_number:
-        # the entry in the dictionary is a list, minus the key field, in the
-        # order they occur.
-        res[key_val] = [parts[i] for i in range(0, len(parts))
-                        if i != key_field_num]
-      else:
-        # the entry in the dictionary is another dictionary indexed by
-        # the header value
-        # TODO proper exception here
-        assert(len(parts) == len(header))
-        res[key_val] = {}
-        for i in range(0, len(parts)):
-          if i == key_field_num:
-            continue
-          else:
-            res[key_val][header[i]] = parts[i]
+      _build_entry(parts, res, key_val, key_field_num, key_is_field_number,
+                   header, allow_duplicates=allow_duplicates,
+                   ignore_missing_keys=ignore_missing_keys)
+
   return res, [x for x in header if x != key] if header is not None else None
 
 
@@ -182,6 +240,12 @@ def getUI(prog_name, args):
                                   "Any field that contains only whitespace " +
                                   "is considered missing",
                       required=False, type=str))
+  ui.addOption(Option(short="d", long="allow-key-duplicates",
+                      description="allow key values to appear more than " +
+                                  "once in a file, If this options is set, " +
+                                  "all combinations of key-value pairs for " +
+                                  "the two files will be output.",
+                      required=False))
   ui.addOption(Option(short="i", long="ignore-missing-key",
                       description="skip lines in input files that are " +
                                   "missing a value for the key field ",
@@ -256,12 +320,16 @@ def _main(args, prog_name):
   if ui.optionIsSet("missing"):
     missing_val = ui.getValue("missing")
 
+  # allow dups?
+  allow_duplicate_key_values = ui.optionIsSet("allow-key-duplicates")
+
   # ignore lines with missing values in the key field?
   ignore_missing_keys = ui.optionIsSet("ignore-missing-key")
 
   # do our thing..
   process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
-          key_two_is_field_number, missing_val, ignore_missing_keys, verbose)
+          key_two_is_field_number, missing_val, ignore_missing_keys,
+          allow_duplicate_key_values, verbose)
 
 
 ###############################################################################
@@ -270,8 +338,9 @@ def _main(args, prog_name):
 
 def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
             key_two_is_field_number, missing_val, ignore_missing_keys,
-            verbose=False):
+            allow_dup_key_values, verbose=False):
   delim = "\t"
+  seen_keys = set()
 
   mixed_headers = (key_one_is_field_number != key_two_is_field_number)
   if mixed_headers and missing_val is None:
@@ -283,6 +352,7 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
   f2_dictionary, f2_header = load_file(infh2, key_two, key_two_is_field_number,
                                        missing_val=missing_val,
                                        ignore_missing_keys=ignore_missing_keys,
+                                       allow_duplicates=allow_dup_key_values,
                                        verbose=verbose)
   f1_header = None
   key_field_num = key_one if key_one_is_field_number else None
@@ -297,8 +367,9 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
       if len(parts) != len(set(parts)):
         raise InvalidHeaderError("header for first file has duplicate names")
       f1_header = parts
+      if key_one not in f1_header:
+        raise InvalidHeaderError(key_one + " does not name a column")
       key_field_num = f1_header.index(key_one)
-      # TODO deal with case where key is not in the header
       # TODO deal with case where key occurs more than once in the header
 
       # TODO exception if header is missing and we have no missing val
@@ -309,7 +380,8 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
         outfh.write(delim.join(f1_header) + delim +
                     delim.join(f2_header) + "\n")
       else:
-        dummy_h = len(f2_dictionary[f2_dictionary.keys()[0]]) * [missing_val]
+        dummy_h = len(f2_dictionary[f2_dictionary.keys()[0]][0]) *\
+            [missing_val]
         outfh.write(delim.join(f1_header) + delim +
                     delim.join(dummy_h) + "\n")
     else:
@@ -318,24 +390,31 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
         if ignore_missing_keys:
           continue
         raise MissingKeyError("missing key value")
-      outfh.write(delim.join(parts) + delim)
+      if key_val in seen_keys and not allow_dup_key_values:
+        raise DuplicateKeyError(key_val + " appears multiple times as key")
+      seen_keys.add(key_val)
 
       if f2_header is not None:
         # f2_dictionary entry is another dictionary indexed by header value
-        first = True
-        for h_val in f2_header:
-          if h_val == key_two:
-            continue
+        if key_val not in f2_dictionary:
+          continue
+        for ne in f2_dictionary[key_val]:
+          outfh.write(delim.join(parts) + delim)
+          first = True
+          for h_val in f2_header:
+            if h_val == key_two:
+              continue
 
-          if first:
-            first = False
-          else:
-            outfh.write(delim)
-          outfh.write(f2_dictionary[key_val][h_val])
-        outfh.write("\n")
+            if first:
+              first = False
+            else:
+              outfh.write(delim)
+            outfh.write(ne[h_val])
+          outfh.write("\n")
       else:
         # f1_dictionary entry is a list
-        outfh.write(delim.join(f2_dictionary[key_val]) + "\n")
+        for ne in f2_dictionary[key_val]:
+          outfh.write(delim.join(parts) + delim + delim.join(ne) + "\n")
 
 
 ###############################################################################
@@ -423,7 +502,11 @@ class TestJoin(unittest.TestCase):
                                  "\n".join(self.test_file_two)),
                  "one_gpd.dat": "\n".join(self.test_file_one_gapped),
                  "one_hdr_gpd.dat": (self.test_headr_one_gapped + "\n" +
-                                     "\n".join(self.test_file_one_gapped))}
+                                     "\n".join(self.test_file_one_gapped)),
+                 "one_dup.dat": (self.test_headr_one_dup + "\n" +
+                                 "\n".join(self.test_file_one)),
+                 "one_dup_fields.dat": (self.test_headr_four + "\n" +
+                                        "\n".join(self.test_file_four))}
 
   @mock.patch('__builtin__.open')
   def test_simple_headerless_join(self, mock_open):
@@ -557,46 +640,105 @@ class TestJoin(unittest.TestCase):
               "\t".join(["UNKNOWN", "B5", "C5", "D5", "UNKNOWN", "B5", "D5"])]
     self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
 
-  def test_missing_key(self):
-    """Program should gracefully handle user giving a key
-       name that doesn't exist.
-    """
-    pass
+  @mock.patch('__builtin__.open')
+  def test_missing_key(self, mock_open):
+    """Should gracefully handle user giving a key name that doesn't exist."""
+    out_strm = StringIO.StringIO()
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
+
+    # should be fine....
+    try:
+      _main(["-o", "out.dat", "-a", "BB", "-b", "BX", "one_hdr.dat",
+             "two_hdr.dat"], "join")
+    except Exception:
+      self.fail()
+    # should fail ..
+    args = ["-o", "out.dat", "-a", "BX", "-b", "BX", "one_hdr.dat",
+            "two_hdr.dat"]
+    self.assertRaises(InvalidHeaderError, _main, args, "join")
+    args = ["-o", "out.dat", "-a", "BB", "-b", "BB", "one_hdr.dat",
+            "two_hdr.dat"]
+    self.assertRaises(InvalidHeaderError, _main, args, "join")
 
   @mock.patch('__builtin__.open')
   def test_duplicate_col_headers(self, mock_open):
     """If headers are present, each column must have a unique name."""
     out_strm = StringIO.StringIO()
-
-    def open_side_effect(*args, **kwargs):
-      if args[0] == "one.dat":
-        return StringIO.StringIO(self.test_headr_one_dup + "\n" +
-                                 "\n".join(self.test_file_one))
-      if args[0] == "two.dat":
-        return StringIO.StringIO(self.test_headr_two + "\n" +
-                                 "\n".join(self.test_file_two))
-      if args[0] == "out.dat":
-        return out_strm
-      raise IOError("No such file")
-
-    mock_open.side_effect = open_side_effect
-    args = ["-o", "out.dat", "-a", "BB", "-b", "BX", "one.dat", "two.dat"]
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
+    args = ["-o", "out.dat", "-a", "BB", "-b", "BX", "one_dup.dat",
+            "two_hdr.dat"]
     self.assertRaises(InvalidHeaderError, _main, args, "join")
-    args = ["-o", "out.dat", "-a", "BX", "-b", "BB", "two.dat", "one.dat"]
+    args = ["-o", "out.dat", "-a", "BX", "-b", "BB", "two_hdr.dat",
+            "one_dup.dat"]
     self.assertRaises(InvalidHeaderError, _main, args, "join")
 
   def test_failure_on_ragged_data_frame(self):
     # number of elements should be the same on each line...
+    # TODO
     pass
 
-  def test_duplicate_key_value_all_combinations(self):
+  @mock.patch('__builtin__.open')
+  def test_fail_on_dup_key_vals(self, mock_open):
+    """Duplicate key vals should cause failure when approp. option not set."""
+    out_strm = StringIO.StringIO()
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
+    args = ["-o", "out.dat", "-a", "BB", "-b", "BX", "one_dup_fields.dat",
+            "two_hdr.dat"]
+    self.assertRaises(DuplicateKeyError, _main, args, "join")
+    args = ["-o", "out.dat", "-a", "BX", "-b", "BB", "two_hdr.dat",
+            "one_dup_fields.dat"]
+    self.assertRaises(DuplicateKeyError, _main, args, "join")
+
+  @mock.patch('__builtin__.open')
+  def test_duplicate_key_value_all_combinations(self, mock_open):
     # if a key value appears more than once, by default the program will just
     # exit with an error, but there is an option to process all combinations
-    pass
+    out_strm = StringIO.StringIO()
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
+
+    _main(["-d", "-o", "out.dat", "-a", "BB", "-b", "BX", "one_dup_fields.dat",
+           "two_hdr.dat"], "join")
+    expect = ["\t".join(["AA", "BB", "CC", "DD", "XX", "YY", "ZZ"]),
+              "\t".join(["A1", "B1", "C1", "D1", "X1", "Y1", "Z1"]),
+              "\t".join(["A2", "B1", "C2", "D2", "X1", "Y1", "Z1"]),
+              "\t".join(["A3", "B3", "C3", "D3", "X3", "Y3", "Z3"]),
+              "\t".join(["A4", "B3", "C4", "D4", "X3", "Y3", "Z3"]),
+              "\t".join(["A5", "B5", "C5", "D5", "X5", "Y5", "Z5"])]
+    print "\n".join(expect) + "\n"
+    print "**********"
+    print out_strm.getvalue()
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
+
+    out_strm.truncate(0)
+    out_strm.seek(0)
+    _main(["-d", "-o", "out.dat", "-a", "BX", "-b", "BB", "two_hdr.dat",
+           "one_dup_fields.dat"], "join")
+    expect = ["\t".join(["XX", "BX", "YY", "ZZ", "AA", "CC", "DD"]),
+              "\t".join(["X1", "B1", "Y1", "Z1", "A1", "C1", "D1"]),
+              "\t".join(["X1", "B1", "Y1", "Z1", "A2", "C2", "D2"]),
+              "\t".join(["X3", "B3", "Y3", "Z3", "A3", "C3", "D3"]),
+              "\t".join(["X3", "B3", "Y3", "Z3", "A4", "C4", "D4"]),
+              "\t".join(["X5", "B5", "Y5", "Z5", "A5", "C5", "D5"])]
+    print "\n".join(expect) + "\n"
+    print "**********"
+    print out_strm.getvalue()
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
 
   def test_duplicate_key_value_join_fields(self):
     # if a key value appears more than once, by default the program will just
     # exit with an error, but there is an option to join the mismatched fields
+    # TODO
+    pass
+
+  def test_output_unmatched_keys(self):
+    # there should be an option to output lines with key values that don't
+    # match anything in the other file. This should require that the missing
+    # value is provided, to fill in unknown columns
+    # TODO
     pass
 
 
