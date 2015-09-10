@@ -708,9 +708,6 @@ class TestJoin(unittest.TestCase):
               "\t".join(["A3", "B3", "C3", "D3", "X3", "Y3", "Z3"]),
               "\t".join(["A4", "B3", "C4", "D4", "X3", "Y3", "Z3"]),
               "\t".join(["A5", "B5", "C5", "D5", "X5", "Y5", "Z5"])]
-    print "\n".join(expect) + "\n"
-    print "**********"
-    print out_strm.getvalue()
     self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
 
     out_strm.truncate(0)
@@ -723,9 +720,6 @@ class TestJoin(unittest.TestCase):
               "\t".join(["X3", "B3", "Y3", "Z3", "A3", "C3", "D3"]),
               "\t".join(["X3", "B3", "Y3", "Z3", "A4", "C4", "D4"]),
               "\t".join(["X5", "B5", "Y5", "Z5", "A5", "C5", "D5"])]
-    print "\n".join(expect) + "\n"
-    print "**********"
-    print out_strm.getvalue()
     self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
 
   def test_duplicate_key_value_join_fields(self):
