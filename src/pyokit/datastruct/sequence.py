@@ -31,10 +31,10 @@ from pyokit.util.mutableString import MutableString
 #                             MODULE CONSTANTS                                #
 ###############################################################################
 
-DNA_COMPLEMENTS = {"A":"T", "T":"A", "C":"G", "G":"C", "N":"N",
-                   "a":"t", "t":"a", "c":"g", "g":"c", "n":"n"}
-RNA_COMPLEMENTS = {"A":"U", "U":"A", "C":"G", "G":"C", "N":"N",
-                   "a":"u", "u":"a", "c":"g", "g":"c", "n":"n"}
+DNA_COMPLEMENTS = {"A": "T", "T": "A", "C": "G", "G": "C", "N": "N",
+                   "a": "t", "t": "a", "c": "g", "g": "c", "n": "n"}
+RNA_COMPLEMENTS = {"A": "U", "U": "A", "C": "G", "G": "C", "N": "N",
+                   "a": "u", "u": "a", "c": "g", "g": "c", "n": "n"}
 GAP_CHAR = "-"
 UNKNOWN_SEQ_NAME = "UNKNOWN_SEQUENCE"
 RNA_NUCS = "ACGUNacgun"
@@ -111,9 +111,9 @@ class Sequence(object):
       raise ValueError("Sequence strand must be either + or -, found " +
                        strand + " instead")
     self.name = seqName
-    if useMutableString :
+    if useMutableString:
       self.sequenceData = MutableString(seqData)
-    else :
+    else:
       self.sequenceData = seqData
     self.mutableString = useMutableString
     self.remaining = remaining
@@ -314,7 +314,7 @@ class Sequence(object):
     """
     assert(self_end - self_start == other_end - other_start)
     count = 0
-    for i in range(0, self_end - self_start + 1) :
+    for i in range(0, self_end - self_start + 1):
       if (self.sequenceData[self_start + i] ==
          other.sequenceData[other_start + i]):
         count += 1
@@ -331,7 +331,7 @@ class Sequence(object):
     isRNA_l = self.isRNA() if isRNA is None else isRNA
 
     tmp = ""
-    for n in self.sequenceData :
+    for n in self.sequenceData:
       if isRNA_l:
         tmp += RNA_COMPLEMENTS[n]
       else:
@@ -392,17 +392,17 @@ class Sequence(object):
                             this sequence
     """
     if region.start < 0 or region.end < 0 or \
-       region.start > len(self) or region.end > len(self) :
+       region.start > len(self) or region.end > len(self):
       raise SequenceError("cannot mask region " + str(region.start) + " to " +
                           str(region.end) + " in " + self.name + ". " +
                           "Region specifies nucleotides not present in " +
                           "this read. Valid range would have been 0 -- " +
                           str(len(self)))
 
-    if self.mutableString :
+    if self.mutableString:
       for i in range(region.start, region.end + 1):
         self.sequenceData[i] = 'N'
-    else :
+    else:
       self.sequenceData = "".join([self.sequenceData[:region.start],
                                   ("N" * (region.end - region.start + 1)),
                                   self.sequenceData[region.end + 1:]])
@@ -422,9 +422,9 @@ class Sequence(object):
                                messagePrefix="completed",
                                messageSuffix="of masking regions in " +
                                              self.name)
-    for region in regions :
+    for region in regions:
       self.maskRegion(region)
-      if verbose :
+      if verbose:
         pind.done += 1
         pind.showProgress()
 
@@ -435,7 +435,7 @@ class Sequence(object):
 
       :return: True if contains only DNA nucleotides, False otherwise
     """
-    for nuc in self.sequenceData :
+    for nuc in self.sequenceData:
       if nuc not in DNA_NUCS:
         return False
     return True
@@ -447,7 +447,7 @@ class Sequence(object):
 
       :return: True if contains only RNA nucleotides, False otherwise
     """
-    for nuc in self.sequenceData :
+    for nuc in self.sequenceData:
       if nuc not in RNA_NUCS:
         return False
     return True
@@ -473,7 +473,7 @@ class Sequence(object):
       :param point: defines the split point, if None then the centre is used
       :return: two Sequence objects -- one for each side
     """
-    if point is None :
+    if point is None:
       point = len(self) / 2
 
     r1 = Sequence(self.name + ".1", self.sequenceData[:point])
@@ -504,17 +504,17 @@ class Sequence(object):
     other_end = len(seq) - 1
     other_start = 0
 
-    for i in range(len(self.sequenceData) - 1, lim - 1, -1) :
+    for i in range(len(self.sequenceData) - 1, lim - 1, -1):
       self_end = i
       self_start = i - (len(seq) - 1)
 
-      if self_start < 0 :
+      if self_start < 0:
         self_start = 0
         other_start = other_end - self_end
 
       score = self.similarity(self_start, self_end, other_start,
                               other_end, seq)
-      if (score >= mm_score) :
+      if (score >= mm_score):
         self.nsRight(len(seq) + (len(self) - i) - 1)
         break
 
@@ -593,7 +593,7 @@ class Sequence(object):
     if m_str:
       res += (" " + m_str)
     res += "\n"
-    for i in range(0, len(self.sequenceData), line_width) :
+    for i in range(0, len(self.sequenceData), line_width):
       res += self.sequenceData[i:i + line_width]
       if i + line_width < len(self.sequenceData):
         res += "\n"
