@@ -119,6 +119,13 @@ class NGSRead(Sequence):
 
       :param size: the number of nucleotides to truncate to.
     """
+    if size > len(self):
+      raise NGSReadError("Trying to truncate NGS read to size " + str(size) +
+                         ", but read is only " + str(len(self)) +
+                         " nucleotides long")
+    if size < 0:
+      raise NGSReadError("Trying to truncate NGS read to size less than 0")
+
     self.trimRight(len(self) - size)
 
   def trimRight(self, amount):
@@ -129,8 +136,10 @@ class NGSRead(Sequence):
       :param amount: the number of nucleotides to trim from the right-side of
                      this sequence.
     """
+    if amount == 0:
+      return
     self.sequenceData = self.sequenceData[:-amount]
-    self.sequenceQual = self.sequenceQual[:-amount]
+    self.seq_qual = self.seq_qual[:-amount]
 
   def trimLeft(self, amount):
     """
@@ -140,6 +149,8 @@ class NGSRead(Sequence):
       :param amount: the number of nucleotides to trim from the left-side of
                      this sequence.
     """
+    if amount == 0:
+      return
     self.sequenceData = self.sequenceData[amount:]
     self.sequenceQual = self.sequenceQual[amount:]
 
@@ -148,12 +159,12 @@ class NGSRead(Sequence):
     return (ord(val) - self.LOWSET_SCORE) / float(self.HIGHEST_SCORE -
                                                   self.LOWSET_SCORE)
 
-  def reverseComplement(self, is_RNA=None):
+  def reverse_complement(self, is_RNA=None):
     """
       Reverse complement this fastq sequence in-place.
     """
     Sequence.reverseComplement(self, is_RNA)
-    self.sequenceQual = self.sequenceQual[::-1]
+    self.seq_qual = self.seq_qual[::-1]
 
   def split(self, point=None):
     """
@@ -210,8 +221,8 @@ class NGSRead(Sequence):
     """
     :return: string representation of this NGS read in FastQ format
     """
-    return "@" + self.sequenceName + "\n" + self.sequenceData +\
-           "\n" + "+" + self.sequenceName + "\n" + self.sequenceQual
+    return "@" + self.name + "\n" + self.sequenceData +\
+           "\n" + "+" + self.name + "\n" + self.seq_qual
 
 
 ###############################################################################
@@ -269,6 +280,34 @@ class NGSReadUnitTests(unittest.TestCase):
     self.r5 = NGSRead("TCTGCT", "s2", "fBBBBB")
     self.r6 = NGSRead("CCCCCC", "s3", "fBBBBB")
     self.r7 = NGSRead("CCCCCC", "s1", "fBBfBB")
+
+  def test_length_mismatch(self):
+    """Test trying to make a read with mismatched seq and qual data."""
+    self.assertRaises(NGSReadError, NGSRead, "ACTGCT", "s1", "BBBBB")
+    self.assertRaises(NGSReadError, NGSRead, "ACTGC", "s1", "BBBBBB")
+    self.assertRaises(NGSReadError, NGSRead, "ACTGCT", "s1", "")
+    self.assertRaises(NGSReadError, NGSRead, "", "s1", "BBBBB")
+
+  def test_truncate(self):
+    """Test truncating NGSReads."""
+    self.r1.truncate(1)
+    self.r2.truncate(6)
+    self.r3.truncate(0)
+
+    self.assertEqual(self.r1, NGSRead("A", "s1", "B"))
+    self.assertEqual(self.r2, NGSRead("ACTGCT", "s1", "BBBBBB"))
+    self.assertEqual(self.r3, NGSRead("", "s1", ""))
+    self.assertRaises(NGSReadError, self.r4.truncate, -1)
+    self.assertRaises(NGSReadError, self.r5.truncate, 7)
+
+  def test_rev_comp(self):
+    self.r1.reverse_complement()
+    self.r3.reverse_complement()
+    self.r7.reverse_complement()
+
+    self.assertEqual(self.r1, NGSRead("AGCAGT", "s1", "BBBBBB"))
+    self.assertEqual(self.r3, NGSRead("AGCAGT", "s1", "BBfBBB"))
+    self.assertEqual(self.r7, NGSRead("GGGGGG", "s1", "BBfBBf"))
 
   def testeq(self):
     """
