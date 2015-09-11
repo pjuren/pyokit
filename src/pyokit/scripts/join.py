@@ -674,11 +674,6 @@ class TestJoin(unittest.TestCase):
             "one_dup.dat"]
     self.assertRaises(InvalidHeaderError, _main, args, "join")
 
-  def test_failure_on_ragged_data_frame(self):
-    # number of elements should be the same on each line...
-    # TODO
-    pass
-
   @mock.patch('__builtin__.open')
   def test_fail_on_dup_key_vals(self, mock_open):
     """Duplicate key vals should cause failure when approp. option not set."""
@@ -732,6 +727,11 @@ class TestJoin(unittest.TestCase):
     # there should be an option to output lines with key values that don't
     # match anything in the other file. This should require that the missing
     # value is provided, to fill in unknown columns
+    # TODO
+    pass
+
+  def test_failure_on_ragged_data_frame(self):
+    # number of elements should be the same on each line...
     # TODO
     pass
 
