@@ -73,7 +73,7 @@ class NGSRead(Sequence):
       Constructor for FastqSequence class; see class level documentation for
       descriptions of parameters.
     """
-    if len(seq) != len(qual) :
+    if len(seq) != len(qual):
       raise NGSReadError("failed to create FastqSequence object -- length " +
                          "of sequence data (" + str(len(seq)) + ")" +
                          "does not match length of quality string (" +
@@ -165,7 +165,7 @@ class NGSRead(Sequence):
       :return: two FastqSequence objects which correspond to the split of this
                sequence.
     """
-    if point is None :
+    if point is None:
       point = len(self) / 2
 
     r1 = NGSRead(self.sequenceName + ".1", self.sequenceData[:point],
@@ -189,7 +189,7 @@ class NGSRead(Sequence):
       :raise: FastqSequenceError if the sequences names do not match, and the
               forceMerge parameter is not set.
     """
-    if self.sequenceName != other.sequenceName and not forceMerge :
+    if self.sequenceName != other.sequenceName and not forceMerge:
       raise NGSReadError("cannot merge " + self.sequenceName + " with " +
                          other.sequenceName + " -- different " +
                          "sequence names")
@@ -261,37 +261,36 @@ class NGSReadUnitTests(unittest.TestCase):
   """
     Unit tests for NGSRead module
   """
+  def setUp(self):
+    self.r1 = NGSRead("ACTGCT", "s1", "BBBBBB")
+    self.r2 = NGSRead("ACTGCT", "s1", "BBBBBB")
+    self.r3 = NGSRead("ACTGCT", "s1", "BBBfBB")
+    self.r4 = NGSRead("ACCGCT", "s1", "BBBBBB")
+    self.r5 = NGSRead("TCTGCT", "s2", "fBBBBB")
+    self.r6 = NGSRead("CCCCCC", "s3", "fBBBBB")
+    self.r7 = NGSRead("CCCCCC", "s1", "fBBfBB")
 
   def testeq(self):
     """
-      test the equality operator for fastQ sequences.
+      test the equality operator for NGSRead sequences.
     """
-    r1 = NGSRead("ACTGCT", "s1", "BBBBBB")
-    r2 = NGSRead("ACTGCT", "s1", "BBBBBB")
-    r3 = NGSRead("ACTGCT", "s1", "BBBfBB")
-    r4 = NGSRead("ACCGCT", "s1", "BBBBBB")
-    r5 = NGSRead("TCTGCT", "s2", "fBBBBB")
-    r6 = NGSRead("CCCCCC", "s3", "fBBBBB")
-    r7 = NGSRead("CCCCCC", "s1", "fBBfBB")
-    r7 = NGSRead("CCCCCC", "s6", "fBBfBB")
+    self.assertTrue((self.r1 == self.r2) is True)   # same name, seq, qual
+    self.assertTrue((self.r1 == self.r3) is False)  # same name, seq, diff qual
+    self.assertTrue((self.r1 == self.r4) is False)  # same name, qual, diff seq
+    self.assertTrue((self.r3 == self.r4) is False)  # same name, diff seq, qual
+    self.assertTrue((self.r1 == self.r5) is False)  # diff name, seq, qual
+    self.assertTrue((self.r5 == self.r6) is False)  # diff name, seq, same qual
+    self.assertTrue((self.r6 == self.r7) is False)  # diff name, qual, same seq
+    self.assertTrue((self.r3 == self.r4) is False)  # diff name, same seq, qual
 
-    self.assertTrue((r1 == r2) == True)   # same name, same seq, same qual
-    self.assertTrue((r1 == r3) == False)  # same name, same seq, diff qual
-    self.assertTrue((r1 == r4) == False)  # same name, diff seq, same qual
-    self.assertTrue((r3 == r4) == False)  # same name, diff seq, diff qual
-    self.assertTrue((r1 == r5) == False)  # diff name, diff seq, diff qual
-    self.assertTrue((r5 == r6) == False)  # diff name, diff seq, same qual
-    self.assertTrue((r6 == r7) == False)  # diff name, same seq, diff qual
-    self.assertTrue((r3 == r4) == False)  # diff name, same seq, same qual
-
-    self.assertTrue((r1 != r2) == False)  # same name, same seq, same qual
-    self.assertTrue((r1 != r3) == True)   # same name, same seq, diff qual
-    self.assertTrue((r1 != r4) == True)   # same name, diff seq, same qual
-    self.assertTrue((r3 != r4) == True)   # same name, diff seq, diff qual
-    self.assertTrue((r1 != r5) == True)   # diff name, diff seq, diff qual
-    self.assertTrue((r5 != r6) == True)   # diff name, diff seq, same qual
-    self.assertTrue((r6 != r7) == True)   # diff name, same seq, diff qual
-    self.assertTrue((r3 != r4) == True)   # diff name, same seq, same qual
+    self.assertTrue((self.r1 != self.r2) is False)  # same name, seq, same qual
+    self.assertTrue((self.r1 != self.r3) is True)   # same name, seq, diff qual
+    self.assertTrue((self.r1 != self.r4) is True)   # same name, qual, diff seq
+    self.assertTrue((self.r3 != self.r4) is True)   # same name, diff seq, qual
+    self.assertTrue((self.r1 != self.r5) is True)   # diff name, diff seq, qual
+    self.assertTrue((self.r5 != self.r6) is True)   # diff name, seq, same qual
+    self.assertTrue((self.r6 != self.r7) is True)   # diff name, qual, same seq
+    self.assertTrue((self.r3 != self.r4) is True)   # diff name, same seq, qual
 
   def testClipadaptor(self):
     input_seq = NGSRead("ACTGCTAGCGATCGACT", "n1", "QQQQQQQQQQQQQQQQQ")
