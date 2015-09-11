@@ -161,28 +161,42 @@ class NGSRead(Sequence):
 
   def reverse_complement(self, is_RNA=None):
     """
-      Reverse complement this fastq sequence in-place.
+      Reverse complement this read in-place.
     """
     Sequence.reverseComplement(self, is_RNA)
     self.seq_qual = self.seq_qual[::-1]
 
   def split(self, point=None):
     """
-      Split this fastq sequence into two halves. The original sequence is left
-      unaltered.
+    Split this read into two halves. Original sequence is left unaltered.
 
-      :param point: the point (index) at which to split this sequence. If None
-                    (the default), then we split in the middle.
-      :return: two FastqSequence objects which correspond to the split of this
-               sequence.
+    The name of the resultant reads will have '.1' and '.2' appended to the
+    name from the original read.
+
+    :param point: the point (index, starting from 0) at which to split this
+                  read -- everything before this index will be placed into the
+                  first sequence, and everything at or after this index will be
+                  placed in the second resultant sequence. If None
+                  (the default), then we split in the middle; if the original
+                  size is not a multiple of 2, the extra nucleotide is placed
+                  into the second resultant sequence. Must be >= 0
+                  and <= length of sequence.
+    :return: two NGSRead objects which correspond to the split of this
+             sequence.
     """
     if point is None:
       point = len(self) / 2
+    if point < 0:
+      raise NGSReadError("Cannot split read at index less than 0 " +
+                         "(index provided: " + str(point) + ")")
+    if point > len(self):
+      raise NGSReadError("Cannot split read at index greater than read " +
+                         "length (index provided: " + str(point) + ")")
 
-    r1 = NGSRead(self.sequenceName + ".1", self.sequenceData[:point],
-                 self.sequenceQual[:point])
-    r2 = NGSRead(self.sequenceName + ".2", self.sequenceData[point:],
-                 self.sequenceQual[point:])
+    r1 = NGSRead(self.sequenceData[:point], self.name + ".1",
+                 self.seq_qual[:point])
+    r2 = NGSRead(self.sequenceData[point:], self.name + ".2",
+                 self.seq_qual[point:])
     return r1, r2
 
   def merge(self, other, forceMerge=False):
@@ -308,6 +322,18 @@ class NGSReadUnitTests(unittest.TestCase):
     self.assertEqual(self.r1, NGSRead("AGCAGT", "s1", "BBBBBB"))
     self.assertEqual(self.r3, NGSRead("AGCAGT", "s1", "BBfBBB"))
     self.assertEqual(self.r7, NGSRead("GGGGGG", "s1", "BBfBBf"))
+
+  def test_split(self):
+    self.assertEquals(self.r1.split(), (NGSRead("ACT", "s1.1", "BBB"),
+                                        NGSRead("GCT", "s1.2", "BBB")))
+    self.assertEquals(self.r1.split(3), (NGSRead("ACT", "s1.1", "BBB"),
+                                         NGSRead("GCT", "s1.2", "BBB")))
+    self.assertEquals(self.r1.split(0), (NGSRead("", "s1.1", ""),
+                                         NGSRead("ACTGCT", "s1.2", "BBBBBB")))
+    self.assertEquals(self.r1.split(6), (NGSRead("ACTGCT", "s1.1", "BBBBBB"),
+                                         NGSRead("", "s1.2", "")))
+    self.assertRaises(NGSReadError, self.r1.split, -1)
+    self.assertRaises(NGSReadError, self.r1.split, 7)
 
   def testeq(self):
     """
