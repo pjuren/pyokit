@@ -25,12 +25,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # standard python imports
 import sys
 
+# check for rpy2 -- we need to disable some scripts if it is missing
+try:
+  from rpy2.robjects import r
+except ImportError, e:
+  have_functioning_rpy2 = False
+
 # pyokit imports -- exceptions
 from pyokit.io.ioError import PyokitIOError
 from pyokit.common.pyokitError import PyokitError
 
 # pyokit imports -- scripts
-from pyokit.scripts import fdr
+if have_functioning_rpy2:
+  from pyokit.scripts import fdr
 from pyokit.scripts import index
 from pyokit.scripts import conservationProfile
 from pyokit.scripts import join
@@ -48,7 +55,10 @@ def main():
   """
   try:
     if sys.argv[1] == "fdr":
-      fdr.main(sys.argv[2:])
+      if have_functioning_rpy2:
+        fdr.main(sys.argv[2:])
+      else:
+        sys.stderr.write("The fdr scripts is disabled; it needs rpy2 to run.")
     elif sys.argv[1] == "index":
       index.main(sys.argv[2:], "pyokit index")
     elif sys.argv[1] == "consprofile":
