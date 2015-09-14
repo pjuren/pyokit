@@ -58,7 +58,9 @@ def main():
       if have_functioning_rpy2:
         fdr.main(sys.argv[2:])
       else:
-        sys.stderr.write("The fdr scripts is disabled; it needs rpy2 to run.")
+        sys.stderr.write("The fdr scripts is disabled; it needs rpy2 to " +
+                         "run and that package either isn't installed or is " +
+                         "not working properly.\n")
     elif sys.argv[1] == "index":
       index.main(sys.argv[2:], "pyokit index")
     elif sys.argv[1] == "consprofile":
