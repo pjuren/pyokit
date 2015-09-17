@@ -23,17 +23,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 
-import sys
+# standard python imports
 import os
-import unittest
+import sys
+import abc
 import mock
+import unittest
 import StringIO
 
+# support for enumerations in python 2
+from enum import Enum
+
+# pyokit imports
 from pyokit.interface.cli import CLI, Option
 from pyokit.util.progressIndicator import ProgressIndicator
 
 ###############################################################################
-#                                 CONSTANTS                                   #
+#                            CONSTANTS AND ENUMS                              #
 ###############################################################################
 
 DEFAULT_VERBOSITY = False
@@ -83,6 +89,94 @@ class InvalidHeaderError(Exception):
 
 
 ###############################################################################
+#                              OUTPUT HANDLERS                                #
+###############################################################################
+
+class OutputHandlerBase(object):
+  __metaclass__ = abc.ABCMeta
+
+  @abc.abstractmethod
+  def write_output(self, out_strm, delim, f1_fields, f2_fields,
+                   f1_header=None, f2_header=None):
+    """Write output to stream for a given pair of columns."""
+    # we don't expect to be given mixed field types
+    if f1_header is None or f2_header is None:
+      if f1_header != f2_header:
+        raise ValueError("mixed field types provided for output...")
+    return
+
+  @abc.abstractmethod
+  def get_description(self):
+    """Return a string description of this output handler."""
+    return
+
+
+class NoDupsOutputHandler(OutputHandlerBase):
+  def write_output(self, out_strm, delim, f1_fields, f2_fields,
+                   f1_header=None, f2_header=None):
+    if len(f1_fields) > 1 or len(f2_fields) > 1:
+      raise DuplicateKeyError()
+    pcout = PairwiseCombinationOutputHandler()
+    pcout.write_output(out_strm, delim, f1_fields, f2_fields,
+                       f1_header, f2_header)
+
+  def get_description(self):
+    """Return a string description of this output handler."""
+    return "program exits with error if any duplicates are found"
+
+
+class PairwiseCombinationOutputHandler(OutputHandlerBase):
+  def write_output(self, out_strm, delim, f1_fields, f2_fields,
+                   f1_header=None, f2_header=None):
+    sc = super(PairwiseCombinationOutputHandler, self)
+    sc.write_output(out_strm, delim, f1_fields, f2_fields, f1_header,
+                    f2_header)
+
+    # above call to super will check that f1_header and f2_header are the same
+    # type, so if f1_header is not None, then so is f2
+    if f1_header is not None:
+      for f1_d in f1_fields:
+        out_strm.write(delim.join([f1_d[k] for k in f1_header]) + delim)
+        for f2_d in f2_fields:
+          first = True
+          for h_val in f2_header:
+            if first:
+              first = False
+            else:
+              out_strm.write(delim)
+            out_strm.write(f2_d[h_val])
+          out_strm.write("\n")
+    else:
+      for f1_l in f1_fields:
+        for f2_l in f2_fields:
+          out_strm.write(delim.join(f1_l) + delim + delim.join(f2_l) + "\n")
+
+  def get_description(self):
+    """Return a string description of this output handler."""
+    return "output one line for each possible pairwise " +\
+           "combination of lines from the first and " +\
+           "second file for the duplicated key value"
+
+
+###############################################################################
+#                                   ENUMS                                     #
+###############################################################################
+
+class OutputType(Enum):
+
+  """An enumeration of the possible ways the join script can handle dups."""
+
+  error_on_dups = NoDupsOutputHandler()
+  all_pairwise_combinations = PairwiseCombinationOutputHandler()
+  # column_wise_join = "output just one line for the duplicated key value, " +\
+  #                   "but inlcude all possible values for the other " +\
+  #                   "fields, separated by semi-colon in each field"
+
+  def get_handler(self):
+    return self.value
+
+
+###############################################################################
 #                              HELPER FUNCTIONS                               #
 ###############################################################################
 
@@ -115,7 +209,8 @@ def file_iterator(filehandle, verbose=False):
 
 
 def _build_entry(parts, existing_list_d, key_value, key_field_num,
-                 key_is_field_number, header=None, allow_duplicates=False,
+                 key_is_field_number, header=None,
+                 output_type=OutputType.error_on_dups,
                  ignore_missing_keys=False):
   """
   Build and add an entry to existing_list_d.
@@ -137,7 +232,7 @@ def _build_entry(parts, existing_list_d, key_value, key_field_num,
                               index, rather than a column name
   :param header:              list giving the names of the columns. Can be None
                               if columns have no names (no header)
-  :param allow_duplicates:    ...
+  :param dup_method:          ...
   :param ignore_missing_keys: ...
   """
   if key_value.strip() == "":
@@ -146,8 +241,10 @@ def _build_entry(parts, existing_list_d, key_value, key_field_num,
     raise MissingKeyError("missing key value")
 
   if key_value in existing_list_d:
-    if not allow_duplicates:
+    if output_type is OutputType.error_on_dups:
       raise DuplicateKeyError(key_value + " appears multiple times as key")
+    else:
+      raise ValueError("Unknown duplicate handling method")
   else:
     existing_list_d[key_value] = []
 
@@ -170,7 +267,7 @@ def _build_entry(parts, existing_list_d, key_value, key_field_num,
 
 def load_file(fn_or_strm, key, key_is_field_number, require_unique_key=True,
               delim="\t", missing_val=None, ignore_missing_keys=False,
-              allow_duplicates=False, verbose=False):
+              output_type=OutputType.error_on_dups, verbose=False):
   res = {}
   header = None
   key_field_num = key if key_is_field_number else None
@@ -200,7 +297,7 @@ def load_file(fn_or_strm, key, key_is_field_number, require_unique_key=True,
 
       key_val = parts[key_field_num]
       _build_entry(parts, res, key_val, key_field_num, key_is_field_number,
-                   header, allow_duplicates=allow_duplicates,
+                   header, output_type=output_type,
                    ignore_missing_keys=ignore_missing_keys)
 
   return res, [x for x in header if x != key] if header is not None else None
@@ -240,12 +337,13 @@ def getUI(prog_name, args):
                                   "Any field that contains only whitespace " +
                                   "is considered missing",
                       required=False, type=str))
-  ui.addOption(Option(short="d", long="allow-key-duplicates",
-                      description="allow key values to appear more than " +
-                                  "once in a file, If this options is set, " +
-                                  "all combinations of key-value pairs for " +
-                                  "the two files will be output.",
-                      required=False))
+  ui.addOption(Option(short="d", long="duplicate-handling", argName="meth",
+                      description="how should duplicate values for a key " +
+                                  "field be treated? " +
+                                  "; ".join([f.name + " = " +
+                                             f.value.get_description()
+                                             for f in OutputType]),
+                      required=False, type=str))
   ui.addOption(Option(short="i", long="ignore-missing-key",
                       description="skip lines in input files that are " +
                                   "missing a value for the key field ",
@@ -321,7 +419,9 @@ def _main(args, prog_name):
     missing_val = ui.getValue("missing")
 
   # allow dups?
-  allow_duplicate_key_values = ui.optionIsSet("allow-key-duplicates")
+  dup_method = OutputType.error_on_dups
+  if ui.optionIsSet("duplicate-handling"):
+    dup_method = OutputType(ui.getValue("duplicate-handling"))
 
   # ignore lines with missing values in the key field?
   ignore_missing_keys = ui.optionIsSet("ignore-missing-key")
@@ -329,7 +429,7 @@ def _main(args, prog_name):
   # do our thing..
   process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
           key_two_is_field_number, missing_val, ignore_missing_keys,
-          allow_duplicate_key_values, verbose)
+          dup_method, verbose)
 
 
 ###############################################################################
@@ -338,9 +438,10 @@ def _main(args, prog_name):
 
 def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
             key_two_is_field_number, missing_val, ignore_missing_keys,
-            allow_dup_key_values, verbose=False):
+            output_type, verbose=False):
   delim = "\t"
   seen_keys = set()
+  output_handler = output_type.get_handler()
 
   mixed_headers = (key_one_is_field_number != key_two_is_field_number)
   if mixed_headers and missing_val is None:
@@ -352,7 +453,7 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
   f2_dictionary, f2_header = load_file(infh2, key_two, key_two_is_field_number,
                                        missing_val=missing_val,
                                        ignore_missing_keys=ignore_missing_keys,
-                                       allow_duplicates=allow_dup_key_values,
+                                       output_type=output_type,
                                        verbose=verbose)
   f1_header = None
   key_field_num = key_one if key_one_is_field_number else None
@@ -390,31 +491,19 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
         if ignore_missing_keys:
           continue
         raise MissingKeyError("missing key value")
-      if key_val in seen_keys and not allow_dup_key_values:
+
+      if key_val in seen_keys and \
+         output_type is OutputType.error_on_dups:
         raise DuplicateKeyError(key_val + " appears multiple times as key")
       seen_keys.add(key_val)
 
-      if f2_header is not None:
-        # f2_dictionary entry is another dictionary indexed by header value
-        if key_val not in f2_dictionary:
-          continue
-        for ne in f2_dictionary[key_val]:
-          outfh.write(delim.join(parts) + delim)
-          first = True
-          for h_val in f2_header:
-            if h_val == key_two:
-              continue
+      if key_val not in f2_dictionary:
+        continue
+      f1_flds = ([dict(zip(parts, f1_header))]
+                 if f1_header is not None else [parts])
 
-            if first:
-              first = False
-            else:
-              outfh.write(delim)
-            outfh.write(ne[h_val])
-          outfh.write("\n")
-      else:
-        # f1_dictionary entry is a list
-        for ne in f2_dictionary[key_val]:
-          outfh.write(delim.join(parts) + delim + delim.join(ne) + "\n")
+      output_handler.write_output(outfh, delim, f1_flds,
+                                  f2_dictionary[key_val], f1_header, f2_header)
 
 
 ###############################################################################
@@ -695,8 +784,8 @@ class TestJoin(unittest.TestCase):
     streams = {"out.dat": out_strm}
     mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
 
-    _main(["-d", "-o", "out.dat", "-a", "BB", "-b", "BX", "one_dup_fields.dat",
-           "two_hdr.dat"], "join")
+    _main(["-d", "all_pairwise_combinations", "-o", "out.dat", "-a", "BB",
+           "-b", "BX", "one_dup_fields.dat", "two_hdr.dat"], "join")
     expect = ["\t".join(["AA", "BB", "CC", "DD", "XX", "YY", "ZZ"]),
               "\t".join(["A1", "B1", "C1", "D1", "X1", "Y1", "Z1"]),
               "\t".join(["A2", "B1", "C2", "D2", "X1", "Y1", "Z1"]),
@@ -707,8 +796,8 @@ class TestJoin(unittest.TestCase):
 
     out_strm.truncate(0)
     out_strm.seek(0)
-    _main(["-d", "-o", "out.dat", "-a", "BX", "-b", "BB", "two_hdr.dat",
-           "one_dup_fields.dat"], "join")
+    _main(["-d", "all_pairwise_combinations", "-o", "out.dat", "-a", "BX",
+           "-b", "BB", "two_hdr.dat", "one_dup_fields.dat"], "join")
     expect = ["\t".join(["XX", "BX", "YY", "ZZ", "AA", "CC", "DD"]),
               "\t".join(["X1", "B1", "Y1", "Z1", "A1", "C1", "D1"]),
               "\t".join(["X1", "B1", "Y1", "Z1", "A2", "C2", "D2"]),
@@ -728,6 +817,9 @@ class TestJoin(unittest.TestCase):
     # match anything in the other file. This should require that the missing
     # value is provided, to fill in unknown columns
     # TODO
+    pass
+
+  def test_failure_on_invalid_dup_method(self):
     pass
 
   def test_failure_on_ragged_data_frame(self):
