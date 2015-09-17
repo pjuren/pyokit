@@ -162,6 +162,7 @@ def get_lookup_by_file_extension(ext):
   else:
     raise ValueError("Unsupported file type: " + str(ext))
 
+
 ###############################################################################
 #                              USER INTERFACE                                 #
 ###############################################################################
@@ -242,9 +243,9 @@ def getUI_lookup_index(prog_name, args):
   return ui
 
 
-################################################################################
-#                     COMMAND LINE PROCESSING AND DISPATCH                     #
-################################################################################
+###############################################################################
+#                     COMMAND LINE PROCESSING AND DISPATCH                    #
+###############################################################################
 
 def __get_indexer(in_fns, selected_type=None):
   """Determine which indexer to use based on input files and type option."""
@@ -360,7 +361,7 @@ def main_lookup_index(args=[], prog_name=sys.argv[0]):
   if ui.optionIsSet("help"):
     ui.usage()
     sys.exit()
-  verbose = (ui.optionIsSet("verbose") == True) or DEFAULT_VERBOSITY
+  verbose = (ui.optionIsSet("verbose") is True) or DEFAULT_VERBOSITY
 
   # required exactly two args, so this should be fine.
   in_indexed, in_index = open(ui.getArgument(0)), open(ui.getArgument(1))
@@ -405,7 +406,7 @@ def main_build_index(args=[], prog_name=sys.argv[0]):
   if ui.optionIsSet("help"):
     ui.usage()
     sys.exit()
-  verbose = (ui.optionIsSet("verbose") == True) or DEFAULT_VERBOSITY
+  verbose = (ui.optionIsSet("verbose") is True) or DEFAULT_VERBOSITY
 
   # get input file-handle(s); fall back to stdin if none found.
   in_fhs = [open(x) for x in ui.getAllArguments()]
