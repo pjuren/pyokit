@@ -25,14 +25,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import unittest
+have_functioning_rpy2 = True
+try:
+  from rpy2.robjects import r
+except ImportError, e:
+  have_functioning_rpy2 = False
 
 ###############################################################################
 #                           STATISTICS LIBRARIES                              #
 ###############################################################################
-from pyokit.statistics.probability import ProbabilityTests
-from pyokit.statistics.fisher import FisherTests
-from pyokit.statistics.multipleHypothesisTesting import TestMHT
+if have_functioning_rpy2:
+  from pyokit.statistics.multipleHypothesisTesting import TestMHT
+  from pyokit.statistics.fisher import FisherTests
 from pyokit.statistics.online import TestOnlineStats
+from pyokit.statistics.probability import ProbabilityTests
 
 ###############################################################################
 #                              I/O LIBRARIES                                  #
@@ -72,7 +78,8 @@ from pyokit.util.meta import TestMeta
 ###############################################################################
 #                                  SCRIPTS                                    #
 ###############################################################################
-from pyokit.scripts.fdr import TestFDR
+if have_functioning_rpy2:
+  from pyokit.scripts.fdr import TestFDR
 from pyokit.scripts.conservationProfile import TestConservationProfileIndvFiles
 from pyokit.scripts.conservationProfile import TestConservationProfileDirectory
 from pyokit.scripts.index import TestIndex
@@ -107,9 +114,11 @@ if __name__ == "__main__":
   sys.stderr.write(head)
   sys.stderr.write("registered tests in \n")
   sys.stderr.write("  " + str(ProbabilityTests) + "\n")
-  sys.stderr.write("  " + str(FisherTests) + "\n")
   sys.stderr.write("  " + str(TestOnlineStats) + "\n")
-  sys.stderr.write("  " + str(TestMHT) + "\n\n")
+  if have_functioning_rpy2:
+    sys.stderr.write("  " + str(TestMHT) + "\n")
+    sys.stderr.write("  " + str(FisherTests) + "\n")
+  sys.stderr.write("\n")
 
   head = " ------------------------  TESTING AND UTIL  -------------------- \n"
   sys.stderr.write(head)
@@ -119,7 +128,8 @@ if __name__ == "__main__":
   head = " -----------------------------  SCRIPTS  ------------------------ \n"
   sys.stderr.write(head)
   sys.stderr.write("registered tests in \n")
-  sys.stderr.write("  " + str(TestFDR) + "\n")
+  if have_functioning_rpy2:
+    sys.stderr.write("  " + str(TestFDR) + "\n")
   sys.stderr.write("  " + str(TestIndex) + "\n")
   sys.stderr.write("  " + str(TestJoin) + "\n")
   sys.stderr.write("  " + str(TestConservationProfileDirectory) + "\n")
