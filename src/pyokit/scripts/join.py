@@ -99,10 +99,6 @@ class OutputHandlerBase(object):
   def write_output(self, out_strm, delim, f1_fields, f2_fields,
                    f1_header=None, f2_header=None):
     """Write output to stream for a given pair of columns."""
-    # we don't expect to be given mixed field types
-    if f1_header is None or f2_header is None:
-      if f1_header != f2_header:
-        raise ValueError("mixed field types provided for output...")
     return
 
   @abc.abstractmethod
@@ -132,24 +128,23 @@ class PairwiseCombinationOutputHandler(OutputHandlerBase):
     sc.write_output(out_strm, delim, f1_fields, f2_fields, f1_header,
                     f2_header)
 
-    # above call to super will check that f1_header and f2_header are the same
-    # type, so if f1_header is not None, then so is f2
-    if f1_header is not None:
-      for f1_d in f1_fields:
-        out_strm.write(delim.join([f1_d[k] for k in f1_header]) + delim)
-        for f2_d in f2_fields:
-          first = True
+    for f1_d in f1_fields:
+      for f2_d in f2_fields:
+        if f1_header is not None:
+          out_strm.write(delim.join([f1_d[k] for k in f1_header]) + delim)
+        else:
+          out_strm.write(delim.join(f1_d) + delim)
+        first = True
+        if f2_header is None:
+          out_strm.write(delim.join(f2_d))
+        else:
           for h_val in f2_header:
             if first:
               first = False
             else:
               out_strm.write(delim)
             out_strm.write(f2_d[h_val])
-          out_strm.write("\n")
-    else:
-      for f1_l in f1_fields:
-        for f2_l in f2_fields:
-          out_strm.write(delim.join(f1_l) + delim + delim.join(f2_l) + "\n")
+        out_strm.write("\n")
 
   def get_description(self):
     """Return a string description of this output handler."""
@@ -243,6 +238,8 @@ def _build_entry(parts, existing_list_d, key_value, key_field_num,
   if key_value in existing_list_d:
     if output_type is OutputType.error_on_dups:
       raise DuplicateKeyError(key_value + " appears multiple times as key")
+    elif output_type is OutputType.all_pairwise_combinations:
+      pass  # dups okay for these output methods
     else:
       raise ValueError("Unknown duplicate handling method")
   else:
@@ -421,7 +418,7 @@ def _main(args, prog_name):
   # allow dups?
   dup_method = OutputType.error_on_dups
   if ui.optionIsSet("duplicate-handling"):
-    dup_method = OutputType(ui.getValue("duplicate-handling"))
+    dup_method = OutputType[ui.getValue("duplicate-handling")]
 
   # ignore lines with missing values in the key field?
   ignore_missing_keys = ui.optionIsSet("ignore-missing-key")
@@ -499,7 +496,7 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
 
       if key_val not in f2_dictionary:
         continue
-      f1_flds = ([dict(zip(parts, f1_header))]
+      f1_flds = ([dict(zip(f1_header, parts))]
                  if f1_header is not None else [parts])
 
       output_handler.write_output(outfh, delim, f1_flds,
@@ -780,6 +777,7 @@ class TestJoin(unittest.TestCase):
   def test_duplicate_key_value_all_combinations(self, mock_open):
     # if a key value appears more than once, by default the program will just
     # exit with an error, but there is an option to process all combinations
+    debug = False
     out_strm = StringIO.StringIO()
     streams = {"out.dat": out_strm}
     mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
@@ -804,6 +802,10 @@ class TestJoin(unittest.TestCase):
               "\t".join(["X3", "B3", "Y3", "Z3", "A3", "C3", "D3"]),
               "\t".join(["X3", "B3", "Y3", "Z3", "A4", "C4", "D4"]),
               "\t".join(["X5", "B5", "Y5", "Z5", "A5", "C5", "D5"])]
+    if debug:
+      sys.stderr.write("\n" + "\n".join(expect) + "\n")
+      sys.stderr.write("----\n")
+      sys.stderr.write(out_strm.getvalue())
     self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
 
   def test_duplicate_key_value_join_fields(self):
