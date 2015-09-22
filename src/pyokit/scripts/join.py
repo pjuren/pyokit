@@ -108,6 +108,25 @@ class OutputHandlerBase(object):
 
 
 class NoDupsOutputHandler(OutputHandlerBase):
+  def write_header(self, out_strm, delim, f1_d, f2_d, f1_header=None,
+                   f2_header=None, missing_val=None):
+    mm = f1_header != f2_header
+    one_none = f1_header is None or f2_header is None
+    if mm and one_none and missing_val is None:
+      raise InvalidHeaderError("oops")
+
+    if not one_none:
+      out_strm.write(delim.join(f1_header) + delim +
+                     delim.join(f2_header) + "\n")
+    elif f1_header is None:
+      dummy_h = len(f1_d[f1_d.keys()[0]][0]) * [missing_val]
+      out_strm.write(delim.join(dummy_h) + delim +
+                     delim.join(f2_header) + "\n")
+    else:
+      dummy_h = len(f2_d[f2_d.keys()[0]][0]) * [missing_val]
+      out_strm.write(delim.join(f1_header) + delim +
+                     delim.join(dummy_h) + "\n")
+
   def write_output(self, out_strm, delim, f1_fields, f2_fields,
                    f1_header=None, f2_header=None):
     if len(f1_fields) > 1 or len(f2_fields) > 1:
@@ -203,6 +222,25 @@ def file_iterator(filehandle, verbose=False):
     yield line
 
 
+def __populated_missing_vals(parts, missing_val=None):
+  if missing_val is not None:
+    parts = [parts[i] if parts[i].strip() != "" else missing_val
+             for i in range(0, len(parts))]
+  return parts
+
+
+def __parse__header(parts, key_column_name):
+  if any(i.strip() == "" for i in parts):
+    raise InvalidHeaderError("header has empty fields")
+  if len(parts) != len(set(parts)):
+    raise InvalidHeaderError("header has duplicate names")
+  header = parts
+  if key_column_name not in header:
+    raise InvalidHeaderError(key_column_name + " does not name a column")
+  key_field_num = header.index(key_column_name)
+  return header, key_field_num
+
+
 def _build_entry(parts, existing_list_d, key_value, key_field_num,
                  key_is_field_number, header=None,
                  output_type=OutputType.error_on_dups,
@@ -276,14 +314,7 @@ def load_file(fn_or_strm, key, key_is_field_number, require_unique_key=True,
       parts = [parts[i] if parts[i].strip() != "" else missing_val
                for i in range(0, len(parts))]
     if header is None and not key_is_field_number:
-      if any(i.strip() == "" for i in parts):
-        raise InvalidHeaderError("header for file has empty fields")
-      if len(parts) != len(set(parts)):
-        raise InvalidHeaderError("head for file has duplicate names")
-      header = parts
-      if key not in header:
-        raise InvalidHeaderError(key + " does not name a column")
-      key_field_num = header.index(key)
+      header, key_field_num = __parse__header(parts, key)
 
       # TODO deal with case where key occurs more than once in the header
     else:
@@ -433,6 +464,15 @@ def _main(args, prog_name):
 #                             MAIN PROGRAM LOGIC                              #
 ###############################################################################
 
+def process_constant_f1_header():
+  """
+    Given a dictionary of values and (optionally) a header for a file,
+    join with another file with a linear pass that does not store The
+    file's values
+  """
+  pass
+
+
 def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
             key_two_is_field_number, missing_val, ignore_missing_keys,
             output_type, verbose=False):
@@ -455,25 +495,14 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
   f1_header = None
   key_field_num = key_one if key_one_is_field_number else None
   for line in file_iterator(infh1, verbose):
-    parts = line.split(delim)
-    if missing_val is not None:
-      parts = [parts[i] if parts[i].strip() != "" else missing_val
-               for i in range(0, len(parts))]
+    parts = __populated_missing_vals(line.split(delim), missing_val)
     if f1_header is None and not key_one_is_field_number:
-      if any(i.strip() == "" for i in parts):
-        raise InvalidHeaderError("header for first file has empty fields")
-      if len(parts) != len(set(parts)):
-        raise InvalidHeaderError("header for first file has duplicate names")
-      f1_header = parts
-      if key_one not in f1_header:
-        raise InvalidHeaderError(key_one + " does not name a column")
-      key_field_num = f1_header.index(key_one)
-      # TODO deal with case where key occurs more than once in the header
-
-      # TODO exception if header is missing and we have no missing val
-      # TODO join missing vals otherwise..
+      f1_header, key_field_num = __parse__header(parts, key_one)
 
       # we know that file one has a header, or we wouldn't be here...
+      output_handler.write_header(outfh, delim, {}, f2_dictionary,
+                                  f1_header, f2_header, missing_val)
+      """
       if not key_two_is_field_number:
         outfh.write(delim.join(f1_header) + delim +
                     delim.join(f2_header) + "\n")
@@ -482,6 +511,7 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
             [missing_val]
         outfh.write(delim.join(f1_header) + delim +
                     delim.join(dummy_h) + "\n")
+      """
     else:
       key_val = parts[key_field_num]
       if key_val.strip() == "":
