@@ -163,6 +163,24 @@ class NoDupsOutputHandler(OutputHandlerBase):
     return "program exits with error if any duplicates are found"
 
 
+class ColumnCombinationOutputHandler(OutputHandlerBase):
+  def write_output(self, out_strm, delim, f1_fields, f2_fields,
+                   f1_header=None, f2_header=None):
+    pass
+
+  def write_header(self, out_strm, delim, f1_d, f2_d, f1_header=None,
+                   f2_header=None, missing_val=None):
+    sc = super(NoDupsOutputHandler, self)
+    sc.write_header(out_strm, delim, f1_d, f2_d, f1_header,
+                    f2_header, missing_val)
+
+  def get_description(self):
+    """Return a string description of this output handler."""
+    return "output just one line for the duplicated key value, " +\
+           "but inlcude all possible values for the other " +\
+           "fields, separated by semi-colon in each field"
+
+
 class PairwiseCombinationOutputHandler(OutputHandlerBase):
   def write_header(self, out_strm, delim, f1_d, f2_d, f1_header=None,
                    f2_header=None, missing_val=None):
@@ -211,9 +229,7 @@ class OutputType(Enum):
 
   error_on_dups = NoDupsOutputHandler()
   all_pairwise_combinations = PairwiseCombinationOutputHandler()
-  # column_wise_join = "output just one line for the duplicated key value, " +\
-  #                   "but inlcude all possible values for the other " +\
-  #                   "fields, separated by semi-colon in each field"
+  column_wise_join = ColumnCombinationOutputHandler()
 
   def get_handler(self):
     return self.value
@@ -557,6 +573,13 @@ def process_without_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
                                s_f_header, f_f_header)
 
 
+def process_by_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
+                       f_f_header=None, s_f_has_header=False,
+                       missing_val=None, delim=None,
+                       ignore_missing_keys=False, verbose=False):
+  pass
+
+
 def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
             key_two_is_field_number, missing_val, ignore_missing_keys,
             output_type, verbose=False):
@@ -574,10 +597,12 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
                                        ignore_missing_keys=ignore_missing_keys,
                                        output_type=output_type,
                                        verbose=verbose)
-
-  process_without_storing(f2_dictionary, infh1, key_one, output_type, outfh,
-                          f2_header, not key_one_is_field_number, missing_val,
-                          delim, ignore_missing_keys, verbose)
+  if output_type is OutputType.column_wise_join:
+    pass
+  else:
+    process_without_storing(f2_dictionary, infh1, key_one, output_type, outfh,
+                            f2_header, not key_one_is_field_number,
+                            missing_val, delim, ignore_missing_keys, verbose)
 
 
 ###############################################################################
