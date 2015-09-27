@@ -106,27 +106,44 @@ class OutputHandlerBase(object):
     """Return a string description of this output handler."""
     return
 
+  @abc.abstractmethod
+  def write_header(self, out_strm, delim, f1_num_fields, f2_num_fields,
+                   f1_header=None, f2_header=None, missing_val=None):
+    """
+    Write the header for a joined file. If headers are provided for one or more
+    of the input files, then a header is generated for the output file.
+    Otherwise, this does not output anything.
 
-class NoDupsOutputHandler(OutputHandlerBase):
-  def write_header(self, out_strm, delim, f1_d, f2_d, f1_header=None,
-                   f2_header=None, missing_val=None):
+    :param out_strm: write to this stream
+    :param delim:
+    :param f1_num_fields: the number of columns in the first file
+    :param f2_num_fields: the number of columns in the second file
+    :param f1_header:
+    :param f2_header:
+    :param missing_val:
+    """
     mm = f1_header != f2_header
     one_none = f1_header is None or f2_header is None
     if mm and one_none and missing_val is None:
-      raise InvalidHeaderError("oops")
+      raise InvalidHeaderError("Cannot generate output header when one " +
+                               "input file is missing a header and no " +
+                               "missing value was provided to replace " +
+                               "unknown entries.")
 
-    if not one_none:
+    if f1_header is not None and f2_header is not None:
       out_strm.write(delim.join(f1_header) + delim +
                      delim.join(f2_header) + "\n")
-    elif f1_header is None:
-      dummy_h = len(f1_d[f1_d.keys()[0]][0]) * [missing_val]
+    elif f1_header is None and f2_header is not None:
+      dummy_h = f1_num_fields * [missing_val]
       out_strm.write(delim.join(dummy_h) + delim +
                      delim.join(f2_header) + "\n")
-    else:
-      dummy_h = len(f2_d[f2_d.keys()[0]][0]) * [missing_val]
+    elif f1_header is not None and f2_header is None:
+      dummy_h = f2_num_fields * [missing_val]
       out_strm.write(delim.join(f1_header) + delim +
                      delim.join(dummy_h) + "\n")
 
+
+class NoDupsOutputHandler(OutputHandlerBase):
   def write_output(self, out_strm, delim, f1_fields, f2_fields,
                    f1_header=None, f2_header=None):
     if len(f1_fields) > 1 or len(f2_fields) > 1:
@@ -135,12 +152,24 @@ class NoDupsOutputHandler(OutputHandlerBase):
     pcout.write_output(out_strm, delim, f1_fields, f2_fields,
                        f1_header, f2_header)
 
+  def write_header(self, out_strm, delim, f1_d, f2_d, f1_header=None,
+                   f2_header=None, missing_val=None):
+    sc = super(NoDupsOutputHandler, self)
+    sc.write_header(out_strm, delim, f1_d, f2_d, f1_header,
+                    f2_header, missing_val)
+
   def get_description(self):
     """Return a string description of this output handler."""
     return "program exits with error if any duplicates are found"
 
 
 class PairwiseCombinationOutputHandler(OutputHandlerBase):
+  def write_header(self, out_strm, delim, f1_d, f2_d, f1_header=None,
+                   f2_header=None, missing_val=None):
+    sc = super(PairwiseCombinationOutputHandler, self)
+    sc.write_header(out_strm, delim, f1_d, f2_d, f1_header,
+                    f2_header, missing_val)
+
   def write_output(self, out_strm, delim, f1_fields, f2_fields,
                    f1_header=None, f2_header=None):
     sc = super(PairwiseCombinationOutputHandler, self)
@@ -236,7 +265,7 @@ def __parse__header(parts, key_column_name):
     raise InvalidHeaderError("header has duplicate names")
   header = parts
   if key_column_name not in header:
-    raise InvalidHeaderError(key_column_name + " does not name a column")
+    raise InvalidHeaderError(str(key_column_name) + " does not name a column")
   key_field_num = header.index(key_column_name)
   return header, key_field_num
 
@@ -464,21 +493,74 @@ def _main(args, prog_name):
 #                             MAIN PROGRAM LOGIC                              #
 ###############################################################################
 
-def process_constant_f1_header():
+def process_without_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
+                            f_f_header=None, s_f_has_header=False,
+                            missing_val=None, delim=None,
+                            ignore_missing_keys=False, verbose=False):
   """
     Given a dictionary of values and (optionally) a header for a file,
     join with another file with a linear pass that does not store The
     file's values
+
+    :param d_vals: dictionary of key-value pairs to match up with the lines
+                   in the second file. If header_f1 is None, the values should
+                   be ordered iterables --output will be in presentation order.
+                   If f1_header is not None, values should be dictionary-like
+                   objects accessible via a keys --output will be in the order
+                   that the keys appear in header_f1
+    :param s_f_strm: TODO
+    :param s_f_key: TODO
+    :param header: TODO
+    :param f2_has_header: TODO
+    :param missing_val: TODO
+    :param verbose: TODO
   """
-  pass
+  key_field_num = s_f_key
+  s_f_header = None
+  seen_keys = set()
+  out_handler = output_type.get_handler()
+  first_element = True
+  for line in file_iterator(s_f_strm, verbose):
+    parts = __populated_missing_vals(line.split(delim), missing_val)
+
+    # on the first element, we might have to output a header..
+    regular_first = True
+    if first_element:
+      first_element = False
+      if s_f_header is None and s_f_has_header:
+        s_f_header, key_field_num = __parse__header(parts, s_f_key)
+        regular_first = False
+      assert(len(d_vals) > 0)
+      f_f_num_cols = len(d_vals[d_vals.keys()[0]][0])
+      out_handler.write_header(outfh, delim, len(parts), f_f_num_cols,
+                               s_f_header, f_f_header, missing_val)
+
+    # any line that is either not the first, or is the first but we decided
+    # it wasn't a header line...
+    if not first_element or regular_first:
+      key_val = parts[key_field_num]
+      if key_val.strip() == "":
+        if ignore_missing_keys:
+          continue
+        raise MissingKeyError("missing key value")
+
+      if key_val in seen_keys and \
+         output_type is OutputType.error_on_dups:
+        raise DuplicateKeyError(key_val + " appears multiple times as key")
+      seen_keys.add(key_val)
+
+      if key_val not in d_vals:
+        continue
+      s_f_flds = ([dict(zip(s_f_header, parts))]
+                  if s_f_header is not None else [parts])
+      out_handler.write_output(outfh, delim, s_f_flds, d_vals[key_val],
+                               s_f_header, f_f_header)
 
 
 def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
             key_two_is_field_number, missing_val, ignore_missing_keys,
             output_type, verbose=False):
   delim = "\t"
-  seen_keys = set()
-  output_handler = output_type.get_handler()
 
   mixed_headers = (key_one_is_field_number != key_two_is_field_number)
   if mixed_headers and missing_val is None:
@@ -492,45 +574,10 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
                                        ignore_missing_keys=ignore_missing_keys,
                                        output_type=output_type,
                                        verbose=verbose)
-  f1_header = None
-  key_field_num = key_one if key_one_is_field_number else None
-  for line in file_iterator(infh1, verbose):
-    parts = __populated_missing_vals(line.split(delim), missing_val)
-    if f1_header is None and not key_one_is_field_number:
-      f1_header, key_field_num = __parse__header(parts, key_one)
 
-      # we know that file one has a header, or we wouldn't be here...
-      output_handler.write_header(outfh, delim, {}, f2_dictionary,
-                                  f1_header, f2_header, missing_val)
-      """
-      if not key_two_is_field_number:
-        outfh.write(delim.join(f1_header) + delim +
-                    delim.join(f2_header) + "\n")
-      else:
-        dummy_h = len(f2_dictionary[f2_dictionary.keys()[0]][0]) *\
-            [missing_val]
-        outfh.write(delim.join(f1_header) + delim +
-                    delim.join(dummy_h) + "\n")
-      """
-    else:
-      key_val = parts[key_field_num]
-      if key_val.strip() == "":
-        if ignore_missing_keys:
-          continue
-        raise MissingKeyError("missing key value")
-
-      if key_val in seen_keys and \
-         output_type is OutputType.error_on_dups:
-        raise DuplicateKeyError(key_val + " appears multiple times as key")
-      seen_keys.add(key_val)
-
-      if key_val not in f2_dictionary:
-        continue
-      f1_flds = ([dict(zip(f1_header, parts))]
-                 if f1_header is not None else [parts])
-
-      output_handler.write_output(outfh, delim, f1_flds,
-                                  f2_dictionary[key_val], f1_header, f2_header)
+  process_without_storing(f2_dictionary, infh1, key_one, output_type, outfh,
+                          f2_header, not key_one_is_field_number, missing_val,
+                          delim, ignore_missing_keys, verbose)
 
 
 ###############################################################################
@@ -805,8 +852,7 @@ class TestJoin(unittest.TestCase):
 
   @mock.patch('__builtin__.open')
   def test_duplicate_key_value_all_combinations(self, mock_open):
-    # if a key value appears more than once, by default the program will just
-    # exit with an error, but there is an option to process all combinations
+    """Test producing all pairwise output lines with dup. key values"""
     debug = False
     out_strm = StringIO.StringIO()
     streams = {"out.dat": out_strm}
