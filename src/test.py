@@ -32,6 +32,11 @@ except ImportError, e:
   have_functioning_rpy2 = False
 
 ###############################################################################
+#                                  COMMON                                     #
+###############################################################################
+from pyokit.common.pbs import TestPBS
+
+###############################################################################
 #                           STATISTICS LIBRARIES                              #
 ###############################################################################
 if have_functioning_rpy2:
@@ -88,6 +93,12 @@ from pyokit.scripts.regionCollapse import TestCollapseRegions
 
 
 if __name__ == "__main__":
+  head = " ------------------------      COMMON       --------------------- \n"
+  sys.stderr.write(head)
+  sys.stderr.write("registered tests in \n")
+  sys.stderr.write("  " + str(TestPBS) + "\n")
+  sys.stderr.write("\n")
+
   head = " ------------------------  DATA STRUCTURES  --------------------- \n"
   sys.stderr.write(head)
   sys.stderr.write("registered tests in \n")

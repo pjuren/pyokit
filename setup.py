@@ -30,7 +30,7 @@ setup(name='pyokit',
       entry_points={'console_scripts':
                     ['pyokit=pyokit.scripts.pyokitMain:main']},
       package_dir={'': 'src'},   # ell distutils packages are under src
-      install_requires=['mock>=1.0.0', 'enum34'],
+      install_requires=['mock>=1.0.0', 'enum34', 'subprocess32'],
       description='A library of python functions and classes to assist in '
                   'processing high-throughput biological data',
       author='Philip J. Uren',
