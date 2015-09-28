@@ -28,8 +28,10 @@ import os
 import sys
 import abc
 import mock
+import copy
 import unittest
 import StringIO
+from collections import OrderedDict
 
 # support for enumerations in python 2
 from enum import Enum
@@ -166,11 +168,48 @@ class NoDupsOutputHandler(OutputHandlerBase):
 class ColumnCombinationOutputHandler(OutputHandlerBase):
   def write_output(self, out_strm, delim, f1_fields, f2_fields,
                    f1_header=None, f2_header=None):
-    pass
+    def collapse_dicts(d):
+      assert(len(d) >= 1)
+      res = copy.copy(d[0])
+      seen = set(res.values())
+      keys = res.keys()
+      for i in range(1, len(d)):
+        assert(set(d[i].keys()) == set(res.keys()))
+        for key in keys:
+          if d[i][key] in seen:
+            continue
+          seen.add(d[i][key])
+          res[key] = res[key] + ";" + d[i][key]
+      return res
+
+    def collapse_lists(k):
+      assert(len(k) >= 1)
+      res = copy.copy(k[0])
+      l_len = len(k[0])
+      for i in range(1, len(k)):
+        assert(len(k[i]) == l_len)
+        for j in range(0, len(k[i])):
+          res[j] = res[j] + ";" + k[i][j]
+      return res
+
+    if f1_header is not None:
+      f1_d = collapse_dicts(f1_fields)
+      out_strm.write(delim.join([f1_d[k] for k in f1_header]) + delim)
+    else:
+      f1_d = collapse_lists(f1_fields)
+      out_strm.write(delim.join(f1_d) + delim)
+
+    if f2_header is not None:
+      f2_d = collapse_dicts(f2_fields)
+      out_strm.write(delim.join([f2_d[k] for k in f2_header]))
+    else:
+      f2_d = collapse_lists(f2_fields)
+      out_strm.write(delim.join(f2_d))
+    out_strm.write("\n")
 
   def write_header(self, out_strm, delim, f1_d, f2_d, f1_header=None,
                    f2_header=None, missing_val=None):
-    sc = super(NoDupsOutputHandler, self)
+    sc = super(ColumnCombinationOutputHandler, self)
     sc.write_header(out_strm, delim, f1_d, f2_d, f1_header,
                     f2_header, missing_val)
 
@@ -289,7 +328,7 @@ def __parse__header(parts, key_column_name):
 def _build_entry(parts, existing_list_d, key_value, key_field_num,
                  key_is_field_number, header=None,
                  output_type=OutputType.error_on_dups,
-                 ignore_missing_keys=False):
+                 ignore_missing_keys=False, keep_key_col=False):
   """
   Build and add an entry to existing_list_d.
 
@@ -321,7 +360,8 @@ def _build_entry(parts, existing_list_d, key_value, key_field_num,
   if key_value in existing_list_d:
     if output_type is OutputType.error_on_dups:
       raise DuplicateKeyError(key_value + " appears multiple times as key")
-    elif output_type is OutputType.all_pairwise_combinations:
+    elif (output_type is OutputType.all_pairwise_combinations or
+          output_type is OutputType.column_wise_join):
       pass  # dups okay for these output methods
     else:
       raise ValueError("Unknown duplicate handling method")
@@ -331,14 +371,15 @@ def _build_entry(parts, existing_list_d, key_value, key_field_num,
   if key_is_field_number:
     # the entry in the dictionary is a list, minus the key field, in the
     # order they occur.
-    ne = [parts[i] for i in range(0, len(parts)) if i != key_field_num]
+    ne = [parts[i] for i in range(0, len(parts))
+          if i != key_field_num or keep_key_col]
     existing_list_d[key_value].append(ne)
   else:
     # the entry in the dictionary is another dictionary indexed by
     # the header value
     ne = {}
     for i in range(0, len(parts)):
-      if i == key_field_num:
+      if i == key_field_num and not keep_key_col:
         continue
       else:
         ne[header[i]] = parts[i]
@@ -347,11 +388,13 @@ def _build_entry(parts, existing_list_d, key_value, key_field_num,
 
 def load_file(fn_or_strm, key, key_is_field_number, require_unique_key=True,
               delim="\t", missing_val=None, ignore_missing_keys=False,
-              output_type=OutputType.error_on_dups, verbose=False):
-  res = {}
+              output_type=OutputType.error_on_dups, keep_key_col=False,
+              verbose=False):
+  res = OrderedDict()
   header = None
   key_field_num = key if key_is_field_number else None
   expected_cols_per_line = None
+  key_val_order = []
 
   for line in file_iterator(fn_or_strm, verbose):
     parts = line.split(delim)
@@ -369,11 +412,14 @@ def load_file(fn_or_strm, key, key_is_field_number, require_unique_key=True,
         raise ValueError("oops")
 
       key_val = parts[key_field_num]
+      # key_val_order.append(key_val)
       _build_entry(parts, res, key_val, key_field_num, key_is_field_number,
-                   header, output_type=output_type,
+                   header, output_type=output_type, keep_key_col=keep_key_col,
                    ignore_missing_keys=ignore_missing_keys)
 
-  return res, [x for x in header if x != key] if header is not None else None
+  h_res = ([x for x in header if x != key or keep_key_col]
+           if header is not None else None)
+  return res, h_res
 
 
 ###############################################################################
@@ -577,7 +623,24 @@ def process_by_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
                        f_f_header=None, s_f_has_header=False,
                        missing_val=None, delim=None,
                        ignore_missing_keys=False, verbose=False):
-  pass
+  delim = "\t"
+  out_handler = output_type.get_handler()
+  sf_d, s_f_header = load_file(s_f_strm, s_f_key, not s_f_has_header,
+                               missing_val=missing_val,
+                               ignore_missing_keys=ignore_missing_keys,
+                               output_type=output_type, keep_key_col=True,
+                               verbose=verbose)
+  f_f_num_cols = (len(f_f_header) if f_f_header is not None
+                  else len(d_vals[d_vals.keys()[0]][0]))
+  s_f_num_cols = (len(s_f_header) if s_f_header is not None
+                  else len(sf_d[sf_d.keys()[0]][0]))
+  out_handler.write_header(outfh, delim, s_f_num_cols, f_f_num_cols,
+                           s_f_header, f_f_header, missing_val)
+  for k in sf_d:
+    if k not in d_vals:
+      continue
+    out_handler.write_output(outfh, delim, sf_d[k], d_vals[k], s_f_header,
+                             f_f_header)
 
 
 def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
@@ -598,7 +661,9 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
                                        output_type=output_type,
                                        verbose=verbose)
   if output_type is OutputType.column_wise_join:
-    pass
+    process_by_storing(f2_dictionary, infh1, key_one, output_type, outfh,
+                       f2_header, not key_one_is_field_number,
+                       missing_val, delim, ignore_missing_keys, verbose)
   else:
     process_without_storing(f2_dictionary, infh1, key_one, output_type, outfh,
                             f2_header, not key_one_is_field_number,
@@ -909,11 +974,37 @@ class TestJoin(unittest.TestCase):
       sys.stderr.write(out_strm.getvalue())
     self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
 
-  def test_duplicate_key_value_join_fields(self):
+  @mock.patch('__builtin__.open')
+  def test_duplicate_key_value_join_fields(self, mock_open):
     # if a key value appears more than once, by default the program will just
     # exit with an error, but there is an option to join the mismatched fields
     # TODO
-    pass
+    debug = False
+    out_strm = StringIO.StringIO()
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
+
+    _main(["-d", "column_wise_join", "-o", "out.dat", "-a", "BB",
+           "-b", "BX", "one_dup_fields.dat", "two_hdr.dat"], "join")
+    expect = ["\t".join(["AA", "BB", "CC", "DD", "XX", "YY", "ZZ"]),
+              "\t".join(["A1;A2", "B1", "C1;C2", "D1;D2", "X1", "Y1", "Z1"]),
+              "\t".join(["A3;A4", "B3", "C3;C4", "D3;D4", "X3", "Y3", "Z3"]),
+              "\t".join(["A5", "B5", "C5", "D5", "X5", "Y5", "Z5"])]
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
+
+    out_strm.truncate(0)
+    out_strm.seek(0)
+    _main(["-d", "column_wise_join", "-o", "out.dat", "-a", "BX",
+           "-b", "BB", "two_hdr.dat", "one_dup_fields.dat"], "join")
+    expect = ["\t".join(["XX", "BX", "YY", "ZZ", "AA", "CC", "DD"]),
+              "\t".join(["X1", "B1", "Y1", "Z1", "A1;A2", "C1;C2", "D1;D2"]),
+              "\t".join(["X3", "B3", "Y3", "Z3", "A3;A4", "C3;C4", "D3;D4"]),
+              "\t".join(["X5", "B5", "Y5", "Z5", "A5", "C5", "D5"])]
+    if debug:
+      sys.stderr.write("\n" + "\n".join(expect) + "\n")
+      sys.stderr.write("----\n")
+      sys.stderr.write(out_strm.getvalue())
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
 
   def test_output_unmatched_keys(self):
     # there should be an option to output lines with key values that don't
