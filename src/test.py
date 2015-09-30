@@ -39,6 +39,7 @@ if have_functioning_rpy2:
   from pyokit.statistics.fisher import FisherTests
 from pyokit.statistics.online import TestOnlineStats
 from pyokit.statistics.probability import ProbabilityTests
+from pyokit.statistics.beta import BetaDistTests
 
 ###############################################################################
 #                              I/O LIBRARIES                                  #
@@ -115,6 +116,7 @@ if __name__ == "__main__":
   sys.stderr.write("registered tests in \n")
   sys.stderr.write("  " + str(ProbabilityTests) + "\n")
   sys.stderr.write("  " + str(TestOnlineStats) + "\n")
+  sys.stderr.write("  " + str(BetaDistTests) + "\n")
   if have_functioning_rpy2:
     sys.stderr.write("  " + str(TestMHT) + "\n")
     sys.stderr.write("  " + str(FisherTests) + "\n")

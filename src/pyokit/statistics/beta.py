@@ -81,7 +81,7 @@ def beta(a, b):
   return beta
 
 
-def incomplete_beta(a, b, x):
+def reg_incomplete_beta(a, b, x):
   """
   Incomplete beta function; code translated from: Numerical Recipes in C.
 
@@ -104,17 +104,47 @@ def incomplete_beta(a, b, x):
 
 
 ###############################################################################
+#                              BETA DISTRIBUTION                              #
+###############################################################################
+
+def beta_pdf(x, a, b):
+  """Beta distirbution probability density function."""
+  bc = 1 / beta(a, b)
+  fc = x ** (a - 1)
+  sc = (1 - x) ** (b - 1)
+  return bc * fc * sc
+
+
+def beta_cdf(x, a, b):
+  """Beta distribution cummulative probability density function."""
+  return reg_incomplete_beta(a, b, x)
+
+
+###############################################################################
 #                                 UNIT TESTS                                  #
 ###############################################################################
 
 class BetaDistTests(unittest.TestCase):
 
   def test_beta_func(self):
-    pass
+    self.assertEqual(beta(1, 1), 1)
+    self.assertAlmostEqual(beta(13, 291), 3.427293e-24)
+    self.assertAlmostEqual(beta(0.01, 800), 93.00376, places=5)
 
   def test_incomplete_beta_func(self):
-    pass
+    self.assertAlmostEqual(reg_incomplete_beta(10, 13, 0), 0)
+    self.assertAlmostEqual(reg_incomplete_beta(10, 13, 0.245), 0.02579353)
+    self.assertAlmostEqual(reg_incomplete_beta(11, 16, 0.76), 0.9999495)
 
+  def test_beta_pdf(self):
+    self.assertAlmostEqual(beta_pdf(0, 10, 13), 0)
+    self.assertAlmostEqual(beta_pdf(0.245, 10, 13), 0.7055451)
+    self.assertAlmostEqual(beta_pdf(0.76, 11, 16), 0.002758423)
+
+  def test_beta_cdf(self):
+    self.assertAlmostEqual(beta_cdf(0, 10, 13), 0)
+    self.assertAlmostEqual(beta_cdf(0.245, 10, 13), 0.02579353)
+    self.assertAlmostEqual(beta_cdf(0.76, 11, 16), 0.9999495)
 
 ###############################################################################
 #               ENTRY POINT WHEN RUN AS A STAND-ALONE MODULE                  #
