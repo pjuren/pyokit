@@ -28,6 +28,7 @@ import sys
 # check for rpy2 -- we need to disable some scripts if it is missing
 try:
   from rpy2.robjects import r
+  have_functioning_rpy2 = True
 except ImportError, e:
   have_functioning_rpy2 = False
 
