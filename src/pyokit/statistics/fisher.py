@@ -55,7 +55,7 @@ if not module_disabled:
 #                         UNIT TESTS FOR THIS MODULE                          #
 ###############################################################################
 
-class FisherTests(unittest.TestCase) :
+class FisherTests(unittest.TestCase):
   """
     @summary:
   """
