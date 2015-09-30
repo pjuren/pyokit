@@ -26,19 +26,19 @@
 """
 
 # standard python imports
+import sys
 import math
+import unittest
 
 # pyokit imports
 from pyokit.common.pyokitError import PyokitError
 
 
-def beta_1(a, b):
-  """use gamma function or inbuilt math.gamma() to compute vals of beta func"""
-  beta = math.exp(math.lgamma(a) + math.lgamma(b) - math.lgamma(a + b))
-  return beta
+###############################################################################
+#                              HELPER FUNCTIONS                               #
+###############################################################################
 
-
-def contfractbeta(a, b, x, ITMAX=200):
+def __contfractbeta(a, b, x, ITMAX=200):
   """
   contfractbeta() evaluates the continued fraction form of the incomplete
   Beta function; incompbeta(). (Code translated from: Numerical Recipes in C.)
@@ -71,7 +71,17 @@ def contfractbeta(a, b, x, ITMAX=200):
                     "computing incomplete beta function.")
 
 
-def incompbeta(a, b, x):
+###############################################################################
+#                               BETA FUNCTIONS                                #
+###############################################################################
+
+def beta(a, b):
+  """use gamma function or inbuilt math.gamma() to compute vals of beta func"""
+  beta = math.exp(math.lgamma(a) + math.lgamma(b) - math.lgamma(a + b))
+  return beta
+
+
+def incomplete_beta(a, b, x):
   """
   Incomplete beta function; code translated from: Numerical Recipes in C.
 
@@ -88,6 +98,27 @@ def incompbeta(a, b, x):
     lbeta = (math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b) +
              a * math.log(x) + b * math.log(1 - x))
     if (x < (a + 1) / (a + b + 2)):
-      return math.exp(lbeta) * contfractbeta(a, b, x) / a
+      return math.exp(lbeta) * __contfractbeta(a, b, x) / a
     else:
-      return 1 - math.exp(lbeta) * contfractbeta(b, a, 1 - x) / b
+      return 1 - math.exp(lbeta) * __contfractbeta(b, a, 1 - x) / b
+
+
+###############################################################################
+#                                 UNIT TESTS                                  #
+###############################################################################
+
+class BetaDistTests(unittest.TestCase):
+
+  def test_beta_func(self):
+    pass
+
+  def test_incomplete_beta_func(self):
+    pass
+
+
+###############################################################################
+#               ENTRY POINT WHEN RUN AS A STAND-ALONE MODULE                  #
+###############################################################################
+
+if __name__ == "__main__":
+    unittest.main(argv=[sys.argv[0]])
