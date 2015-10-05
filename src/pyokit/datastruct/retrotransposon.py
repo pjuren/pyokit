@@ -484,7 +484,7 @@ class RetrotransposonOccurrence(GenomicInterval):
     if self.consensus_match_strand is '+':
       s = s_dist_to_gen_start + self.consensus_start
       s = s + gaps_before
-      for i in range(0, gaps_in) :
+      for i in range(0, gaps_in):
         e = s + min((gap_interval - (gen_s_dist % gap_interval)), left_to_lift)
         res.append(GenomicInterval(name, s, e, intersecting_region.name,
                                    intersecting_region.score, self.strand))
@@ -498,7 +498,7 @@ class RetrotransposonOccurrence(GenomicInterval):
     else:
       e = self.consensus_end - s_dist_to_gen_start
       e = e - gaps_before
-      for i in range(0, gaps_in) :
+      for i in range(0, gaps_in):
         s = e - min((gap_interval - (gen_s_dist % gap_interval)), left_to_lift)
         res.append(GenomicInterval(name, s, e, intersecting_region.name,
                                    intersecting_region.score, self.strand))
@@ -542,18 +542,18 @@ class TestRetrotransposon(unittest.TestCase):
     self.rto7 = RetrotransposonOccurrence("chr5", 10, 18, '+',
                                           110, 121, 196, self.rt3, uniq_id=7)
 
-    self.rm_0 = ("463   1.3  0.6  1.7  chr1      10001   10467 (249240153) +  "
-                 + "(TAACCC)n      Simple_repeat          1  467    (0)     1")
-    self.rm_1 = ("463   1.3  0.6  1.7  chr1      10001   10467 (249240153) +  "
-                 + "(TAACCC)n      Simple_repeat          1  462    (0)     1")
-    self.rm_2 = ("3612  11.4 21.5  1.3  chr14    10469   11446 (249239174) C  "
-                 + "TAR1           Satellite/telo     (399) 1711    483     2")
-    self.rm_3 = ("484  25.1 13.2  0.0  chrX      11505   11674 (249238946) C  "
-                 + "L1MC5a         LINE/L1           (2382) 5647   5452     3")
-    self.rm_4 = ("3612  11.4 21.5  1.3  chr14    10469   11447 (249239174) C  "
-                 + "TAR1           Satellite/telo     (399) 1447    467     2")
-    self.rm_5 = ("484  25.1 13.2  0.0  chrX      11505   11675 (249238946) C  "
-                 + "L1MC5a         LINE/L1           (2382) 675   503     3")
+    self.rm_0 = ("463   1.3  0.6  1.7  chr1      10001   10467 (249240153) +" +
+                 "  (TAACCC)n      Simple_repeat          1  467    (0)     1")
+    self.rm_1 = ("463   1.3  0.6  1.7  chr1      10001   10467 (249240153) +" +
+                 "  (TAACCC)n      Simple_repeat          1  462    (0)     1")
+    self.rm_2 = ("3612  11.4 21.5  1.3  chr14    10469   11446 (249239174) C" +
+                 "  TAR1           Satellite/telo     (399) 1711    483     2")
+    self.rm_3 = ("484  25.1 13.2  0.0  chrX      11505   11674 (249238946) C" +
+                 "  L1MC5a         LINE/L1           (2382) 5647   5452     3")
+    self.rm_4 = ("3612  11.4 21.5  1.3  chr14    10469   11447 (249239174) C" +
+                 "  TAR1           Satellite/telo     (399) 1447    467     2")
+    self.rm_5 = ("484  25.1 13.2  0.0  chrX      11505   11675 (249238946) C" +
+                 "  L1MC5a         LINE/L1           (2382) 675   503     3")
     self.rm_6 = ("146  25.6 14.9  0.0  chr5      10 49 (249238946) C " +
                  "L1MC5a         LINE/L1             (2382) 10    39      6")
 
