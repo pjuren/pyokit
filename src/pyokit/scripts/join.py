@@ -394,7 +394,6 @@ def load_file(fn_or_strm, key, key_is_field_number, require_unique_key=True,
   header = None
   key_field_num = key if key_is_field_number else None
   expected_cols_per_line = None
-  key_val_order = []
 
   for line in file_iterator(fn_or_strm, verbose):
     parts = line.split(delim)
@@ -467,6 +466,11 @@ def getUI(prog_name, args):
                       description="skip lines in input files that are " +
                                   "missing a value for the key field ",
                       required=False))
+  ui.addOption(Option(short="p", long="output-unpaired-lines",
+                      description="output lines that cannot be joined by " +
+                                  "populating missing columns with "
+                                  "missing-value ",
+                      required=False))
   ui.addOption(Option(short="h", long="help",
                       description="show this help message ", special=True))
   ui.addOption(Option(short="v", long="verbose",
@@ -537,6 +541,9 @@ def _main(args, prog_name):
   if ui.optionIsSet("missing"):
     missing_val = ui.getValue("missing")
 
+  # output lines that cannot be joined?
+  output_unpaired = ui.optionIsSet("output-unpaired-lines")
+
   # allow dups?
   dup_method = OutputType.error_on_dups
   if ui.optionIsSet("duplicate-handling"):
@@ -548,7 +555,7 @@ def _main(args, prog_name):
   # do our thing..
   process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
           key_two_is_field_number, missing_val, ignore_missing_keys,
-          dup_method, verbose)
+          dup_method, output_unpaired, verbose)
 
 
 ###############################################################################
@@ -558,7 +565,8 @@ def _main(args, prog_name):
 def process_without_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
                             f_f_header=None, s_f_has_header=False,
                             missing_val=None, delim=None,
-                            ignore_missing_keys=False, verbose=False):
+                            ignore_missing_keys=False,
+                            output_unpaired=False, verbose=False):
   """
     Given a dictionary of values and (optionally) a header for a file,
     join with another file with a linear pass that does not store The
@@ -577,6 +585,7 @@ def process_without_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
     :param missing_val: TODO
     :param verbose: TODO
   """
+  used_d_val_keys = set()
   key_field_num = s_f_key
   s_f_header = None
   seen_keys = set()
@@ -588,7 +597,6 @@ def process_without_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
     # on the first element, we might have to output a header..
     regular_first = True
     if first_element:
-      first_element = False
       if s_f_header is None and s_f_has_header:
         s_f_header, key_field_num = __parse__header(parts, s_f_key)
         regular_first = False
@@ -612,17 +620,41 @@ def process_without_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
       seen_keys.add(key_val)
 
       if key_val not in d_vals:
-        continue
+        if not output_unpaired:
+          continue
+        if f_f_header is not None:
+          f_f_flds = [dict(zip(f_f_header, [missing_val] * len(f_f_header)))]
+        else:
+          assert(len(d_vals) > 0)
+          f_f_num_cols = len(d_vals[d_vals.keys()[0]][0])
+          f_f_flds = [[missing_val] * f_f_num_cols]
+      else:
+        f_f_flds = d_vals[key_val]
+        used_d_val_keys.add(key_val)
       s_f_flds = ([dict(zip(s_f_header, parts))]
                   if s_f_header is not None else [parts])
-      out_handler.write_output(outfh, delim, s_f_flds, d_vals[key_val],
+      out_handler.write_output(outfh, delim, s_f_flds, f_f_flds,
                                s_f_header, f_f_header)
+    first_element = False
+
+  if output_unpaired:
+    for k in d_vals:
+      if k not in used_d_val_keys:
+        f_f_flds = d_vals[k]
+        if s_f_header is not None:
+          s_f_flds = [dict(zip(s_f_header, [missing_val] * len(s_f_header)))]
+        else:
+          s_f_num_cols = len(parts)
+          s_f_flds = [[missing_val] * s_f_num_cols]
+        out_handler.write_output(outfh, delim, s_f_flds, f_f_flds,
+                                 s_f_header, f_f_header)
 
 
 def process_by_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
                        f_f_header=None, s_f_has_header=False,
                        missing_val=None, delim=None,
-                       ignore_missing_keys=False, verbose=False):
+                       ignore_missing_keys=False,
+                       output_unpaired=False, verbose=False):
   delim = "\t"
   out_handler = output_type.get_handler()
   sf_d, s_f_header = load_file(s_f_strm, s_f_key, not s_f_has_header,
@@ -645,7 +677,7 @@ def process_by_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
 
 def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
             key_two_is_field_number, missing_val, ignore_missing_keys,
-            output_type, verbose=False):
+            output_type, output_unpaired=False, verbose=False):
   delim = "\t"
 
   mixed_headers = (key_one_is_field_number != key_two_is_field_number)
@@ -663,11 +695,13 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
   if output_type is OutputType.column_wise_join:
     process_by_storing(f2_dictionary, infh1, key_one, output_type, outfh,
                        f2_header, not key_one_is_field_number,
-                       missing_val, delim, ignore_missing_keys, verbose)
+                       missing_val, delim, ignore_missing_keys,
+                       output_unpaired, verbose)
   else:
     process_without_storing(f2_dictionary, infh1, key_one, output_type, outfh,
                             f2_header, not key_one_is_field_number,
-                            missing_val, delim, ignore_missing_keys, verbose)
+                            missing_val, delim, ignore_missing_keys,
+                            output_unpaired, verbose)
 
 
 ###############################################################################
@@ -1006,11 +1040,54 @@ class TestJoin(unittest.TestCase):
       sys.stderr.write(out_strm.getvalue())
     self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
 
-  def test_output_unmatched_keys(self):
-    # there should be an option to output lines with key values that don't
-    # match anything in the other file. This should require that the missing
-    # value is provided, to fill in unknown columns
-    # TODO
+  @mock.patch('__builtin__.open')
+  def test_output_unmatched_keys_pws(self, mock_open):
+    """Test outputing unmatched lines with running without storing file."""
+    debug = False
+    out_strm = StringIO.StringIO()
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
+
+    _main(["-m", "MV", "-p", "-d", "all_pairwise_combinations", "-o",
+           "out.dat", "-a", "BB", "-b", "BX", "one_dup_fields.dat",
+           "two_hdr.dat"],
+          "join")
+    expect = ["\t".join(["AA", "BB", "CC", "DD", "XX", "YY", "ZZ"]),
+              "\t".join(["A1", "B1", "C1", "D1", "X1", "Y1", "Z1"]),
+              "\t".join(["A2", "B1", "C2", "D2", "X1", "Y1", "Z1"]),
+              "\t".join(["A3", "B3", "C3", "D3", "X3", "Y3", "Z3"]),
+              "\t".join(["A4", "B3", "C4", "D4", "X3", "Y3", "Z3"]),
+              "\t".join(["A5", "B5", "C5", "D5", "X5", "Y5", "Z5"]),
+              "\t".join(["MV", "MV", "MV", "MV", "X2", "Y2", "Z2"]),
+              "\t".join(["MV", "MV", "MV", "MV", "X4", "Y4", "Z4"])]
+    if debug:
+      sys.stderr.write("\n" + "\n".join(expect) + "\n")
+      sys.stderr.write("----\n")
+      sys.stderr.write(out_strm.getvalue())
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
+
+    out_strm.truncate(0)
+    out_strm.seek(0)
+    _main(["-m", "MV", "-p", "-d", "all_pairwise_combinations", "-o",
+           "out.dat", "-a", "BX", "-b", "BB", "two_hdr.dat",
+           "one_dup_fields.dat"],
+          "join")
+    expect = ["\t".join(["XX", "BX", "YY", "ZZ", "AA", "CC", "DD"]),
+              "\t".join(["X1", "B1", "Y1", "Z1", "A1", "C1", "D1"]),
+              "\t".join(["X1", "B1", "Y1", "Z1", "A2", "C2", "D2"]),
+              "\t".join(["X2", "B2", "Y2", "Z2", "MV", "MV", "MV"]),
+              "\t".join(["X3", "B3", "Y3", "Z3", "A3", "C3", "D3"]),
+              "\t".join(["X3", "B3", "Y3", "Z3", "A4", "C4", "D4"]),
+              "\t".join(["X4", "B4", "Y4", "Z4", "MV", "MV", "MV"]),
+              "\t".join(["X5", "B5", "Y5", "Z5", "A5", "C5", "D5"])]
+    if debug:
+      sys.stderr.write("\n" + "\n".join(expect) + "\n")
+      sys.stderr.write("----\n")
+      sys.stderr.write(out_strm.getvalue())
+
+
+  @mock.patch('__builtin__.open')
+  def test_output_unmatched_keys_pstor(self, mock_open):
     pass
 
   def test_failure_on_invalid_dup_method(self):
