@@ -90,6 +90,19 @@ class InvalidHeaderError(Exception):
     return repr(self.value)
 
 
+class MissingValueError(Exception):
+
+  """..."""
+
+  def __init__(self, msg):
+    """..."""
+    self.value = msg
+
+  def __str__(self):
+    """Get string representation of this exception."""
+    return repr(self.value)
+
+
 ###############################################################################
 #                              OUTPUT HANDLERS                                #
 ###############################################################################
@@ -622,6 +635,9 @@ def process_without_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
       if key_val not in d_vals:
         if not output_unpaired:
           continue
+        if missing_val is None:
+          raise MissingValueError("Need missing value to output " +
+                                  " unpaired lines")
         if f_f_header is not None:
           f_f_flds = [dict(zip(f_f_header, [missing_val] * len(f_f_header)))]
         else:
@@ -640,6 +656,9 @@ def process_without_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
   if output_unpaired:
     for k in d_vals:
       if k not in used_d_val_keys:
+        if missing_val is None:
+          raise MissingValueError("Need missing value to output " +
+                                  " unpaired lines")
         f_f_flds = d_vals[k]
         if s_f_header is not None:
           s_f_flds = [dict(zip(s_f_header, [missing_val] * len(s_f_header)))]
@@ -674,6 +693,9 @@ def process_by_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
     if k not in d_vals:
       if not output_unpaired:
         continue
+      if missing_val is None:
+        raise MissingValueError("Need missing value to output " +
+                                " unpaired lines")
       if f_f_header is not None:
         ff_fields = [dict(zip(f_f_header, [missing_val] * len(f_f_header)))]
       else:
@@ -691,6 +713,9 @@ def process_by_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
     for k in d_vals:
       if k not in used_ff_keys:
         f_f_flds = d_vals[k]
+        if missing_val is None:
+          raise MissingValueError("Need missing value to output " +
+                                  " unpaired lines")
         if s_f_header is not None:
           s_f_flds = [dict(zip(s_f_header, [missing_val] * len(s_f_header)))]
         else:
@@ -1090,6 +1115,11 @@ class TestJoin(unittest.TestCase):
       sys.stderr.write("----\n")
       sys.stderr.write(out_strm.getvalue())
     self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
+    # fails if the missing value is not provided though...
+    args = ["-p", "-d", "all_pairwise_combinations", "-o",
+            "out.dat", "-a", "BB", "-b", "BX", "one_dup_fields.dat",
+            "two_hdr.dat"]
+    self.assertRaises(MissingValueError, _main, args, "join")
 
     out_strm.truncate(0)
     out_strm.seek(0)
@@ -1109,6 +1139,12 @@ class TestJoin(unittest.TestCase):
       sys.stderr.write("\n" + "\n".join(expect) + "\n")
       sys.stderr.write("----\n")
       sys.stderr.write(out_strm.getvalue())
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
+    # fails if the missing value is not provided though...
+    args = ["-p", "-d", "all_pairwise_combinations", "-o",
+            "out.dat", "-a", "BX", "-b", "BB", "two_hdr.dat",
+            "one_dup_fields.dat"]
+    self.assertRaises(MissingValueError, _main, args, "join")
 
   @mock.patch('__builtin__.open')
   def test_output_unmatched_keys_pstor(self, mock_open):
@@ -1132,6 +1168,11 @@ class TestJoin(unittest.TestCase):
       sys.stderr.write("----\n")
       sys.stderr.write(out_strm.getvalue())
     self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
+    # fails if the missing value is not provided though...
+    args = ["-p", "-d", "column_wise_join", "-o",
+            "out.dat", "-a", "BB", "-b", "BX", "one_dup_fields.dat",
+            "two_hdr.dat"]
+    self.assertRaises(MissingValueError, _main, args, "join")
 
     out_strm.truncate(0)
     out_strm.seek(0)
@@ -1149,6 +1190,12 @@ class TestJoin(unittest.TestCase):
       sys.stderr.write("\n" + "\n".join(expect) + "\n")
       sys.stderr.write("----\n")
       sys.stderr.write(out_strm.getvalue())
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
+    # fails if the missing value is not provided though...
+    args = ["-p", "-d", "column_wise_join", "-o",
+            "out.dat", "-a", "BX", "-b", "BB", "two_hdr.dat",
+            "one_dup_fields.dat"]
+    self.assertRaises(MissingValueError, _main, args, "join")
 
   def test_failure_on_invalid_dup_method(self):
     pass
