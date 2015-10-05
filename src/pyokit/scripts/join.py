@@ -668,11 +668,36 @@ def process_by_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
                   else len(sf_d[sf_d.keys()[0]][0]))
   out_handler.write_header(outfh, delim, s_f_num_cols, f_f_num_cols,
                            s_f_header, f_f_header, missing_val)
+
+  used_ff_keys = set()
   for k in sf_d:
     if k not in d_vals:
-      continue
-    out_handler.write_output(outfh, delim, sf_d[k], d_vals[k], s_f_header,
+      if not output_unpaired:
+        continue
+      if f_f_header is not None:
+        ff_fields = [dict(zip(f_f_header, [missing_val] * len(f_f_header)))]
+      else:
+        assert(len(d_vals) > 0)
+        f_f_num_cols = len(d_vals[d_vals.keys()[0]][0])
+        ff_fields = [[missing_val] * f_f_num_cols]
+    else:
+      used_ff_keys.add(k)
+      ff_fields = d_vals[k]
+
+    out_handler.write_output(outfh, delim, sf_d[k], ff_fields, s_f_header,
                              f_f_header)
+
+  if output_unpaired:
+    for k in d_vals:
+      if k not in used_ff_keys:
+        f_f_flds = d_vals[k]
+        if s_f_header is not None:
+          s_f_flds = [dict(zip(s_f_header, [missing_val] * len(s_f_header)))]
+        else:
+          s_f_num_cols = len(sf_d[d_vals.keys()[0]][0])
+          s_f_flds = [[missing_val] * s_f_num_cols]
+        out_handler.write_output(outfh, delim, s_f_flds, f_f_flds,
+                                 s_f_header, f_f_header)
 
 
 def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
@@ -1085,10 +1110,45 @@ class TestJoin(unittest.TestCase):
       sys.stderr.write("----\n")
       sys.stderr.write(out_strm.getvalue())
 
-
   @mock.patch('__builtin__.open')
   def test_output_unmatched_keys_pstor(self, mock_open):
-    pass
+    debug = False
+    out_strm = StringIO.StringIO()
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
+
+    _main(["-m", "MV", "-p", "-d", "column_wise_join", "-o",
+           "out.dat", "-a", "BB", "-b", "BX", "one_dup_fields.dat",
+           "two_hdr.dat"],
+          "join")
+    expect = ["\t".join(["AA", "BB", "CC", "DD", "XX", "YY", "ZZ"]),
+              "\t".join(["A1;A2", "B1", "C1;C2", "D1;D2", "X1", "Y1", "Z1"]),
+              "\t".join(["A3;A4", "B3", "C3;C4", "D3;D4", "X3", "Y3", "Z3"]),
+              "\t".join(["A5", "B5", "C5", "D5", "X5", "Y5", "Z5"]),
+              "\t".join(["MV", "MV", "MV", "MV", "X2", "Y2", "Z2"]),
+              "\t".join(["MV", "MV", "MV", "MV", "X4", "Y4", "Z4"])]
+    if debug:
+      sys.stderr.write("\n" + "\n".join(expect) + "\n")
+      sys.stderr.write("----\n")
+      sys.stderr.write(out_strm.getvalue())
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
+
+    out_strm.truncate(0)
+    out_strm.seek(0)
+    _main(["-m", "MV", "-p", "-d", "column_wise_join", "-o",
+           "out.dat", "-a", "BX", "-b", "BB", "two_hdr.dat",
+           "one_dup_fields.dat"],
+          "join")
+    expect = ["\t".join(["XX", "BX", "YY", "ZZ", "AA", "CC", "DD"]),
+              "\t".join(["X1", "B1", "Y1", "Z1", "A1;A2", "C1;C2", "D1;D2"]),
+              "\t".join(["X2", "B2", "Y2", "Z2", "MV", "MV", "MV"]),
+              "\t".join(["X3", "B3", "Y3", "Z3", "A3;A4", "C3;C4", "D3;D4"]),
+              "\t".join(["X4", "B4", "Y4", "Z4", "MV", "MV", "MV"]),
+              "\t".join(["X5", "B5", "Y5", "Z5", "A5", "C5", "D5"])]
+    if debug:
+      sys.stderr.write("\n" + "\n".join(expect) + "\n")
+      sys.stderr.write("----\n")
+      sys.stderr.write(out_strm.getvalue())
 
   def test_failure_on_invalid_dup_method(self):
     pass
