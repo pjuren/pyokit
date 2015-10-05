@@ -59,29 +59,11 @@ class GenomeAlignmentError(Exception):
 
 
 class NoSuchAlignmentColumnError(GenomeAlignmentError):
-
-  """Raised when a column is requested that doesn't exist in the alignment."""
-
-  def __init__(self, msg):
-    """
-    Constructor for GenomeAlignmentErrors.
-
-    :param msg: message to display
-    """
-    self.value = msg
+  pass
 
 
 class NoUniqueColumnError(GenomeAlignmentError):
-
-  """Raised when no unique alignment present (i.e. ambiguous)."""
-
-  def __init__(self, msg):
-    """
-    Constructor for GenomeAlignmentErrors.
-
-    :param msg: message to display
-    """
-    self.value = msg
+  pass
 
 
 ###############################################################################
@@ -472,7 +454,8 @@ class TestGenomeAlignmentDS(unittest.TestCase):
     self.block3 = GenomeAlignmentBlock([Sequence("s1.c1", "CA-TAGC-G", 20, 26),
                                         Sequence("s2.c1", "CAGTAGC-G", 38, 35),
                                         Sequence("s3.c2", "C-GT-GCAG", 5, 13),
-                                        Sequence("s4.c1", "CACT-GC-G", 58, 65)],
+                                        Sequence("s4.c1", "CACT-GC-G", 58,
+                                                 65)],
                                        "s1")
     self.block4 = GenomeAlignmentBlock([Sequence("s1.c1", "CG-TCGA", 51, 57),
                                         Sequence("s2.c1", "CGCT-GA", 38, 35),

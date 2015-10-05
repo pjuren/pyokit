@@ -45,10 +45,6 @@ from pyokit.util.progressIndicator import ProgressIndicator
 from pyokit.io.ioError import PyokitIOError
 
 
-# def genome_alignment_block_hash(b):
-#  """Hash a genome alignment block to unique ID: its location in the genome."""
-#  return b.chrom + "\t" + str(b.start) + "\t" + str(b.end)
-
 ###############################################################################
 #                              HELPER FUNCTIONS                               #
 ###############################################################################
@@ -160,7 +156,7 @@ def __find_index(alig_file_pth, idx_extensions):
   """
   if idx_extensions is None:
     return None
-  base, ext = os.path.splitext(alig_file_pth)
+  base, _ = os.path.splitext(alig_file_pth)
   for idx_ext in idx_extensions:
     candidate = base + os.extsep + idx_ext
     if os.path.isfile(candidate):
@@ -169,8 +165,8 @@ def __find_index(alig_file_pth, idx_extensions):
 
 
 def build_genome_alignment_from_directory(d_name, ref_spec, extensions=None,
-                                          index_exts=None, fail_no_index=False,
-                                          verbose=False):
+                                          index_exts=None,
+                                          fail_no_index=False):
   """
   build a genome aligment by loading all files in a directory.
 
@@ -180,9 +176,9 @@ def build_genome_alignment_from_directory(d_name, ref_spec, extensions=None,
   :param d_name:        directory to load from.
   :param ref_spec:      which species in the alignemnt files is the reference?
   :param extensions:    list or set of acceptable extensions; treat any files
-                        with these extensions as part of the alignment. If None,
-                        treat any file which has an extension that is NOT in
-                        index_extensions as part of the alignment.
+                        with these extensions as part of the alignment. If
+                        None, treat any file which has an extension that is
+                        NOT in index_extensions as part of the alignment.
   :param index_exts:    treat any files with these extensions as index files.
   :param fail_no_index: fail if index extensions are provided and an alignment
                         file has no index file.
@@ -195,7 +191,7 @@ def build_genome_alignment_from_directory(d_name, ref_spec, extensions=None,
   for fn in os.listdir(d_name):
     pth = os.path.join(d_name, fn)
     if os.path.isfile(pth):
-      base, ext = os.path.splitext(pth)
+      _, ext = os.path.splitext(pth)
       if extensions is None or ext in extensions:
         idx_path = __find_index(pth, index_exts)
         if idx_path is None and fail_no_index:
@@ -259,7 +255,8 @@ def genome_alignment_iterator(fn, reference_species, index_friendly=False,
   kw_args = {"reference_species": reference_species}
   for e in maf.maf_iterator(fn, index_friendly=index_friendly,
                             yield_class=GenomeAlignmentBlock,
-                            yield_kw_args=kw_args):
+                            yield_kw_args=kw_args,
+                            verbose=verbose):
     yield e
 
 
@@ -459,7 +456,7 @@ class TestGenomeAlignment(unittest.TestCase):
         return StringIO.StringIO(self.b2)
       raise IOError("No such file")
 
-    def isfile_side_effect(*args, **kwargs):
+    def isfile_side_effect(*args):
       if (args[0] == os.path.join("the_dir", "one.maf") or
           args[0] == os.path.join("the_dir", "two.maf")):
         return True
@@ -478,7 +475,7 @@ class TestGenomeAlignment(unittest.TestCase):
   @mock.patch('__builtin__.open')
   def test_build_genome_alignment_from_file(self, mock_open):
     """Test building a genome alignment from a single MAF file."""
-    def open_side_effect(*args, **kwargs):
+    def open_side_effect(*args):
       if args[0] == "one.maf":
         return StringIO.StringIO(self.b1 + "\n" + self.b2)
       raise IOError("No such file")
@@ -499,7 +496,7 @@ class TestGenomeAlignment(unittest.TestCase):
     idx_strm = StringIO.StringIO()
 
     # replace open with mock
-    def open_side_effect(*args, **kwargs):
+    def open_side_effect(*args):
       if not isinstance(args[0], basestring):
         raise TypeError()
       if args[0] == "one.maf":
@@ -546,7 +543,7 @@ class TestGenomeAlignment(unittest.TestCase):
     ga_in_2 = WrappedStringIO(self.b2)
 
     # replace open with mock
-    def open_side_effect(*args, **kwargs):
+    def open_side_effect(*args):
       if not isinstance(args[0], basestring):
         raise TypeError()
       if args[0] == os.path.join("the_dir", "chr22:1711-1768.maf"):
@@ -563,7 +560,7 @@ class TestGenomeAlignment(unittest.TestCase):
         return x
       raise IOError("No such file: " + args[0])
 
-    def isfile_side_effect(*args, **kwargs):
+    def isfile_side_effect(*args):
       fn = args[0].strip()
       if (fn == os.path.join("the_dir", "chr22:1711-1768.maf") or
           fn == os.path.join("the_dir", "chr22:1772-1825.maf") or
