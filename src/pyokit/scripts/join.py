@@ -51,22 +51,8 @@ DEFAULT_VERBOSITY = False
 #                            EXCEPTION CLASSES                                #
 ###############################################################################
 
-class MissingKeyError(Exception):
-
-  """..."""
-
-  def __init__(self, msg):
-    """..."""
-    self.value = msg
-
-  def __str__(self):
-    """Get string representation of this exception."""
-    return repr(self.value)
-
-
-class DuplicateKeyError(Exception):
-
-  """..."""
+class JoinException(Exception):
+  """Base class for exceptions raised by the join script"""
 
   def __init__(self, msg):
     """..."""
@@ -77,30 +63,24 @@ class DuplicateKeyError(Exception):
     return repr(self.value)
 
 
-class InvalidHeaderError(Exception):
-
-  """..."""
-
-  def __init__(self, msg):
-    """..."""
-    self.value = msg
-
-  def __str__(self):
-    """Get string representation of this exception."""
-    return repr(self.value)
+class MissingKeyError(JoinException):
+  pass
 
 
-class MissingValueError(Exception):
+class DuplicateKeyError(JoinException):
+  pass
 
-  """..."""
 
-  def __init__(self, msg):
-    """..."""
-    self.value = msg
+class InvalidHeaderError(JoinException):
+  pass
 
-  def __str__(self):
-    """Get string representation of this exception."""
-    return repr(self.value)
+
+class MissingValueError(JoinException):
+  pass
+
+
+class InvalidOutputHandlerError(JoinException):
+  pass
 
 
 ###############################################################################
@@ -560,7 +540,14 @@ def _main(args, prog_name):
   # allow dups?
   dup_method = OutputType.error_on_dups
   if ui.optionIsSet("duplicate-handling"):
-    dup_method = OutputType[ui.getValue("duplicate-handling")]
+    kv = ui.getValue("duplicate-handling")
+    try:
+      dup_method = OutputType[kv]
+    except KeyError:
+      msg = "Not a valid output handler: " + kv + ". Options are " + \
+            "; ".join([f.name + " = " + f.value.get_description()
+                       for f in OutputType])
+      raise InvalidOutputHandlerError(msg)
 
   # ignore lines with missing values in the key field?
   ignore_missing_keys = ui.optionIsSet("ignore-missing-key")
@@ -1197,8 +1184,12 @@ class TestJoin(unittest.TestCase):
             "one_dup_fields.dat"]
     self.assertRaises(MissingValueError, _main, args, "join")
 
-  def test_failure_on_invalid_dup_method(self):
-    pass
+  @mock.patch('__builtin__.open')
+  def test_failure_on_invalid_dup_method(self, mock_open):
+    args = ["-m", "MV", "-p", "-d", "junk", "-o",
+            "out.dat", "-a", "BB", "-b", "BX", "one_dup_fields.dat",
+            "two_hdr.dat"]
+    self.assertRaises(InvalidOutputHandlerError, _main, args, "join")
 
   def test_failure_on_ragged_data_frame(self):
     # number of elements should be the same on each line...
