@@ -83,6 +83,10 @@ class InvalidOutputHandlerError(JoinException):
   pass
 
 
+class RaggedInputError(JoinException):
+  pass
+
+
 ###############################################################################
 #                              OUTPUT HANDLERS                                #
 ###############################################################################
@@ -401,7 +405,9 @@ def load_file(fn_or_strm, key, key_is_field_number, require_unique_key=True,
       if expected_cols_per_line is None:
         expected_cols_per_line = len(parts) if header is None else len(header)
       if expected_cols_per_line != len(parts):
-        raise ValueError("oops")
+        raise RaggedInputError("Found line with " + str(len(parts)) + " "
+                               "columns, but was expecting " +
+                               str(expected_cols_per_line) + " columns")
 
       key_val = parts[key_field_num]
       # key_val_order.append(key_val)
@@ -590,6 +596,7 @@ def process_without_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
   s_f_header = None
   seen_keys = set()
   out_handler = output_type.get_handler()
+  expected_cols_per_line = None
   first_element = True
   for line in file_iterator(s_f_strm, verbose):
     parts = __populated_missing_vals(line.split(delim), missing_val)
@@ -608,6 +615,14 @@ def process_without_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
     # any line that is either not the first, or is the first but we decided
     # it wasn't a header line...
     if not first_element or regular_first:
+      if expected_cols_per_line is None:
+        expected_cols_per_line = (len(parts) if s_f_header is None
+                                  else len(s_f_header))
+      if expected_cols_per_line != len(parts):
+        raise RaggedInputError("Found line with " + str(len(parts)) + " "
+                               "columns, but was expecting " +
+                               str(expected_cols_per_line) + " columns")
+
       key_val = parts[key_field_num]
       if key_val.strip() == "":
         if ignore_missing_keys:
@@ -818,6 +833,15 @@ class TestJoin(unittest.TestCase):
                            "\t".join(["A4", "B4", "C4", "D4"]),
                            "\t".join(["A5", "B5", "C5", "D5"])]
 
+    # an input file where the header has fewer vals than date lines
+    self.test_headr_six = "\t".join(["AA", "BB", "CC"])
+    self.test_file_six = ["\t".join(["A1", "B1", "C1", "D1"]),
+                          "\t".join(["A5", "B5", "C5", "D5"])]
+
+    # an input file where one of the content lines has less vals than others
+    self.test_file_seven = ["\t".join(["A1", "B1", "C1", "D1"]),
+                            "\t".join(["A5", "B5", "C5"])]
+
     self.strs = {"one.dat": "\n".join(self.test_file_one),
                  "two.dat": "\n".join(self.test_file_two),
                  "one_hdr.dat": (self.test_headr_one + "\n" +
@@ -830,7 +854,10 @@ class TestJoin(unittest.TestCase):
                  "one_dup.dat": (self.test_headr_one_dup + "\n" +
                                  "\n".join(self.test_file_one)),
                  "one_dup_fields.dat": (self.test_headr_four + "\n" +
-                                        "\n".join(self.test_file_four))}
+                                        "\n".join(self.test_file_four)),
+                 "ragged_with_head.dat": (self.test_headr_six + "\n" +
+                                          "\n".join(self.test_file_six)),
+                 "ragged_no_head.dat": ("\n".join(self.test_file_seven))}
 
   @mock.patch('__builtin__.open')
   def test_simple_headerless_join(self, mock_open):
@@ -1191,10 +1218,36 @@ class TestJoin(unittest.TestCase):
             "two_hdr.dat"]
     self.assertRaises(InvalidOutputHandlerError, _main, args, "join")
 
-  def test_failure_on_ragged_data_frame(self):
-    # number of elements should be the same on each line...
-    # TODO
-    pass
+  @mock.patch('__builtin__.open')
+  def test_failure_on_ragged_data_frame(self, mock_open):
+    """Test that the script exists gracefully when an input file is ragged."""
+    out_strm = StringIO.StringIO()
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
+
+    # when the first file is ragged, with a header, but second is fine
+    args = ["-m", "MV", "-p", "-o",
+            "out.dat", "-a", "BB", "-b", "BX", "ragged_with_head.dat",
+            "two_hdr.dat"]
+    self.assertRaises(RaggedInputError, _main, args, "join")
+
+    # when the second file is ragged, with a header, but first is fine
+    args = ["-m", "MV", "-p", "-o",
+            "out.dat", "-a", "BX", "-b", "BB", "two_hdr.dat",
+            "ragged_with_head.dat"]
+    self.assertRaises(RaggedInputError, _main, args, "join")
+
+    # when the first file is ragged with no header, but second is fine
+    args = ["-m", "MV", "-p", "-o",
+            "out.dat", "-a", "2", "-b", "2", "ragged_no_head.dat",
+            "two_hdr.dat"]
+    self.assertRaises(RaggedInputError, _main, args, "join")
+
+    # when the second file is ragged with no header, but the first is fine
+    args = ["-m", "MV", "-p", "-o",
+            "out.dat", "-a", "2", "-b", "2", "two_hdr.dat",
+            "ragged_no_head.dat"]
+    self.assertRaises(RaggedInputError, _main, args, "join")
 
 
 ###############################################################################
