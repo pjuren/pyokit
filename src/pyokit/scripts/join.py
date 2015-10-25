@@ -488,6 +488,28 @@ def getUI(prog_name, args):
 #                     COMMAND LINE PROCESSING AND DISPATCH                    #
 ###############################################################################
 
+def get_key_field(ui, ui_option_name, default_val=0, default_is_number=True):
+  """
+    parse an option from a UI object as the name of a key field.
+
+    If the named option is not set, return the default values for the tuple.
+
+    :return: a tuple of two items, first is the value of the option, second is
+             a boolean value that indicates whether the value is a column name
+             or a column number (numbers start at 0).
+  """
+  key = default_val
+  key_is_field_number = default_is_number
+  if ui.optionIsSet(ui_option_name):
+    key = ui.getValue(ui_option_name)
+    try:
+      key = int(key) - 1
+      key_is_field_number = True
+    except ValueError:
+      key_is_field_number = False
+  return key, key_is_field_number
+
+
 def _main(args, prog_name):
   # get options and arguments
   ui = getUI(prog_name, args)
@@ -513,27 +535,9 @@ def _main(args, prog_name):
   if ui.optionIsSet("output"):
     outfh = open(ui.getValue("output"), "w")
 
-  # get key field in file one
-  key_one = 0
-  key_one_is_field_number = True
-  if ui.optionIsSet("field-one"):
-    key_one = ui.getValue("field-one")
-    try:
-      key_one = int(key_one) - 1
-      key_one_is_field_number = True
-    except ValueError:
-      key_one_is_field_number = False
-
-  # get key field in file two
-  key_two = 0
-  key_two_is_field_number = True
-  if ui.optionIsSet("field-two"):
-    key_two = ui.getValue("field-two")
-    try:
-      key_two = int(key_two) - 1
-      key_two_is_field_number = True
-    except ValueError:
-      key_two_is_field_number = False
+  # get key fields in both files
+  key_one, key_one_is_field_number = get_key_field(ui, "field-one")
+  key_two, key_two_is_field_number = get_key_field(ui, "field-two")
 
   # get missing value
   missing_val = None
