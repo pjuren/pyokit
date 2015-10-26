@@ -23,17 +23,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 
-import sys
+# standard python imports
 import os
-import unittest
+import sys
+import abc
 import mock
+import copy
+import unittest
 import StringIO
+from collections import OrderedDict
 
+# support for enumerations in python 2
+from enum import Enum
+
+# pyokit imports
 from pyokit.interface.cli import CLI, Option
 from pyokit.util.progressIndicator import ProgressIndicator
 
 ###############################################################################
-#                                 CONSTANTS                                   #
+#                            CONSTANTS AND ENUMS                              #
 ###############################################################################
 
 DEFAULT_VERBOSITY = False
@@ -43,22 +51,8 @@ DEFAULT_VERBOSITY = False
 #                            EXCEPTION CLASSES                                #
 ###############################################################################
 
-class MissingKeyError(Exception):
-
-  """..."""
-
-  def __init__(self, msg):
-    """..."""
-    self.value = msg
-
-  def __str__(self):
-    """Get string representation of this exception."""
-    return repr(self.value)
-
-
-class DuplicateKeyError(Exception):
-
-  """..."""
+class JoinException(Exception):
+  """Base class for exceptions raised by the join script"""
 
   def __init__(self, msg):
     """..."""
@@ -69,17 +63,212 @@ class DuplicateKeyError(Exception):
     return repr(self.value)
 
 
-class InvalidHeaderError(Exception):
+class MissingKeyError(JoinException):
+  pass
 
-  """..."""
 
-  def __init__(self, msg):
-    """..."""
-    self.value = msg
+class DuplicateKeyError(JoinException):
+  pass
 
-  def __str__(self):
-    """Get string representation of this exception."""
-    return repr(self.value)
+
+class InvalidHeaderError(JoinException):
+  pass
+
+
+class MissingValueError(JoinException):
+  pass
+
+
+class InvalidOutputHandlerError(JoinException):
+  pass
+
+
+class RaggedInputError(JoinException):
+  pass
+
+
+###############################################################################
+#                              OUTPUT HANDLERS                                #
+###############################################################################
+
+class OutputHandlerBase(object):
+  __metaclass__ = abc.ABCMeta
+
+  @abc.abstractmethod
+  def write_output(self, out_strm, delim, f1_fields, f2_fields,
+                   f1_header=None, f2_header=None):
+    """Write output to stream for a given pair of columns."""
+    return
+
+  @abc.abstractmethod
+  def get_description(self):
+    """Return a string description of this output handler."""
+    return
+
+  @abc.abstractmethod
+  def write_header(self, out_strm, delim, f1_num_fields, f2_num_fields,
+                   f1_header=None, f2_header=None, missing_val=None):
+    """
+    Write the header for a joined file. If headers are provided for one or more
+    of the input files, then a header is generated for the output file.
+    Otherwise, this does not output anything.
+
+    :param out_strm: write to this stream
+    :param delim:
+    :param f1_num_fields: the number of columns in the first file
+    :param f2_num_fields: the number of columns in the second file
+    :param f1_header:
+    :param f2_header:
+    :param missing_val:
+    """
+    mm = f1_header != f2_header
+    one_none = f1_header is None or f2_header is None
+    if mm and one_none and missing_val is None:
+      raise InvalidHeaderError("Cannot generate output header when one " +
+                               "input file is missing a header and no " +
+                               "missing value was provided to replace " +
+                               "unknown entries.")
+
+    if f1_header is not None and f2_header is not None:
+      out_strm.write(delim.join(f1_header) + delim +
+                     delim.join(f2_header) + "\n")
+    elif f1_header is None and f2_header is not None:
+      dummy_h = f1_num_fields * [missing_val]
+      out_strm.write(delim.join(dummy_h) + delim +
+                     delim.join(f2_header) + "\n")
+    elif f1_header is not None and f2_header is None:
+      dummy_h = f2_num_fields * [missing_val]
+      out_strm.write(delim.join(f1_header) + delim +
+                     delim.join(dummy_h) + "\n")
+
+
+class NoDupsOutputHandler(OutputHandlerBase):
+  def write_output(self, out_strm, delim, f1_fields, f2_fields,
+                   f1_header=None, f2_header=None):
+    if len(f1_fields) > 1 or len(f2_fields) > 1:
+      raise DuplicateKeyError()
+    pcout = PairwiseCombinationOutputHandler()
+    pcout.write_output(out_strm, delim, f1_fields, f2_fields,
+                       f1_header, f2_header)
+
+  def write_header(self, out_strm, delim, f1_d, f2_d, f1_header=None,
+                   f2_header=None, missing_val=None):
+    sc = super(NoDupsOutputHandler, self)
+    sc.write_header(out_strm, delim, f1_d, f2_d, f1_header,
+                    f2_header, missing_val)
+
+  def get_description(self):
+    """Return a string description of this output handler."""
+    return "program exits with error if any duplicates are found"
+
+
+class ColumnCombinationOutputHandler(OutputHandlerBase):
+  def write_output(self, out_strm, delim, f1_fields, f2_fields,
+                   f1_header=None, f2_header=None):
+    def collapse_dicts(d):
+      assert(len(d) >= 1)
+      res = copy.copy(d[0])
+      seen = set(res.values())
+      keys = res.keys()
+      for i in range(1, len(d)):
+        assert(set(d[i].keys()) == set(res.keys()))
+        for key in keys:
+          if d[i][key] in seen:
+            continue
+          seen.add(d[i][key])
+          res[key] = res[key] + ";" + d[i][key]
+      return res
+
+    def collapse_lists(k):
+      assert(len(k) >= 1)
+      res = copy.copy(k[0])
+      l_len = len(k[0])
+      for i in range(1, len(k)):
+        assert(len(k[i]) == l_len)
+        for j in range(0, len(k[i])):
+          res[j] = res[j] + ";" + k[i][j]
+      return res
+
+    if f1_header is not None:
+      f1_d = collapse_dicts(f1_fields)
+      out_strm.write(delim.join([f1_d[k] for k in f1_header]) + delim)
+    else:
+      f1_d = collapse_lists(f1_fields)
+      out_strm.write(delim.join(f1_d) + delim)
+
+    if f2_header is not None:
+      f2_d = collapse_dicts(f2_fields)
+      out_strm.write(delim.join([f2_d[k] for k in f2_header]))
+    else:
+      f2_d = collapse_lists(f2_fields)
+      out_strm.write(delim.join(f2_d))
+    out_strm.write("\n")
+
+  def write_header(self, out_strm, delim, f1_d, f2_d, f1_header=None,
+                   f2_header=None, missing_val=None):
+    sc = super(ColumnCombinationOutputHandler, self)
+    sc.write_header(out_strm, delim, f1_d, f2_d, f1_header,
+                    f2_header, missing_val)
+
+  def get_description(self):
+    """Return a string description of this output handler."""
+    return "output just one line for the duplicated key value, " +\
+           "but inlcude all possible values for the other " +\
+           "fields, separated by semi-colon in each field"
+
+
+class PairwiseCombinationOutputHandler(OutputHandlerBase):
+  def write_header(self, out_strm, delim, f1_d, f2_d, f1_header=None,
+                   f2_header=None, missing_val=None):
+    sc = super(PairwiseCombinationOutputHandler, self)
+    sc.write_header(out_strm, delim, f1_d, f2_d, f1_header,
+                    f2_header, missing_val)
+
+  def write_output(self, out_strm, delim, f1_fields, f2_fields,
+                   f1_header=None, f2_header=None):
+    sc = super(PairwiseCombinationOutputHandler, self)
+    sc.write_output(out_strm, delim, f1_fields, f2_fields, f1_header,
+                    f2_header)
+
+    for f1_d in f1_fields:
+      for f2_d in f2_fields:
+        if f1_header is not None:
+          out_strm.write(delim.join([f1_d[k] for k in f1_header]) + delim)
+        else:
+          out_strm.write(delim.join(f1_d) + delim)
+        first = True
+        if f2_header is None:
+          out_strm.write(delim.join(f2_d))
+        else:
+          for h_val in f2_header:
+            if first:
+              first = False
+            else:
+              out_strm.write(delim)
+            out_strm.write(f2_d[h_val])
+        out_strm.write("\n")
+
+  def get_description(self):
+    """Return a string description of this output handler."""
+    return "output one line for each possible pairwise " +\
+           "combination of lines from the first and " +\
+           "second file for the duplicated key value"
+
+
+###############################################################################
+#                                   ENUMS                                     #
+###############################################################################
+
+class OutputType(Enum):
+
+  """An enumeration of the possible ways the join script can handle dups."""
+
+  error_on_dups = NoDupsOutputHandler()
+  all_pairwise_combinations = PairwiseCombinationOutputHandler()
+  column_wise_join = ColumnCombinationOutputHandler()
+
+  def get_handler(self):
+    return self.value
 
 
 ###############################################################################
@@ -114,9 +303,29 @@ def file_iterator(filehandle, verbose=False):
     yield line
 
 
+def __populated_missing_vals(parts, missing_val=None):
+  if missing_val is not None:
+    parts = [parts[i] if parts[i].strip() != "" else missing_val
+             for i in range(0, len(parts))]
+  return parts
+
+
+def __parse__header(parts, key_column_name):
+  if any(i.strip() == "" for i in parts):
+    raise InvalidHeaderError("header has empty fields")
+  if len(parts) != len(set(parts)):
+    raise InvalidHeaderError("header has duplicate names")
+  header = parts
+  if key_column_name not in header:
+    raise InvalidHeaderError(str(key_column_name) + " does not name a column")
+  key_field_num = header.index(key_column_name)
+  return header, key_field_num
+
+
 def _build_entry(parts, existing_list_d, key_value, key_field_num,
-                 key_is_field_number, header=None, allow_duplicates=False,
-                 ignore_missing_keys=False):
+                 key_is_field_number, header=None,
+                 output_type=OutputType.error_on_dups,
+                 ignore_missing_keys=False, keep_key_col=False):
   """
   Build and add an entry to existing_list_d.
 
@@ -137,7 +346,7 @@ def _build_entry(parts, existing_list_d, key_value, key_field_num,
                               index, rather than a column name
   :param header:              list giving the names of the columns. Can be None
                               if columns have no names (no header)
-  :param allow_duplicates:    ...
+  :param dup_method:          ...
   :param ignore_missing_keys: ...
   """
   if key_value.strip() == "":
@@ -146,22 +355,28 @@ def _build_entry(parts, existing_list_d, key_value, key_field_num,
     raise MissingKeyError("missing key value")
 
   if key_value in existing_list_d:
-    if not allow_duplicates:
+    if output_type is OutputType.error_on_dups:
       raise DuplicateKeyError(key_value + " appears multiple times as key")
+    elif (output_type is OutputType.all_pairwise_combinations or
+          output_type is OutputType.column_wise_join):
+      pass  # dups okay for these output methods
+    else:
+      raise ValueError("Unknown duplicate handling method")
   else:
     existing_list_d[key_value] = []
 
   if key_is_field_number:
     # the entry in the dictionary is a list, minus the key field, in the
     # order they occur.
-    ne = [parts[i] for i in range(0, len(parts)) if i != key_field_num]
+    ne = [parts[i] for i in range(0, len(parts))
+          if i != key_field_num or keep_key_col]
     existing_list_d[key_value].append(ne)
   else:
     # the entry in the dictionary is another dictionary indexed by
     # the header value
     ne = {}
     for i in range(0, len(parts)):
-      if i == key_field_num:
+      if i == key_field_num and not keep_key_col:
         continue
       else:
         ne[header[i]] = parts[i]
@@ -170,8 +385,9 @@ def _build_entry(parts, existing_list_d, key_value, key_field_num,
 
 def load_file(fn_or_strm, key, key_is_field_number, require_unique_key=True,
               delim="\t", missing_val=None, ignore_missing_keys=False,
-              allow_duplicates=False, verbose=False):
-  res = {}
+              output_type=OutputType.error_on_dups, keep_key_col=False,
+              verbose=False):
+  res = OrderedDict()
   header = None
   key_field_num = key if key_is_field_number else None
   expected_cols_per_line = None
@@ -182,28 +398,51 @@ def load_file(fn_or_strm, key, key_is_field_number, require_unique_key=True,
       parts = [parts[i] if parts[i].strip() != "" else missing_val
                for i in range(0, len(parts))]
     if header is None and not key_is_field_number:
-      if any(i.strip() == "" for i in parts):
-        raise InvalidHeaderError("header for file has empty fields")
-      if len(parts) != len(set(parts)):
-        raise InvalidHeaderError("head for file has duplicate names")
-      header = parts
-      if key not in header:
-        raise InvalidHeaderError(key + " does not name a column")
-      key_field_num = header.index(key)
+      header, key_field_num = __parse__header(parts, key)
 
       # TODO deal with case where key occurs more than once in the header
     else:
       if expected_cols_per_line is None:
         expected_cols_per_line = len(parts) if header is None else len(header)
       if expected_cols_per_line != len(parts):
-        raise ValueError("oops")
+        raise RaggedInputError("Found line with " + str(len(parts)) + " "
+                               "columns, but was expecting " +
+                               str(expected_cols_per_line) + " columns")
 
       key_val = parts[key_field_num]
+      # key_val_order.append(key_val)
       _build_entry(parts, res, key_val, key_field_num, key_is_field_number,
-                   header, allow_duplicates=allow_duplicates,
+                   header, output_type=output_type, keep_key_col=keep_key_col,
                    ignore_missing_keys=ignore_missing_keys)
 
-  return res, [x for x in header if x != key] if header is not None else None
+  h_res = ([x for x in header if x != key or keep_key_col]
+           if header is not None else None)
+  return res, h_res
+
+
+def __output_unpaired_vals(d_vals, used_ff_keys, f_f_header, sf_d, s_f_header,
+                           missing_val, out_handler, outfh, delim="\t"):
+  """
+  Use an output handler to output keys that could not be paired.
+
+  Go over the keys in d_vals and for any that were not used (i.e. not in
+  used_ff_keys), build an output line using the values from d_vals,
+  populated the missing columns with missing_val, and output these using the
+  provided output hander.
+  """
+  if missing_val is None:
+    raise MissingValueError("Need missing value to output " +
+                            " unpaired lines")
+  for k in d_vals:
+    if k not in used_ff_keys:
+      f_f_flds = d_vals[k]
+      if s_f_header is not None:
+        s_f_flds = [dict(zip(s_f_header, [missing_val] * len(s_f_header)))]
+      else:
+        s_f_num_cols = len(sf_d[d_vals.keys()[0]][0])
+        s_f_flds = [[missing_val] * s_f_num_cols]
+      out_handler.write_output(outfh, delim, s_f_flds, f_f_flds,
+                               s_f_header, f_f_header)
 
 
 ###############################################################################
@@ -240,15 +479,21 @@ def getUI(prog_name, args):
                                   "Any field that contains only whitespace " +
                                   "is considered missing",
                       required=False, type=str))
-  ui.addOption(Option(short="d", long="allow-key-duplicates",
-                      description="allow key values to appear more than " +
-                                  "once in a file, If this options is set, " +
-                                  "all combinations of key-value pairs for " +
-                                  "the two files will be output.",
-                      required=False))
+  ui.addOption(Option(short="d", long="duplicate-handling", argName="meth",
+                      description="how should duplicate values for a key " +
+                                  "field be treated? " +
+                                  "; ".join([f.name + " = " +
+                                             f.value.get_description()
+                                             for f in OutputType]),
+                      required=False, type=str))
   ui.addOption(Option(short="i", long="ignore-missing-key",
                       description="skip lines in input files that are " +
                                   "missing a value for the key field ",
+                      required=False))
+  ui.addOption(Option(short="p", long="output-unpaired-lines",
+                      description="output lines that cannot be joined by " +
+                                  "populating missing columns with "
+                                  "missing-value ",
                       required=False))
   ui.addOption(Option(short="h", long="help",
                       description="show this help message ", special=True))
@@ -267,6 +512,28 @@ def getUI(prog_name, args):
 ###############################################################################
 #                     COMMAND LINE PROCESSING AND DISPATCH                    #
 ###############################################################################
+
+def get_key_field(ui, ui_option_name, default_val=0, default_is_number=True):
+  """
+    parse an option from a UI object as the name of a key field.
+
+    If the named option is not set, return the default values for the tuple.
+
+    :return: a tuple of two items, first is the value of the option, second is
+             a boolean value that indicates whether the value is a column name
+             or a column number (numbers start at 0).
+  """
+  key = default_val
+  key_is_field_number = default_is_number
+  if ui.optionIsSet(ui_option_name):
+    key = ui.getValue(ui_option_name)
+    try:
+      key = int(key) - 1
+      key_is_field_number = True
+    except ValueError:
+      key_is_field_number = False
+  return key, key_is_field_number
+
 
 def _main(args, prog_name):
   # get options and arguments
@@ -293,35 +560,29 @@ def _main(args, prog_name):
   if ui.optionIsSet("output"):
     outfh = open(ui.getValue("output"), "w")
 
-  # get key field in file one
-  key_one = 0
-  key_one_is_field_number = True
-  if ui.optionIsSet("field-one"):
-    key_one = ui.getValue("field-one")
-    try:
-      key_one = int(key_one) - 1
-      key_one_is_field_number = True
-    except ValueError:
-      key_one_is_field_number = False
-
-  # get key field in file two
-  key_two = 0
-  key_two_is_field_number = True
-  if ui.optionIsSet("field-two"):
-    key_two = ui.getValue("field-two")
-    try:
-      key_two = int(key_two) - 1
-      key_two_is_field_number = True
-    except ValueError:
-      key_two_is_field_number = False
+  # get key fields in both files
+  key_one, key_one_is_field_number = get_key_field(ui, "field-one")
+  key_two, key_two_is_field_number = get_key_field(ui, "field-two")
 
   # get missing value
   missing_val = None
   if ui.optionIsSet("missing"):
     missing_val = ui.getValue("missing")
 
+  # output lines that cannot be joined?
+  output_unpaired = ui.optionIsSet("output-unpaired-lines")
+
   # allow dups?
-  allow_duplicate_key_values = ui.optionIsSet("allow-key-duplicates")
+  dup_method = OutputType.error_on_dups
+  if ui.optionIsSet("duplicate-handling"):
+    kv = ui.getValue("duplicate-handling")
+    try:
+      dup_method = OutputType[kv]
+    except KeyError:
+      msg = "Not a valid output handler: " + kv + ". Options are " + \
+            "; ".join([f.name + " = " + f.value.get_description()
+                       for f in OutputType])
+      raise InvalidOutputHandlerError(msg)
 
   # ignore lines with missing values in the key field?
   ignore_missing_keys = ui.optionIsSet("ignore-missing-key")
@@ -329,18 +590,190 @@ def _main(args, prog_name):
   # do our thing..
   process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
           key_two_is_field_number, missing_val, ignore_missing_keys,
-          allow_duplicate_key_values, verbose)
+          dup_method, output_unpaired, verbose)
 
 
 ###############################################################################
 #                             MAIN PROGRAM LOGIC                              #
 ###############################################################################
 
+def populate_unpaired_line(d_vals, f_f_header, missing_val=None):
+  """
+  used when a value in d_vals doesn't match anything in the other file.
+
+  :return: a dictionary, indexed by key value, with the correct missing values
+           populated for the other file.
+  """
+  if missing_val is None:
+    raise MissingValueError("Need missing value to output " +
+                            " unpaired lines")
+  if f_f_header is not None:
+    f_f_flds = [dict(zip(f_f_header, [missing_val] * len(f_f_header)))]
+  else:
+    assert(len(d_vals) > 0)
+    f_f_num_cols = len(d_vals[d_vals.keys()[0]][0])
+    f_f_flds = [[missing_val] * f_f_num_cols]
+  return f_f_flds
+
+
+def process_without_storing_header(parts, d_vals, f_f_header, s_f_has_header,
+                                   s_f_header, s_f_key, key_field_num,
+                                   out_handler, outfh, missing_val, delim):
+  regular_first = True
+  if s_f_header is None and s_f_has_header:
+    s_f_header, key_field_num = __parse__header(parts, s_f_key)
+    regular_first = False
+  assert(len(d_vals) > 0)
+  f_f_num_cols = len(d_vals[d_vals.keys()[0]][0])
+  out_handler.write_header(outfh, delim, len(parts), f_f_num_cols,
+                           s_f_header, f_f_header, missing_val)
+  return regular_first, s_f_header, key_field_num
+
+
+def get_key_value(parts, key_field_num, ignore_missing_keys, seen_keys,
+                  output_type):
+  """
+  get the key value from the line and check it's not a dup. or missing. fields
+  with only whitespace are considered empty (missing).
+
+  :param ignore_missing_keys: if True, return None for missing keys. If false,
+                              missing keys cause an exception
+                              (MissingKeyError).
+  :param seen_keys: a set of keys already seen.
+
+  :return: the key value, or None if the field was empty.
+  """
+  key_val = parts[key_field_num]
+  if key_val.strip() == "":
+    if not ignore_missing_keys:
+      raise MissingKeyError("missing key value")
+    else:
+      return None
+
+  if key_val in seen_keys and \
+     output_type is OutputType.error_on_dups:
+    raise DuplicateKeyError(key_val + " appears multiple times as key")
+
+  return key_val
+
+
+def process_without_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
+                            f_f_header=None, s_f_has_header=False,
+                            missing_val=None, delim=None,
+                            ignore_missing_keys=False,
+                            output_unpaired=False, verbose=False):
+  """
+    Given a dictionary of values and (optionally) a header for a file,
+    join with another file with a linear pass that does not store The
+    file's values
+
+    :param d_vals: dictionary of key-value pairs to match up with the lines
+                   in the second file. If header_f1 is None, the values should
+                   be ordered iterables --output will be in presentation order.
+                   If f1_header is not None, values should be dictionary-like
+                   objects accessible via a keys --output will be in the order
+                   that the keys appear in header_f1
+    :param s_f_strm: TODO
+    :param s_f_key: TODO
+    :param header: TODO
+    :param f2_has_header: TODO
+    :param missing_val: TODO
+    :param verbose: TODO
+  """
+  used_d_val_keys = set()
+  key_field_num = s_f_key
+  s_f_header = None
+  seen_keys = set()
+  out_handler = output_type.get_handler()
+  expected_cols_per_line = None
+  first_element = True
+  for line in file_iterator(s_f_strm, verbose):
+    parts = __populated_missing_vals(line.split(delim), missing_val)
+
+    # on the first element, we might have to output a header..
+    if first_element:
+      regular_first, s_f_header, key_field_num =\
+          process_without_storing_header(parts, d_vals, f_f_header,
+                                         s_f_has_header, s_f_header, s_f_key,
+                                         key_field_num, out_handler, outfh,
+                                         missing_val, delim)
+
+    # any line that is either not the first, or is the first but we decided
+    # it wasn't a header line...
+    if not first_element or regular_first:
+      if expected_cols_per_line is None:
+        expected_cols_per_line = (len(parts) if s_f_header is None
+                                  else len(s_f_header))
+      if expected_cols_per_line != len(parts):
+        raise RaggedInputError("Found line with " + str(len(parts)) + " "
+                               "columns, but was expecting " +
+                               str(expected_cols_per_line) + " columns")
+
+      key_val = get_key_value(parts, key_field_num, ignore_missing_keys,
+                              seen_keys, output_type)
+      if key_val is None and ignore_missing_keys:
+        continue
+      seen_keys.add(key_val)
+
+      if key_val not in d_vals:
+        if not output_unpaired:
+          continue
+        f_f_flds = populate_unpaired_line(d_vals, f_f_header, missing_val)
+      else:
+        f_f_flds = d_vals[key_val]
+        used_d_val_keys.add(key_val)
+      s_f_flds = ([dict(zip(s_f_header, parts))]
+                  if s_f_header is not None else [parts])
+      out_handler.write_output(outfh, delim, s_f_flds, f_f_flds,
+                               s_f_header, f_f_header)
+    first_element = False
+
+  if output_unpaired:
+    __output_unpaired_vals(d_vals, used_d_val_keys, f_f_header, s_f_flds,
+                           s_f_header, missing_val, out_handler, outfh, delim)
+
+
+def process_by_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
+                       f_f_header=None, s_f_has_header=False,
+                       missing_val=None, delim=None,
+                       ignore_missing_keys=False,
+                       output_unpaired=False, verbose=False):
+  delim = "\t"
+  out_handler = output_type.get_handler()
+  sf_d, s_f_header = load_file(s_f_strm, s_f_key, not s_f_has_header,
+                               missing_val=missing_val,
+                               ignore_missing_keys=ignore_missing_keys,
+                               output_type=output_type, keep_key_col=True,
+                               verbose=verbose)
+  f_f_num_cols = (len(f_f_header) if f_f_header is not None
+                  else len(d_vals[d_vals.keys()[0]][0]))
+  s_f_num_cols = (len(s_f_header) if s_f_header is not None
+                  else len(sf_d[sf_d.keys()[0]][0]))
+  out_handler.write_header(outfh, delim, s_f_num_cols, f_f_num_cols,
+                           s_f_header, f_f_header, missing_val)
+
+  used_ff_keys = set()
+  for k in sf_d:
+    if k not in d_vals:
+      if not output_unpaired:
+        continue
+      ff_fields = populate_unpaired_line(d_vals, f_f_header, missing_val)
+    else:
+      used_ff_keys.add(k)
+      ff_fields = d_vals[k]
+
+    out_handler.write_output(outfh, delim, sf_d[k], ff_fields, s_f_header,
+                             f_f_header)
+
+  if output_unpaired:
+    __output_unpaired_vals(d_vals, used_ff_keys, f_f_header, sf_d, s_f_header,
+                           missing_val, out_handler, outfh, delim)
+
+
 def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
             key_two_is_field_number, missing_val, ignore_missing_keys,
-            allow_dup_key_values, verbose=False):
+            output_type, output_unpaired=False, verbose=False):
   delim = "\t"
-  seen_keys = set()
 
   mixed_headers = (key_one_is_field_number != key_two_is_field_number)
   if mixed_headers and missing_val is None:
@@ -352,69 +785,18 @@ def process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
   f2_dictionary, f2_header = load_file(infh2, key_two, key_two_is_field_number,
                                        missing_val=missing_val,
                                        ignore_missing_keys=ignore_missing_keys,
-                                       allow_duplicates=allow_dup_key_values,
+                                       output_type=output_type,
                                        verbose=verbose)
-  f1_header = None
-  key_field_num = key_one if key_one_is_field_number else None
-  for line in file_iterator(infh1, verbose):
-    parts = line.split(delim)
-    if missing_val is not None:
-      parts = [parts[i] if parts[i].strip() != "" else missing_val
-               for i in range(0, len(parts))]
-    if f1_header is None and not key_one_is_field_number:
-      if any(i.strip() == "" for i in parts):
-        raise InvalidHeaderError("header for first file has empty fields")
-      if len(parts) != len(set(parts)):
-        raise InvalidHeaderError("header for first file has duplicate names")
-      f1_header = parts
-      if key_one not in f1_header:
-        raise InvalidHeaderError(key_one + " does not name a column")
-      key_field_num = f1_header.index(key_one)
-      # TODO deal with case where key occurs more than once in the header
-
-      # TODO exception if header is missing and we have no missing val
-      # TODO join missing vals otherwise..
-
-      # we know that file one has a header, or we wouldn't be here...
-      if not key_two_is_field_number:
-        outfh.write(delim.join(f1_header) + delim +
-                    delim.join(f2_header) + "\n")
-      else:
-        dummy_h = len(f2_dictionary[f2_dictionary.keys()[0]][0]) *\
-            [missing_val]
-        outfh.write(delim.join(f1_header) + delim +
-                    delim.join(dummy_h) + "\n")
-    else:
-      key_val = parts[key_field_num]
-      if key_val.strip() == "":
-        if ignore_missing_keys:
-          continue
-        raise MissingKeyError("missing key value")
-      if key_val in seen_keys and not allow_dup_key_values:
-        raise DuplicateKeyError(key_val + " appears multiple times as key")
-      seen_keys.add(key_val)
-
-      if f2_header is not None:
-        # f2_dictionary entry is another dictionary indexed by header value
-        if key_val not in f2_dictionary:
-          continue
-        for ne in f2_dictionary[key_val]:
-          outfh.write(delim.join(parts) + delim)
-          first = True
-          for h_val in f2_header:
-            if h_val == key_two:
-              continue
-
-            if first:
-              first = False
-            else:
-              outfh.write(delim)
-            outfh.write(ne[h_val])
-          outfh.write("\n")
-      else:
-        # f1_dictionary entry is a list
-        for ne in f2_dictionary[key_val]:
-          outfh.write(delim.join(parts) + delim + delim.join(ne) + "\n")
+  if output_type is OutputType.column_wise_join:
+    process_by_storing(f2_dictionary, infh1, key_one, output_type, outfh,
+                       f2_header, not key_one_is_field_number,
+                       missing_val, delim, ignore_missing_keys,
+                       output_unpaired, verbose)
+  else:
+    process_without_storing(f2_dictionary, infh1, key_one, output_type, outfh,
+                            f2_header, not key_one_is_field_number,
+                            missing_val, delim, ignore_missing_keys,
+                            output_unpaired, verbose)
 
 
 ###############################################################################
@@ -494,6 +876,15 @@ class TestJoin(unittest.TestCase):
                            "\t".join(["A4", "B4", "C4", "D4"]),
                            "\t".join(["A5", "B5", "C5", "D5"])]
 
+    # an input file where the header has fewer vals than date lines
+    self.test_headr_six = "\t".join(["AA", "BB", "CC"])
+    self.test_file_six = ["\t".join(["A1", "B1", "C1", "D1"]),
+                          "\t".join(["A5", "B5", "C5", "D5"])]
+
+    # an input file where one of the content lines has less vals than others
+    self.test_file_seven = ["\t".join(["A1", "B1", "C1", "D1"]),
+                            "\t".join(["A5", "B5", "C5"])]
+
     self.strs = {"one.dat": "\n".join(self.test_file_one),
                  "two.dat": "\n".join(self.test_file_two),
                  "one_hdr.dat": (self.test_headr_one + "\n" +
@@ -506,7 +897,10 @@ class TestJoin(unittest.TestCase):
                  "one_dup.dat": (self.test_headr_one_dup + "\n" +
                                  "\n".join(self.test_file_one)),
                  "one_dup_fields.dat": (self.test_headr_four + "\n" +
-                                        "\n".join(self.test_file_four))}
+                                        "\n".join(self.test_file_four)),
+                 "ragged_with_head.dat": (self.test_headr_six + "\n" +
+                                          "\n".join(self.test_file_six)),
+                 "ragged_no_head.dat": ("\n".join(self.test_file_seven))}
 
   @mock.patch('__builtin__.open')
   def test_simple_headerless_join(self, mock_open):
@@ -689,14 +1083,14 @@ class TestJoin(unittest.TestCase):
 
   @mock.patch('__builtin__.open')
   def test_duplicate_key_value_all_combinations(self, mock_open):
-    # if a key value appears more than once, by default the program will just
-    # exit with an error, but there is an option to process all combinations
+    """Test producing all pairwise output lines with dup. key values"""
+    debug = False
     out_strm = StringIO.StringIO()
     streams = {"out.dat": out_strm}
     mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
 
-    _main(["-d", "-o", "out.dat", "-a", "BB", "-b", "BX", "one_dup_fields.dat",
-           "two_hdr.dat"], "join")
+    _main(["-d", "all_pairwise_combinations", "-o", "out.dat", "-a", "BB",
+           "-b", "BX", "one_dup_fields.dat", "two_hdr.dat"], "join")
     expect = ["\t".join(["AA", "BB", "CC", "DD", "XX", "YY", "ZZ"]),
               "\t".join(["A1", "B1", "C1", "D1", "X1", "Y1", "Z1"]),
               "\t".join(["A2", "B1", "C2", "D2", "X1", "Y1", "Z1"]),
@@ -707,33 +1101,196 @@ class TestJoin(unittest.TestCase):
 
     out_strm.truncate(0)
     out_strm.seek(0)
-    _main(["-d", "-o", "out.dat", "-a", "BX", "-b", "BB", "two_hdr.dat",
-           "one_dup_fields.dat"], "join")
+    _main(["-d", "all_pairwise_combinations", "-o", "out.dat", "-a", "BX",
+           "-b", "BB", "two_hdr.dat", "one_dup_fields.dat"], "join")
     expect = ["\t".join(["XX", "BX", "YY", "ZZ", "AA", "CC", "DD"]),
               "\t".join(["X1", "B1", "Y1", "Z1", "A1", "C1", "D1"]),
               "\t".join(["X1", "B1", "Y1", "Z1", "A2", "C2", "D2"]),
               "\t".join(["X3", "B3", "Y3", "Z3", "A3", "C3", "D3"]),
               "\t".join(["X3", "B3", "Y3", "Z3", "A4", "C4", "D4"]),
               "\t".join(["X5", "B5", "Y5", "Z5", "A5", "C5", "D5"])]
+    if debug:
+      sys.stderr.write("\n" + "\n".join(expect) + "\n")
+      sys.stderr.write("----\n")
+      sys.stderr.write(out_strm.getvalue())
     self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
 
-  def test_duplicate_key_value_join_fields(self):
+  @mock.patch('__builtin__.open')
+  def test_duplicate_key_value_join_fields(self, mock_open):
     # if a key value appears more than once, by default the program will just
     # exit with an error, but there is an option to join the mismatched fields
     # TODO
-    pass
+    debug = False
+    out_strm = StringIO.StringIO()
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
 
-  def test_output_unmatched_keys(self):
-    # there should be an option to output lines with key values that don't
-    # match anything in the other file. This should require that the missing
-    # value is provided, to fill in unknown columns
-    # TODO
-    pass
+    _main(["-d", "column_wise_join", "-o", "out.dat", "-a", "BB",
+           "-b", "BX", "one_dup_fields.dat", "two_hdr.dat"], "join")
+    expect = ["\t".join(["AA", "BB", "CC", "DD", "XX", "YY", "ZZ"]),
+              "\t".join(["A1;A2", "B1", "C1;C2", "D1;D2", "X1", "Y1", "Z1"]),
+              "\t".join(["A3;A4", "B3", "C3;C4", "D3;D4", "X3", "Y3", "Z3"]),
+              "\t".join(["A5", "B5", "C5", "D5", "X5", "Y5", "Z5"])]
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
 
-  def test_failure_on_ragged_data_frame(self):
-    # number of elements should be the same on each line...
-    # TODO
-    pass
+    out_strm.truncate(0)
+    out_strm.seek(0)
+    _main(["-d", "column_wise_join", "-o", "out.dat", "-a", "BX",
+           "-b", "BB", "two_hdr.dat", "one_dup_fields.dat"], "join")
+    expect = ["\t".join(["XX", "BX", "YY", "ZZ", "AA", "CC", "DD"]),
+              "\t".join(["X1", "B1", "Y1", "Z1", "A1;A2", "C1;C2", "D1;D2"]),
+              "\t".join(["X3", "B3", "Y3", "Z3", "A3;A4", "C3;C4", "D3;D4"]),
+              "\t".join(["X5", "B5", "Y5", "Z5", "A5", "C5", "D5"])]
+    if debug:
+      sys.stderr.write("\n" + "\n".join(expect) + "\n")
+      sys.stderr.write("----\n")
+      sys.stderr.write(out_strm.getvalue())
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
+
+  @mock.patch('__builtin__.open')
+  def test_output_unmatched_keys_pws(self, mock_open):
+    """Test outputing unmatched lines with running without storing file."""
+    debug = False
+    out_strm = StringIO.StringIO()
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
+
+    _main(["-m", "MV", "-p", "-d", "all_pairwise_combinations", "-o",
+           "out.dat", "-a", "BB", "-b", "BX", "one_dup_fields.dat",
+           "two_hdr.dat"],
+          "join")
+    expect = ["\t".join(["AA", "BB", "CC", "DD", "XX", "YY", "ZZ"]),
+              "\t".join(["A1", "B1", "C1", "D1", "X1", "Y1", "Z1"]),
+              "\t".join(["A2", "B1", "C2", "D2", "X1", "Y1", "Z1"]),
+              "\t".join(["A3", "B3", "C3", "D3", "X3", "Y3", "Z3"]),
+              "\t".join(["A4", "B3", "C4", "D4", "X3", "Y3", "Z3"]),
+              "\t".join(["A5", "B5", "C5", "D5", "X5", "Y5", "Z5"]),
+              "\t".join(["MV", "MV", "MV", "MV", "X2", "Y2", "Z2"]),
+              "\t".join(["MV", "MV", "MV", "MV", "X4", "Y4", "Z4"])]
+    if debug:
+      sys.stderr.write("\n" + "\n".join(expect) + "\n")
+      sys.stderr.write("----\n")
+      sys.stderr.write(out_strm.getvalue())
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
+    # fails if the missing value is not provided though...
+    args = ["-p", "-d", "all_pairwise_combinations", "-o",
+            "out.dat", "-a", "BB", "-b", "BX", "one_dup_fields.dat",
+            "two_hdr.dat"]
+    self.assertRaises(MissingValueError, _main, args, "join")
+
+    out_strm.truncate(0)
+    out_strm.seek(0)
+    _main(["-m", "MV", "-p", "-d", "all_pairwise_combinations", "-o",
+           "out.dat", "-a", "BX", "-b", "BB", "two_hdr.dat",
+           "one_dup_fields.dat"],
+          "join")
+    expect = ["\t".join(["XX", "BX", "YY", "ZZ", "AA", "CC", "DD"]),
+              "\t".join(["X1", "B1", "Y1", "Z1", "A1", "C1", "D1"]),
+              "\t".join(["X1", "B1", "Y1", "Z1", "A2", "C2", "D2"]),
+              "\t".join(["X2", "B2", "Y2", "Z2", "MV", "MV", "MV"]),
+              "\t".join(["X3", "B3", "Y3", "Z3", "A3", "C3", "D3"]),
+              "\t".join(["X3", "B3", "Y3", "Z3", "A4", "C4", "D4"]),
+              "\t".join(["X4", "B4", "Y4", "Z4", "MV", "MV", "MV"]),
+              "\t".join(["X5", "B5", "Y5", "Z5", "A5", "C5", "D5"])]
+    if debug:
+      sys.stderr.write("\n" + "\n".join(expect) + "\n")
+      sys.stderr.write("----\n")
+      sys.stderr.write(out_strm.getvalue())
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
+    # fails if the missing value is not provided though...
+    args = ["-p", "-d", "all_pairwise_combinations", "-o",
+            "out.dat", "-a", "BX", "-b", "BB", "two_hdr.dat",
+            "one_dup_fields.dat"]
+    self.assertRaises(MissingValueError, _main, args, "join")
+
+  @mock.patch('__builtin__.open')
+  def test_output_unmatched_keys_pstor(self, mock_open):
+    debug = False
+    out_strm = StringIO.StringIO()
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
+
+    _main(["-m", "MV", "-p", "-d", "column_wise_join", "-o",
+           "out.dat", "-a", "BB", "-b", "BX", "one_dup_fields.dat",
+           "two_hdr.dat"],
+          "join")
+    expect = ["\t".join(["AA", "BB", "CC", "DD", "XX", "YY", "ZZ"]),
+              "\t".join(["A1;A2", "B1", "C1;C2", "D1;D2", "X1", "Y1", "Z1"]),
+              "\t".join(["A3;A4", "B3", "C3;C4", "D3;D4", "X3", "Y3", "Z3"]),
+              "\t".join(["A5", "B5", "C5", "D5", "X5", "Y5", "Z5"]),
+              "\t".join(["MV", "MV", "MV", "MV", "X2", "Y2", "Z2"]),
+              "\t".join(["MV", "MV", "MV", "MV", "X4", "Y4", "Z4"])]
+    if debug:
+      sys.stderr.write("\n" + "\n".join(expect) + "\n")
+      sys.stderr.write("----\n")
+      sys.stderr.write(out_strm.getvalue())
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
+    # fails if the missing value is not provided though...
+    args = ["-p", "-d", "column_wise_join", "-o",
+            "out.dat", "-a", "BB", "-b", "BX", "one_dup_fields.dat",
+            "two_hdr.dat"]
+    self.assertRaises(MissingValueError, _main, args, "join")
+
+    out_strm.truncate(0)
+    out_strm.seek(0)
+    _main(["-m", "MV", "-p", "-d", "column_wise_join", "-o",
+           "out.dat", "-a", "BX", "-b", "BB", "two_hdr.dat",
+           "one_dup_fields.dat"],
+          "join")
+    expect = ["\t".join(["XX", "BX", "YY", "ZZ", "AA", "CC", "DD"]),
+              "\t".join(["X1", "B1", "Y1", "Z1", "A1;A2", "C1;C2", "D1;D2"]),
+              "\t".join(["X2", "B2", "Y2", "Z2", "MV", "MV", "MV"]),
+              "\t".join(["X3", "B3", "Y3", "Z3", "A3;A4", "C3;C4", "D3;D4"]),
+              "\t".join(["X4", "B4", "Y4", "Z4", "MV", "MV", "MV"]),
+              "\t".join(["X5", "B5", "Y5", "Z5", "A5", "C5", "D5"])]
+    if debug:
+      sys.stderr.write("\n" + "\n".join(expect) + "\n")
+      sys.stderr.write("----\n")
+      sys.stderr.write(out_strm.getvalue())
+    self.assertEqual("\n".join(expect) + "\n", out_strm.getvalue())
+    # fails if the missing value is not provided though...
+    args = ["-p", "-d", "column_wise_join", "-o",
+            "out.dat", "-a", "BX", "-b", "BB", "two_hdr.dat",
+            "one_dup_fields.dat"]
+    self.assertRaises(MissingValueError, _main, args, "join")
+
+  @mock.patch('__builtin__.open')
+  def test_failure_on_invalid_dup_method(self, mock_open):
+    args = ["-m", "MV", "-p", "-d", "junk", "-o",
+            "out.dat", "-a", "BB", "-b", "BX", "one_dup_fields.dat",
+            "two_hdr.dat"]
+    self.assertRaises(InvalidOutputHandlerError, _main, args, "join")
+
+  @mock.patch('__builtin__.open')
+  def test_failure_on_ragged_data_frame(self, mock_open):
+    """Test that the script exists gracefully when an input file is ragged."""
+    out_strm = StringIO.StringIO()
+    streams = {"out.dat": out_strm}
+    mock_open.side_effect = build_mock_open_side_effect(self.strs, streams)
+
+    # when the first file is ragged, with a header, but second is fine
+    args = ["-m", "MV", "-p", "-o",
+            "out.dat", "-a", "BB", "-b", "BX", "ragged_with_head.dat",
+            "two_hdr.dat"]
+    self.assertRaises(RaggedInputError, _main, args, "join")
+
+    # when the second file is ragged, with a header, but first is fine
+    args = ["-m", "MV", "-p", "-o",
+            "out.dat", "-a", "BX", "-b", "BB", "two_hdr.dat",
+            "ragged_with_head.dat"]
+    self.assertRaises(RaggedInputError, _main, args, "join")
+
+    # when the first file is ragged with no header, but second is fine
+    args = ["-m", "MV", "-p", "-o",
+            "out.dat", "-a", "2", "-b", "2", "ragged_no_head.dat",
+            "two_hdr.dat"]
+    self.assertRaises(RaggedInputError, _main, args, "join")
+
+    # when the second file is ragged with no header, but the first is fine
+    args = ["-m", "MV", "-p", "-o",
+            "out.dat", "-a", "2", "-b", "2", "two_hdr.dat",
+            "ragged_no_head.dat"]
+    self.assertRaises(RaggedInputError, _main, args, "join")
 
 
 ###############################################################################
