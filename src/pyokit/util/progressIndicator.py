@@ -22,11 +22,13 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+# standard python imports
+import math
+import sys
 
-import math, sys
 
-class ProgressIndicator:
-  def __init__(self, totalToDo, messagePrefix = None, messageSuffix = None):
+class ProgressIndicator(object):
+  def __init__(self, totalToDo, messagePrefix=None, messageSuffix=None):
     self.total = totalToDo
     self.done = 0
     self.prefix = messagePrefix
@@ -34,19 +36,21 @@ class ProgressIndicator:
     self.finished = False
     self.previousMsg = None
 
-    if self.prefix == None : self.prefix = ""
-    if self.suffix == None : self.suffix = ""
+    if self.prefix is None:
+      self.prefix = ""
+    if self.suffix is None:
+      self.suffix = ""
 
   def showProgress(self):
-    if not self.finished :
+    if not self.finished:
       percent = math.ceil(100 * self.done / float(self.total))
 
-      msg ="\r" + self.prefix + " %d%% " % percent + self.suffix
-      if self.previousMsg == None or self.previousMsg != msg :
+      msg = "\r" + self.prefix + " %d%% " % percent + self.suffix
+      if self.previousMsg is None or self.previousMsg != msg:
         sys.stderr.write(msg)
         sys.stderr.flush()
       self.previousMsg = msg
 
-      if percent == 100 :
+      if percent == 100:
         self.finished = True
         sys.stderr.write("\n")
