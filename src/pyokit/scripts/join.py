@@ -597,6 +597,25 @@ def _main(args, prog_name):
 #                             MAIN PROGRAM LOGIC                              #
 ###############################################################################
 
+def populate_unpaired_line(d_vals, f_f_header, missing_val=None):
+  """
+  used when a value in d_vals doesn't match anything in the other file.
+
+  :return: a dictionary, indexed by key value, with the correct missing values
+           populated for the other file.
+  """
+  if missing_val is None:
+    raise MissingValueError("Need missing value to output " +
+                            " unpaired lines")
+  if f_f_header is not None:
+    f_f_flds = [dict(zip(f_f_header, [missing_val] * len(f_f_header)))]
+  else:
+    assert(len(d_vals) > 0)
+    f_f_num_cols = len(d_vals[d_vals.keys()[0]][0])
+    f_f_flds = [[missing_val] * f_f_num_cols]
+  return f_f_flds
+
+
 def process_without_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
                             f_f_header=None, s_f_has_header=False,
                             missing_val=None, delim=None,
@@ -666,15 +685,7 @@ def process_without_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
       if key_val not in d_vals:
         if not output_unpaired:
           continue
-        if missing_val is None:
-          raise MissingValueError("Need missing value to output " +
-                                  " unpaired lines")
-        if f_f_header is not None:
-          f_f_flds = [dict(zip(f_f_header, [missing_val] * len(f_f_header)))]
-        else:
-          assert(len(d_vals) > 0)
-          f_f_num_cols = len(d_vals[d_vals.keys()[0]][0])
-          f_f_flds = [[missing_val] * f_f_num_cols]
+        f_f_flds = populate_unpaired_line(d_vals, f_f_header, missing_val)
       else:
         f_f_flds = d_vals[key_val]
         used_d_val_keys.add(key_val)
@@ -713,15 +724,7 @@ def process_by_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
     if k not in d_vals:
       if not output_unpaired:
         continue
-      if missing_val is None:
-        raise MissingValueError("Need missing value to output " +
-                                " unpaired lines")
-      if f_f_header is not None:
-        ff_fields = [dict(zip(f_f_header, [missing_val] * len(f_f_header)))]
-      else:
-        assert(len(d_vals) > 0)
-        f_f_num_cols = len(d_vals[d_vals.keys()[0]][0])
-        ff_fields = [[missing_val] * f_f_num_cols]
+      ff_fields = populate_unpaired_line(d_vals, f_f_header, missing_val)
     else:
       used_ff_keys.add(k)
       ff_fields = d_vals[k]
