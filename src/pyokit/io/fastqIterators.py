@@ -192,6 +192,56 @@ def fastqIterator(fn, useMutableString=False, verbose=False, debug=False,
     yield s
 
 
+def fastq_complex_parse_qual(fh, line, prevLine, verbose=False, pind=None):
+  prevLine = line
+  qualdata = ""
+  while not _isSequenceHead(line, prevLine):
+    prevLine = line
+    line = fh.readline()
+    if verbose and pind is not None:
+      pind.done += 1
+    if line == "":
+      break
+    elif not _isSequenceHead(line, prevLine):
+      qualdata += line.strip()
+  if qualdata.strip() == "":
+    raise FastqFileFormatError("missing quality data..")
+  return qualdata, line, prevLine
+
+
+def fastq_complex_parse_seq(fh, pind=None, verbose=False):
+  line = None
+  seqdata = ""
+  while line is None or not _isQualityHead(line):
+    line = fh.readline()
+    if verbose and pind is not None:
+      pind.done += 1
+    if line == "":
+      raise FastqFileFormatError("ran out of lines before finding qual head")
+    if not _isQualityHead(line):
+      seqdata += line.strip()
+  return seqdata, line
+
+
+def fastq_complex_parse_seq_header(fh, prevLine, pind, verbose):
+  seqHeader = ""
+  if prevLine is not None and not _isSequenceHead(prevLine):
+    raise FastqFileFormatError("terminated on non-read header: " + prevLine)
+  if prevLine is None:
+    while seqHeader.strip() == "":
+      nl = fh.readline()
+      if verbose:
+        pind.done += 1
+      if nl == "":
+         # we're looking for a sequence header, but we're getting eof --
+         # file is empty!
+         raise StopIteration()
+      seqHeader = nl
+  else:
+    seqHeader = prevLine
+  return seqHeader[1:].strip(), prevLine
+
+
 def fastqIteratorComplex(fn, useMutableString=False, verbose=False,
                          debug=False, sanger=False):
   """
@@ -220,6 +270,7 @@ def fastqIteratorComplex(fn, useMutableString=False, verbose=False,
   prevLine = None
 
   # try to get an idea of how much data we have...
+  pind = None
   if verbose:
     try:
       totalLines = linesInFile(fh.name)
@@ -236,69 +287,24 @@ def fastqIteratorComplex(fn, useMutableString=False, verbose=False,
     # either we have a sequence header left over from the
     # prev call, or we need to read a new one from the file...
     # try to do that now
-    seqHeader = ""
-    if prevLine is not None and not _isSequenceHead(prevLine):
-      raise FastqFileFormatError("terminated on non-read header: " + prevLine)
-    if prevLine is None:
-      while seqHeader.strip() == "":
-        nl = fh.readline()
-        if verbose:
-          pind.done += 1
-        if nl == "":
-           # we're looking for a sequence header, but we're getting eof --
-           # file is empty!
-           raise StopIteration()
-        seqHeader = nl
-    else:
-      seqHeader = prevLine
-    name = seqHeader[1:].strip()
+    name, prevLine = fastq_complex_parse_seq_header(fh, prevLine,
+                                                    pind, verbose)
 
-    # now we need to read lines until we hit a quality header
-    # this is our sequence data
-    line = None
-    seqdata = ""
-    while line is None or not _isQualityHead(line):
-      line = fh.readline()
-      if verbose:
-        pind.done += 1
-      if line == "":
-        raise FastqFileFormatError("ran out of lines before finding qual head")
-      if not _isQualityHead(line):
-        seqdata += line.strip()
+    # read lines until we hit a qual header --> this is our sequence data
+    seqdata, line = fastq_complex_parse_seq(fh, pind, verbose)
 
     # <line> is now a qual header, keep reading until we see
     # a sequence header.. or we run out of lines.. this is our quality data
-    if debug:
-      sys.stderr.write("found quality header: " + line.strip() + "\n")
-    prevLine = line
-    qualdata = ""
-    while not _isSequenceHead(line, prevLine):
-      prevLine = line
-      line = fh.readline()
-      if verbose:
-        pind.done += 1
-      if line == "":
-        break
-      elif not _isSequenceHead(line, prevLine):
-        qualdata += line.strip()
-    if debug:
-      sys.stderr.write("finished reading quality data, found: "
-                       + qualdata.strip() + "\n")
-      sys.stderr.write("loop terminated with line: " + line.strip() + "\n")
-      sys.stderr.write("prev when loop termianted was: "
-                       + prevLine.strip() + "\n")
-    if qualdata.strip() == "":
-      raise FastqFileFormatError("missing quality data..")
+    qualdata, line, prevLine = fastq_complex_parse_qual(fh, line, prevLine,
+                                                        verbose, pind)
 
     # package it all up..
-    yield NGSRead(name, seqdata, qualdata, useMutableString)
+    yield NGSRead(seqdata, name, qualdata, useMutableString)
     if verbose:
       pind.showProgress()
 
     # remember where we stopped for next call, or finish
     prevLine = line
-    if debug:
-      sys.stderr.write("setting prev line to: " + str(prevLine) + "\n")
     if prevLine == "":
       break
 
@@ -379,6 +385,52 @@ class FastQUintTests(unittest.TestCase):
 
     seqs = []
     for seq in fastqIterator(ins, debug=debug):
+      seqs.append(seq)
+
+    seqs.sort(key=lambda x: x.name)
+    expect.sort(key=lambda x: x.name)
+
+    if debug:
+      sys.stderr.write("expect\n")
+      for seq in expect:
+        sys.stderr.write(str(seq) + "\n" + "----------------\n")
+      sys.stderr.write("got\n")
+      for seq in seqs:
+        sys.stderr.write(str(seq) + "\n" + "----------------\n")
+
+    self.assertTrue(seqs == expect)
+
+  def test_complex(self):
+    """Test parsing a complex fastq file with line breaks in names and data."""
+    debug = False
+
+    seq1Name = "SRR034466/SRR034466.sra.1032 YL_CLIP_2_1_865_643 length=36"
+    seq1Data = ("GACCTCCAAGTAGTCGT\n" +
+                "AAGCCTACTTCTGCTTGAA")
+    seq1Qual = ("III6DEII\n" +
+                "I/I;-&2>,H%&\n" +
+                "63$()8205$1D7$(3")
+    seq2Name = "SRR034466/SRR034466.sra.1033 YL_CLIP_2_1_845_340 length=36"
+    seq2Data = "TAGAGATAGGATTCTGGTGTGTCGTATTCCGTCTTC"
+    seq2Qual = "IIIIIIIIIIIII.IID,&@*6;2>HI$91%C(II%"
+
+    instr = "\n\n" +\
+            "@" + seq1Name + "\n" +\
+            "" + seq1Data + "\n" +\
+            "+" + seq1Name + "\n" +\
+            "" + seq1Qual + "\n" +\
+            "@" + seq2Name + "\n" +\
+            "" + seq2Data + "\n" +\
+            "+" + seq2Name + "\n" +\
+            "" + seq2Qual + ""
+    expect = [NGSRead(seq1Data.replace('\n', ''), seq1Name,
+                      seq1Qual.replace('\n', '')),
+              NGSRead(seq2Data, seq2Name, seq2Qual)]
+
+    ins = DummyInputStream(instr)
+
+    seqs = []
+    for seq in fastqIteratorComplex(ins, debug=debug):
       seqs.append(seq)
 
     seqs.sort(key=lambda x: x.name)
