@@ -37,6 +37,7 @@ from collections import OrderedDict
 from enum import Enum
 
 # pyokit imports
+from pyokit.common.pyokitError import PyokitError
 from pyokit.interface.cli import CLI, Option
 from pyokit.util.progressIndicator import ProgressIndicator
 
@@ -51,16 +52,10 @@ DEFAULT_VERBOSITY = False
 #                            EXCEPTION CLASSES                                #
 ###############################################################################
 
-class JoinException(Exception):
+class JoinException(PyokitError):
   """Base class for exceptions raised by the join script"""
 
-  def __init__(self, msg):
-    """..."""
-    self.value = msg
-
-  def __str__(self):
-    """Get string representation of this exception."""
-    return repr(self.value)
+  pass
 
 
 class MissingKeyError(JoinException):
@@ -1298,4 +1293,8 @@ class TestJoin(unittest.TestCase):
 ###############################################################################
 
 if __name__ == "__main__":
-  _main(sys.argv[1:], sys.argv[0])
+  try:
+    _main(sys.argv[1:], sys.argv[0])
+  except Exception as e:
+    sys.stderr.write("An unexpected exception occurred. Details: " + str(e) +
+                     " \n")

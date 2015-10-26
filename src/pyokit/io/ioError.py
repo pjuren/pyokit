@@ -36,10 +36,4 @@ class PyokitIOError(PyokitError):
 
   """Generic pyokit IO error class."""
 
-  def __init__(self, msg):
-    """Constructor for IO errors."""
-    self.value = msg
-
-  def __str__(self):
-    """:return: string representation of this IO error."""
-    return repr(self.value)
+  pass

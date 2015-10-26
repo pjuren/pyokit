@@ -63,16 +63,7 @@ RIGHT_COUNT_KEY = "RIGHT_COUNT"
 ###############################################################################
 
 class MAFError(PyokitIOError):
-
-  """Errors that occur when performing IO on .maf format files."""
-
-  def __init__(self, msg):
-    """Constructor for MAFErrors."""
-    self.value = msg
-
-  def __str__(self):
-    """:return: string representation of this MAFError."""
-    return repr(self.value)
+  pass
 
 
 ###############################################################################
