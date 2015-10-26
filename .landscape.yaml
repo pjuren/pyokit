@@ -1,6 +1,7 @@
 pylint:
   disable:
       - bad-indentation
+      - nonstandard-exception
 pep8:
   disable:
       - E114
