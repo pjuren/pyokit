@@ -74,10 +74,11 @@ class NGSRead(Sequence):
       descriptions of parameters.
     """
     if len(seq) != len(qual):
-      raise NGSReadError("failed to create FastqSequence object -- length " +
-                         "of sequence data (" + str(len(seq)) + ")" +
-                         "does not match length of quality string (" +
-                         str(len(qual)) + ")")
+      msg = ("failed to create FastqSequence object -- length of sequence " +
+             "data (" + str(len(seq)) + ") does not match length of quality " +
+             "string (" + str(len(qual)) + "). seq data: " + seq +
+             "  qual data: " + qual)
+      raise NGSReadError(msg)
 
     Sequence.__init__(self, name, seq, use_mut_str)
 
