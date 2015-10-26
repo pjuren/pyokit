@@ -616,6 +616,47 @@ def populate_unpaired_line(d_vals, f_f_header, missing_val=None):
   return f_f_flds
 
 
+def process_without_storing_header(parts, d_vals, f_f_header, s_f_has_header,
+                                   s_f_header, s_f_key, key_field_num,
+                                   out_handler, outfh, missing_val, delim):
+  regular_first = True
+  if s_f_header is None and s_f_has_header:
+    s_f_header, key_field_num = __parse__header(parts, s_f_key)
+    regular_first = False
+  assert(len(d_vals) > 0)
+  f_f_num_cols = len(d_vals[d_vals.keys()[0]][0])
+  out_handler.write_header(outfh, delim, len(parts), f_f_num_cols,
+                           s_f_header, f_f_header, missing_val)
+  return regular_first, s_f_header, key_field_num
+
+
+def get_key_value(parts, key_field_num, ignore_missing_keys, seen_keys,
+                  output_type):
+  """
+  get the key value from the line and check it's not a dup. or missing. fields
+  with only whitespace are considered empty (missing).
+
+  :param ignore_missing_keys: if True, return None for missing keys. If false,
+                              missing keys cause an exception
+                              (MissingKeyError).
+  :param seen_keys: a set of keys already seen.
+
+  :return: the key value, or None if the field was empty.
+  """
+  key_val = parts[key_field_num]
+  if key_val.strip() == "":
+    if not ignore_missing_keys:
+      raise MissingKeyError("missing key value")
+    else:
+      return None
+
+  if key_val in seen_keys and \
+     output_type is OutputType.error_on_dups:
+    raise DuplicateKeyError(key_val + " appears multiple times as key")
+
+  return key_val
+
+
 def process_without_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
                             f_f_header=None, s_f_has_header=False,
                             missing_val=None, delim=None,
@@ -650,15 +691,12 @@ def process_without_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
     parts = __populated_missing_vals(line.split(delim), missing_val)
 
     # on the first element, we might have to output a header..
-    regular_first = True
     if first_element:
-      if s_f_header is None and s_f_has_header:
-        s_f_header, key_field_num = __parse__header(parts, s_f_key)
-        regular_first = False
-      assert(len(d_vals) > 0)
-      f_f_num_cols = len(d_vals[d_vals.keys()[0]][0])
-      out_handler.write_header(outfh, delim, len(parts), f_f_num_cols,
-                               s_f_header, f_f_header, missing_val)
+      regular_first, s_f_header, key_field_num =\
+          process_without_storing_header(parts, d_vals, f_f_header,
+                                         s_f_has_header, s_f_header, s_f_key,
+                                         key_field_num, out_handler, outfh,
+                                         missing_val, delim)
 
     # any line that is either not the first, or is the first but we decided
     # it wasn't a header line...
@@ -671,15 +709,10 @@ def process_without_storing(d_vals, s_f_strm, s_f_key, output_type, outfh,
                                "columns, but was expecting " +
                                str(expected_cols_per_line) + " columns")
 
-      key_val = parts[key_field_num]
-      if key_val.strip() == "":
-        if ignore_missing_keys:
-          continue
-        raise MissingKeyError("missing key value")
-
-      if key_val in seen_keys and \
-         output_type is OutputType.error_on_dups:
-        raise DuplicateKeyError(key_val + " appears multiple times as key")
+      key_val = get_key_value(parts, key_field_num, ignore_missing_keys,
+                              seen_keys, output_type)
+      if key_val is None and ignore_missing_keys:
+        continue
       seen_keys.add(key_val)
 
       if key_val not in d_vals:
