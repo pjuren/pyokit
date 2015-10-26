@@ -73,7 +73,7 @@ from pyokit.datastruct.sequence import *
 #                             TESTING AND UTILS                               #
 ###############################################################################
 from pyokit.testing.dummyfiles import *
-from pyokit.util.progressIndicator import *
+from pyokit.util.progressIndicator import TestProgressIndicator
 from pyokit.util.meta import TestMeta
 
 ###############################################################################
@@ -125,6 +125,7 @@ if __name__ == "__main__":
   head = " ------------------------  TESTING AND UTIL  -------------------- \n"
   sys.stderr.write(head)
   sys.stderr.write("registered tests in \n")
+  sys.stderr.write("  " + str(TestProgressIndicator) + "\n")
   sys.stderr.write("  " + str(TestMeta) + "\n\n")
 
   head = " -----------------------------  SCRIPTS  ------------------------ \n"

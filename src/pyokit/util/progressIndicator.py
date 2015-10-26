@@ -25,6 +25,8 @@
 # standard python imports
 import math
 import sys
+import unittest
+import StringIO
 
 
 class ProgressIndicator(object):
@@ -41,16 +43,47 @@ class ProgressIndicator(object):
     if self.suffix is None:
       self.suffix = ""
 
-  def showProgress(self):
+  def showProgress(self, to_strm=sys.stderr):
     if not self.finished:
       percent = math.ceil(100 * self.done / float(self.total))
 
       msg = "\r" + self.prefix + " %d%% " % percent + self.suffix
       if self.previousMsg is None or self.previousMsg != msg:
-        sys.stderr.write(msg)
-        sys.stderr.flush()
+        to_strm.write(msg)
+        to_strm.flush()
       self.previousMsg = msg
 
       if percent == 100:
         self.finished = True
-        sys.stderr.write("\n")
+        to_strm.write("\n")
+
+
+###############################################################################
+#                                 UNIT TESTS                                  #
+###############################################################################
+
+class TestProgressIndicator(unittest.TestCase):
+
+  def test_basic(self):
+    """Test that no more than 100 msgs are ever output, and they're right."""
+    MAX_VAL = 2000
+    outfh = StringIO.StringIO()
+    nums = range(0, MAX_VAL)
+    pind = ProgressIndicator(totalToDo=len(nums), messagePrefix="done",
+                             messageSuffix="of numbers")
+    for x in nums:
+      pind.done += 1
+      pind.showProgress(outfh)
+
+    expect = "\r" + "\r".join(["done " + str(i) + "% of numbers"
+                               for i in range(1, 101)])
+    expect += "\n"
+    self.assertEqual(expect, outfh.getvalue())
+
+
+###############################################################################
+#              MAIN ENTRY POINT WHEN RUN AS STAND-ALONE MODULE                #
+###############################################################################
+
+if __name__ == "__main__":
+    unittest.main()
