@@ -34,6 +34,7 @@ import mock
 # pyokit imports
 from pyokit.io.fastqIterators import fastqIterator
 from pyokit.interface.cli import CLI, Option
+from pyokit.util.testing import build_mock_open_side_effect
 
 
 ###############################################################################
@@ -132,25 +133,6 @@ def write_output(counts, outfh):
 ###############################################################################
 #                         UNIT TESTS FOR THIS MODULE                          #
 ###############################################################################
-
-def build_mock_open_side_effect(string_d, stream_d):
-  """
-  Build a mock open side effect using a dictionary of content for the files.
-
-  :param string_d: keys are file names, values are string file contents
-  :param stream_d: keys are file names, values are stream of contents
-  """
-  assert(len(set(string_d.keys()).intersection(set(stream_d.keys()))) == 0)
-
-  def mock_open_side_effect(*args, **kwargs):
-    if args[0] in string_d:
-      return StringIO.StringIO(string_d[args[0]])
-    elif args[0] in stream_d:
-      return stream_d[args[0]]
-    else:
-      raise IOError("No such file: " + args[0])
-  return mock_open_side_effect
-
 
 class TestNucDist(unittest.TestCase):
 
