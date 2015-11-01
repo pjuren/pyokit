@@ -87,6 +87,7 @@ from pyokit.scripts.index import TestIndex
 from pyokit.scripts.join import TestJoin
 from pyokit.scripts.fastqNucDist import TestNucDist
 from pyokit.scripts.remDupsBED import TestRemDupsBed
+from pyokit.scripts.convertJunctionReads import ConvertJunctionsUnitTests
 from pyokit.scripts.regionCollapse import TestCollapseRegions
 
 
@@ -141,6 +142,7 @@ if __name__ == "__main__":
   sys.stderr.write("  " + str(TestCollapseRegions) + "\n")
   sys.stderr.write("  " + str(TestNucDist) + "\n")
   sys.stderr.write("  " + str(TestRemDupsBed) + "\n")
+  sys.stderr.write("  " + str(ConvertJunctionsUnitTests) + "\n")
   sys.stderr.write("  " + str(TestConservationProfileIndvFiles) + "\n\n")
 
   sys.stderr.write("\n\n RUNNING TESTS \n\n")

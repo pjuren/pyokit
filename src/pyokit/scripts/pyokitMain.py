@@ -43,6 +43,8 @@ from pyokit.scripts import index
 from pyokit.scripts import conservationProfile
 from pyokit.scripts import join
 from pyokit.scripts import regionCollapse
+from pyokit.scripts import remDupsBED
+from pyokit.scripts import convertJunctionReads
 
 
 def main():
@@ -70,6 +72,10 @@ def main():
       join._main(sys.argv[2:], "join")
     elif sys.argv[1] == "regionCollapse":
       regionCollapse.main(sys.argv[2:], "pyokit regionCollapse")
+    elif sys.argv[1] == "remDupsBED":
+      remDupsBED._main(sys.argv[2:], "remDupsBED")
+    elif sys.argv[1] == "convertJunctionReads":
+      convertJunctionReads._main(sys.argv[2:], "remDupsBED")
     else:
       sys.stderr.write("Pyokit: I don't recognise the option '" + sys.argv[1] +
                        "'.\n")
