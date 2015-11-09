@@ -31,15 +31,19 @@ import subprocess32
 # for mocking during unit testing
 import mock
 
+# pyokit imports
+from pyokit.common.pyokitError import PyokitError
+
 
 ###############################################################################
 #                                CONSTANTS                                    #
 ###############################################################################
 
-# resource management
-DEFAULT_JOB_MAX = 300
-DEFAULT_NODES_MAX = 300
-DEFAULT_PROCESSOR_MAX = 300
+# Default max vals for queue resource usage
+DEF_Q_JOB_MAX = 300
+DEF_Q_NODES_MAX = 300
+DEF_Q_PROCESSOR_MAX = 300
+DEF_Q_MEM_MAX_GB = 1000
 
 # controlling status update frequency
 DEFAULT_MIN_THINK_TIME_SECONDS = 300
@@ -48,6 +52,14 @@ DEFAULT_MIN_THINK_TIME_SECONDS = 300
 ###############################################################################
 #                            EXCEPTION CLASSES                                #
 ###############################################################################
+
+class PBSDuplicateQueueError(PyokitError):
+  pass
+
+
+class PBSNoSuchQueueError(PyokitError):
+  pass
+
 
 class PBSTrackerError(Exception):
 
@@ -125,14 +137,15 @@ class PBSQueueResourceStatus(object):
   """
   Representation of resources usage for a queue.
 
-  :param queue_job_max:        max number of jobs the user can have running or
-                               submitted to the queue
-  :param queue_nodes_max:      max number of nodes the user can be using.
-  :param queue_processors_max: max number of processors the user can be using.
+  :param job_count:        number of running jobs
+  :param nodes_count:      number of nodes being used.
+  :param processors_count: number of processors being used.
+  :param mem_count:        total amount of memory used
   """
 
-  def __init__(self, job_count=DEFAULT_JOB_MAX, nodes_count=DEFAULT_NODES_MAX,
-               processors_count=DEFAULT_PROCESSOR_MAX):
+  def __init__(self, job_count=DEF_Q_JOB_MAX, nodes_count=DEF_Q_NODES_MAX,
+               processors_count=DEF_Q_PROCESSOR_MAX,
+               mem_count_gb=DEF_Q_MEM_MAX_GB):
     """
     Constructor for PBSQueueResourceConstraint.
 
@@ -143,6 +156,7 @@ class PBSQueueResourceStatus(object):
     self.job_count = job_count
     self.nodes_count = nodes_count
     self.processors_count = processors_count
+    self.mem_count_gb = mem_count_gb
 
 
 ###############################################################################
@@ -154,12 +168,31 @@ class _PBSTracker(object):
   def __init__(self):
     self.queues = {}
 
-  def push_job(self, job_name, queue_name):
-    """Create a new job and push it to the specified queue."""
-    pass
+  def __get_queue(self, name):
+    if name not in self.queues:
+      raise PBSNoSuchQueueError("No such PBS queue: " + name)
+    else:
+      return self.queues[name]
 
-  def is_complete(self, job_name):
-    pass
+  def register_queue(self, name, constraints, allow_qstat=False,
+                     loud_qstat=True):
+    if name in self.queues:
+      raise PBSDuplicateQueueError("Queue with name " + name +
+                                   " already exists")
+    self.queues[name] = _QueueTracker(name, constraints, allow_qstat,
+                                      loud_qstat)
+
+  def push_job(self, job, queue_name, verbose=False):
+    """Create a new job and push it to the specified queue."""
+    q = self.__get_queue(queue_name)
+    q.submit(job, verbose=verbose)
+
+  def is_complete(self, jid, queue_name=None):
+    if queue_name is not None:
+      q = self.__get_queue(queue_name)
+      q.is_job_complete(jid)
+    else:
+      raise PyokitError("oops, not implemented yet")
 
 
 class _QueueTracker(object):
@@ -466,9 +499,9 @@ class TestPBS(unittest.TestCase):
 #                            EXTERNAL INTERFACE                               #
 ###############################################################################
 
-# When this module is imported, we instantiate the __RiboCopPBSTracker class
-# to make the following object -- this is the itnerface to the module.
-ribocop_PBS_interface = _PBSTracker()
+# When this module is imported, we instantiate the _PBSTracker class
+# to make the following object -- this is the public  itnerface to the module.
+pbs_tracker = _PBSTracker()
 
 ###############################################################################
 #               ENTRY POINT WHEN RUN AS A STAND-ALONE MODULE                  #
