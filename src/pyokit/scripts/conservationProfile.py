@@ -331,70 +331,68 @@ def main(args, prog_name):
   # get options and arguments
   ui = getUI(prog_name, args)
 
-  # just run unit tests
   if ui.optionIsSet("test"):
+    # just run unit tests
     unittest.main(argv=[sys.argv[0]])
-    sys.exit()
-
-  # just show help
-  if ui.optionIsSet("help"):
+  elif ui.optionIsSet("help"):
+    # just show help
     ui.usage()
-    sys.exit()
-  verbose = (ui.optionIsSet("verbose") is True) or DEFAULT_VERBOSITY
-
-  # get output handle
-  out_fh = sys.stdout
-  if ui.optionIsSet("output"):
-    out_fh = open(ui.getValue("output"), "w")
-
-  # get window size...
-  window_size = DEFAULT_WINDOW_SIZE
-  if ui.optionIsSet("window"):
-    window_size = ui.getValue("window")
-
-  # get the window anchoring location
-  windowCentre = DEFAULT_WINDOW_CENTRE
-  if ui.optionIsSet("centre"):
-    windowCentre = ui.getValue("centre")
-    if windowCentre not in WINDOW_CENTRE_OPTIONS:
-      sys.stderr.write("un-recognised window anchor position: " +
-                       str(windowCentre) + "\n")
-      sys.exit(1)
-
-  args = ui.getAllArguments()
-  assert(len(args) == 3 or len(args) == 4)
-  region_fn = ui.getArgument(0)
-  ga_path = ui.getArgument(1)
-  index_fn = None
-  if len(args) == 3:
-    spec = ui.getArgument(2)
   else:
-    index_fn = ui.getArgument(2)
-    spec = ui.getArgument(3)
+    verbose = (ui.optionIsSet("verbose") is True) or DEFAULT_VERBOSITY
 
-  extensions = (ui.getValue("extensions").strip().split(",") if
-                ui.optionIsSet("extensions") else None)
-  index_extensions = (ui.getValue("index-extensions").strip().split(",") if
-                      ui.optionIsSet("index-extensions") else None)
-  fail_no_index = ui.optionIsSet("fail-no-index")
-  mi_seqs = (MissingSequenceHandler[ui.getValue("missing")]
-             if ui.optionIsSet("missing")
-             else MissingSequenceHandler.TREAT_AS_ALL_GAPS)
-  species = ([x.strip() for x in ui.getValue("species").split(",")] if
-             ui.optionIsSet("species") else None)
+    # get output handle
+    out_fh = sys.stdout
+    if ui.optionIsSet("output"):
+      out_fh = open(ui.getValue("output"), "w")
 
-  # build the genome alignment
-  alig = (load_just_in_time_genome_alignment(ga_path, spec, extensions,
-                                             index_extensions, fail_no_index,
-                                             verbose)
-          if os.path.isdir(ga_path)
-          else build_genome_alignment_from_file(ga_path, spec, index_fn,
-                                                verbose))
+    # get window size...
+    window_size = DEFAULT_WINDOW_SIZE
+    if ui.optionIsSet("window"):
+      window_size = ui.getValue("window")
 
-  # get the profile and write it to the output stream
-  profile = processBED(open(region_fn), alig, window_size, CENTRE,
-                       mi_seqs, species, verbose)
-  out_fh.write("\n\n" + ", ".join(str(x) for x in profile) + "\n")
+    # get the window anchoring location
+    windowCentre = DEFAULT_WINDOW_CENTRE
+    if ui.optionIsSet("centre"):
+      windowCentre = ui.getValue("centre")
+      if windowCentre not in WINDOW_CENTRE_OPTIONS:
+        sys.stderr.write("un-recognised window anchor position: " +
+                         str(windowCentre) + "\n")
+        sys.exit(1)
+
+    args = ui.getAllArguments()
+    assert(len(args) == 3 or len(args) == 4)
+    region_fn = ui.getArgument(0)
+    ga_path = ui.getArgument(1)
+    index_fn = None
+    if len(args) == 3:
+      spec = ui.getArgument(2)
+    else:
+      index_fn = ui.getArgument(2)
+      spec = ui.getArgument(3)
+
+    extensions = (ui.getValue("extensions").strip().split(",") if
+                  ui.optionIsSet("extensions") else None)
+    index_extensions = (ui.getValue("index-extensions").strip().split(",") if
+                        ui.optionIsSet("index-extensions") else None)
+    fail_no_index = ui.optionIsSet("fail-no-index")
+    mi_seqs = (MissingSequenceHandler[ui.getValue("missing")]
+               if ui.optionIsSet("missing")
+               else MissingSequenceHandler.TREAT_AS_ALL_GAPS)
+    species = ([x.strip() for x in ui.getValue("species").split(",")] if
+               ui.optionIsSet("species") else None)
+
+    # build the genome alignment
+    alig = (load_just_in_time_genome_alignment(ga_path, spec, extensions,
+                                               index_extensions, fail_no_index,
+                                               verbose)
+            if os.path.isdir(ga_path)
+            else build_genome_alignment_from_file(ga_path, spec, index_fn,
+                                                  verbose))
+
+    # get the profile and write it to the output stream
+    profile = processBED(open(region_fn), alig, window_size, CENTRE,
+                         mi_seqs, species, verbose)
+    out_fh.write("\n\n" + ", ".join(str(x) for x in profile) + "\n")
 
 
 ###############################################################################

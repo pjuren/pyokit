@@ -191,41 +191,39 @@ def main(args):
   # get options and arguments
   ui = getUI(args)
 
-  # just run unit tests
   if ui.optionIsSet("test"):
+    # just run unit tests
     unittest.main(argv=[sys.argv[0]])
-    sys.exit()
-
-  # just show help
-  if ui.optionIsSet("help"):
+  elif ui.optionIsSet("help"):
+    # just show help
     ui.usage()
-    sys.exit()
-  verbose = (ui.optionIsSet("verbose") == True) or DEFAULT_VERBOSITY
+  else:
+    verbose = (ui.optionIsSet("verbose") is True) or DEFAULT_VERBOSITY
 
-  # header?
-  header = ui.optionIsSet("header")
+    # header?
+    header = ui.optionIsSet("header")
 
-  # get field value
-  field = ui.getValue("field") - 1
+    # get field value
+    field = ui.getValue("field") - 1
 
-  # get output handle
-  out_fh = sys.stdout
-  if ui.optionIsSet("output"):
-    out_fh = open(ui.getValue("output"), "w")
+    # get output handle
+    out_fh = sys.stdout
+    if ui.optionIsSet("output"):
+      out_fh = open(ui.getValue("output"), "w")
 
-  # get input file-handle
-  in_fh = sys.stdin
-  if ui.hasArgument(0):
-    in_fh = open(ui.getArgument(0))
+    # get input file-handle
+    in_fh = sys.stdin
+    if ui.hasArgument(0):
+      in_fh = open(ui.getArgument(0))
 
-  delim = DEFAULT_DELIM
+    delim = DEFAULT_DELIM
 
-  # load data, do conversion, write out results.
-  data_table = DataTable()
-  data_table.load(in_fh, header, delim, verbose)
-  data_table.frame[field] =\
-      correct_pvals(data_table.frame[field], verbose=verbose)
-  data_table.write(out_fh, delim, verbose)
+    # load data, do conversion, write out results.
+    data_table = DataTable()
+    data_table.load(in_fh, header, delim, verbose)
+    data_table.frame[field] =\
+        correct_pvals(data_table.frame[field], verbose=verbose)
+    data_table.write(out_fh, delim, verbose)
 
 
 ###############################################################################
@@ -296,4 +294,4 @@ class TestFDR(unittest.TestCase):
 ###############################################################################
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

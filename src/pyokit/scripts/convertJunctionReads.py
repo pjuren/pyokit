@@ -96,33 +96,31 @@ def _main(args, prog_name):
   # get options and arguments
   ui = getUI(prog_name, args)
 
-  # just run unit tests
   if ui.optionIsSet("test"):
+    # just run unit tests
     unittest.main(argv=[sys.argv[0]])
-    sys.exit()
-
-  # just show help
-  if ui.optionIsSet("help"):
+  elif ui.optionIsSet("help"):
+    # just show help
     ui.usage()
-    sys.exit()
-  verbose = (ui.optionIsSet("verbose") is True) or DEFAULT_VERBOSITY
+  else:
+    verbose = (ui.optionIsSet("verbose") is True) or DEFAULT_VERBOSITY
 
-  # get input handle
-  infh = sys.stdin
-  if ui.hasArgument(0):
-    infh = open(ui.getArgument(0))
+    # get input handle
+    infh = sys.stdin
+    if ui.hasArgument(0):
+      infh = open(ui.getArgument(0))
 
-  # make output handle
-  outfh = sys.stdout
-  if ui.optionIsSet("output"):
-    outfh = open(ui.getValue("output"), "w")
+    # make output handle
+    outfh = sys.stdout
+    if ui.optionIsSet("output"):
+      outfh = open(ui.getValue("output"), "w")
 
-  # get scheme
-  scheme = DEFAULT_SCHEME
-  if ui.optionIsSet("scheme"):
-    scheme = ui.getValue("scheme")
+    # get scheme
+    scheme = DEFAULT_SCHEME
+    if ui.optionIsSet("scheme"):
+      scheme = ui.getValue("scheme")
 
-  processBED(infh, outfh, scheme, verbose)
+    processBED(infh, outfh, scheme, verbose)
 
 
 ###############################################################################

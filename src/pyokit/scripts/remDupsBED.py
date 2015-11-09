@@ -100,32 +100,30 @@ def _main(args, prog_name):
   # get options and arguments
   ui = getUI(prog_name, args)
   if ui.optionIsSet("help"):
+    # just show help
     ui.usage()
-    sys.exit()
-
-  # just run unit tests
-  if ui.optionIsSet("test"):
+  elif ui.optionIsSet("test"):
+    # just run unit tests
     unittest.main(argv=[sys.argv[0]])
-    sys.exit()
+  else:
+    verbose = (ui.optionIsSet("verbose") is True) or DEFAULT_VERBOSITY
 
-  verbose = (ui.optionIsSet("verbose") is True) or DEFAULT_VERBOSITY
+    # get input file handles
+    infh1 = open(ui.getValue("first"))
+    infh2 = open(ui.getValue("second"))
 
-  # get input file handles
-  infh1 = open(ui.getValue("first"))
-  infh2 = open(ui.getValue("second"))
+    # get output file handles
+    parts = ui.getValue("output").split()
+    if len(parts) != 2:
+      sys.stderr.write("expected two output filenames, got" +
+                       str(len(parts)))
+      sys.exit(1)
+    outfh1, outfh2 = open(parts[0], "w"), open(parts[1], "w")
 
-  # get output file handles
-  parts = ui.getValue("output").split()
-  if len(parts) != 2:
-    sys.stderr.write("expected two output filenames, got" +
-                     str(len(parts)))
-    sys.exit(1)
-  outfh1, outfh2 = open(parts[0], "w"), open(parts[1], "w")
+    # only filter worse mappings?
+    best = ui.optionIsSet("best")
 
-  # only filter worse mappings?
-  best = ui.optionIsSet("best")
-
-  ambigFilter(infh1, infh2, outfh1, outfh2, verbose, best)
+    ambigFilter(infh1, infh2, outfh1, outfh2, verbose, best)
 
 
 ###############################################################################

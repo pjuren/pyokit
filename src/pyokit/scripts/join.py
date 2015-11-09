@@ -534,58 +534,56 @@ def _main(args, prog_name):
   # get options and arguments
   ui = getUI(prog_name, args)
 
-  # just run unit tests
   if ui.optionIsSet("test"):
+    # just run unit tests
     unittest.main(argv=[sys.argv[0]])
-    sys.exit()
-
-  # just show help
-  if ui.optionIsSet("help"):
+  elif ui.optionIsSet("help"):
+    # just show help
     ui.usage()
-    sys.exit()
-  verbose = (ui.optionIsSet("verbose") is True) or DEFAULT_VERBOSITY
+  else:
+    verbose = (ui.optionIsSet("verbose") is True) or DEFAULT_VERBOSITY
 
-  # get input handles -- we required two args, so we know these will be here.
-  # TODO add unit test for this
-  infh1 = open(ui.getArgument(0))
-  infh2 = open(ui.getArgument(1))
+    # get input handles -- we required two args, so we know these will be here.
+    # TODO add unit test for this
+    infh1 = open(ui.getArgument(0))
+    infh2 = open(ui.getArgument(1))
 
-  # make output handle
-  outfh = sys.stdout
-  if ui.optionIsSet("output"):
-    outfh = open(ui.getValue("output"), "w")
+    # make output handle
+    outfh = sys.stdout
+    if ui.optionIsSet("output"):
+      outfh = open(ui.getValue("output"), "w")
 
-  # get key fields in both files
-  key_one, key_one_is_field_number = get_key_field(ui, "field-one")
-  key_two, key_two_is_field_number = get_key_field(ui, "field-two")
+    # get key fields in both files
+    key_one, key_one_is_field_number = get_key_field(ui, "field-one")
+    key_two, key_two_is_field_number = get_key_field(ui, "field-two")
 
-  # get missing value
-  missing_val = None
-  if ui.optionIsSet("missing"):
-    missing_val = ui.getValue("missing")
+    # get missing value
+    missing_val = None
+    if ui.optionIsSet("missing"):
+      missing_val = ui.getValue("missing")
 
-  # output lines that cannot be joined?
-  output_unpaired = ui.optionIsSet("output-unpaired-lines")
+    # output lines that cannot be joined?
+    output_unpaired = ui.optionIsSet("output-unpaired-lines")
 
-  # allow dups?
-  dup_method = OutputType.error_on_dups
-  if ui.optionIsSet("duplicate-handling"):
-    kv = ui.getValue("duplicate-handling")
-    try:
-      dup_method = OutputType[kv]
-    except KeyError:
-      msg = "Not a valid output handler: " + kv + ". Options are " + \
-            "; ".join([f.name + " = " + f.value.get_description()
-                       for f in OutputType])
-      raise InvalidOutputHandlerError(msg)
+    # allow dups?
+    dup_method = OutputType.error_on_dups
+    if ui.optionIsSet("duplicate-handling"):
+      kv = ui.getValue("duplicate-handling")
+      try:
+        dup_method = OutputType[kv]
+      except KeyError:
+        msg = "Not a valid output handler: " + kv + ". Options are " + \
+              "; ".join([f.name + " = " + f.value.get_description()
+                         for f in OutputType])
+        raise InvalidOutputHandlerError(msg)
 
-  # ignore lines with missing values in the key field?
-  ignore_missing_keys = ui.optionIsSet("ignore-missing-key")
+    # ignore lines with missing values in the key field?
+    ignore_missing_keys = ui.optionIsSet("ignore-missing-key")
 
-  # do our thing..
-  process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
-          key_two_is_field_number, missing_val, ignore_missing_keys,
-          dup_method, output_unpaired, verbose)
+    # do our thing..
+    process(infh1, infh2, outfh, key_one, key_one_is_field_number, key_two,
+            key_two_is_field_number, missing_val, ignore_missing_keys,
+            dup_method, output_unpaired, verbose)
 
 
 ###############################################################################

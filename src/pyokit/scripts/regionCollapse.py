@@ -110,43 +110,41 @@ def main(args, prog_name):
   # get options and arguments
   ui = getUI(args, prog_name)
 
-  # just run unit tests
   if ui.optionIsSet("test"):
+    # just run unit tests
     unittest.main(argv=[sys.argv[0]])
-    sys.exit()
-
-  # just show help
-  if ui.optionIsSet("help"):
+  elif ui.optionIsSet("help"):
+    # just show help
     ui.usage()
-    sys.exit()
-  verbose = (ui.optionIsSet("verbose") is True) or DEFAULT_VERBOSITY
-
-  # how to handle strand, names, and whether to collapse only regions with
-  # exactly matching genomic loci?
-  stranded = ui.optionIsSet("stranded")
-  names = ui.optionIsSet("accumulate_names")
-  exact = ui.optionIsSet("exact")
-
-  # get output handle
-  out_fh = sys.stdout
-  if ui.optionIsSet("output"):
-    out_fh = open(ui.getValue("output"), "w")
-
-  # get input file-handle
-  in_fh = sys.stdin
-  if ui.hasArgument(0):
-    in_fh = open(ui.getArgument(0))
-
-  # load data -- TODO at the moment we load everying; need to think about
-  # whether it is possible to do this using a single pass of the data, but not
-  # loading it all first.
-  regions = [x for x in BEDIterator(in_fh, verbose)]
-
-  if exact:
-    collapse_exact(regions, stranded, names, out_fh)
   else:
-    for x in collapseRegions(regions, stranded, names, verbose):
-      out_fh.write(str(x) + "\n")
+    verbose = (ui.optionIsSet("verbose") is True) or DEFAULT_VERBOSITY
+
+    # how to handle strand, names, and whether to collapse only regions with
+    # exactly matching genomic loci?
+    stranded = ui.optionIsSet("stranded")
+    names = ui.optionIsSet("accumulate_names")
+    exact = ui.optionIsSet("exact")
+
+    # get output handle
+    out_fh = sys.stdout
+    if ui.optionIsSet("output"):
+      out_fh = open(ui.getValue("output"), "w")
+
+    # get input file-handle
+    in_fh = sys.stdin
+    if ui.hasArgument(0):
+      in_fh = open(ui.getArgument(0))
+
+    # load data -- TODO at the moment we load everying; need to think about
+    # whether it is possible to do this using a single pass of the data, but not
+    # loading it all first.
+    regions = [x for x in BEDIterator(in_fh, verbose)]
+
+    if exact:
+      collapse_exact(regions, stranded, names, out_fh)
+    else:
+      for x in collapseRegions(regions, stranded, names, verbose):
+        out_fh.write(str(x) + "\n")
 
 
 ###############################################################################
