@@ -24,6 +24,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # standard python imports
 import sys
+import unittest
+
+# for testing
+import mock
 
 # check for rpy2 -- we need to disable some scripts if it is missing
 try:
@@ -47,7 +51,65 @@ from pyokit.scripts import remDupsBED
 from pyokit.scripts import convertJunctionReads
 
 
-def main():
+###############################################################################
+#                             EXCEPTION CLASSES                               #
+###############################################################################
+
+class NoSuchScriptError(PyokitError):
+  pass
+
+
+###############################################################################
+#                       DISPATCH HANDLERS FOR SCRIPTS                         #
+###############################################################################
+
+def dispatch_fdr(args):
+  if have_functioning_rpy2:
+    fdr.main(args)
+  else:
+    sys.stderr.write("The fdr scripts is disabled; it needs rpy2 to " +
+                     "run and that package either isn't installed or is " +
+                     "not working properly.\n")
+
+
+def dispatch_index(args):
+  index.main(args, "pyokit index")
+
+
+def dispatch_cons_profile(args):
+  conservationProfile.main(args, "pyokit consprofile")
+
+
+def dispatch_join(args):
+  join._main(args, "join")
+
+
+def dispatch_region_collapse(args):
+  regionCollapse.main(args, "pyokit regionCollapse")
+
+
+def dispatch_convert_junc_reads(args):
+  convertJunctionReads._main(args, "remDupsBED")
+
+
+def dispatch_rem_dups_bed(args):
+  remDupsBED._main(args, "remDupsBED")
+
+
+dispatchers = {"fdr": dispatch_fdr,
+               "index": dispatch_index,
+               "consprofile": dispatch_cons_profile,
+               "join": dispatch_join,
+               "regionCollapse": dispatch_region_collapse,
+               "remDupsBED": dispatch_rem_dups_bed,
+               "convertJunctionReads": dispatch_convert_junc_reads}
+
+
+###############################################################################
+#                               MAIN PROG LOGIC                               #
+###############################################################################
+
+def dispatch(args):
   """
   Parse the command line and dispatch the appropriate script.
 
@@ -56,32 +118,49 @@ def main():
   function the user wants Ribocop to perform, then dispatch to the appropriate
   module.
   """
+  prog_name = args[0]
+  if prog_name not in dispatchers:
+    raise NoSuchScriptError("No such pyokit script: " + prog_name + "\n")
+  else:
+    dispatchers[prog_name](args[1:])
+
+
+def main():
+  args = sys.argv[1:]
   try:
-    if sys.argv[1] == "fdr":
-      if have_functioning_rpy2:
-        fdr.main(sys.argv[2:])
-      else:
-        sys.stderr.write("The fdr scripts is disabled; it needs rpy2 to " +
-                         "run and that package either isn't installed or is " +
-                         "not working properly.\n")
-    elif sys.argv[1] == "index":
-      index.main(sys.argv[2:], "pyokit index")
-    elif sys.argv[1] == "consprofile":
-      conservationProfile.main(sys.argv[2:], "pyokit consprofile")
-    elif sys.argv[1] == "join":
-      join._main(sys.argv[2:], "join")
-    elif sys.argv[1] == "regionCollapse":
-      regionCollapse.main(sys.argv[2:], "pyokit regionCollapse")
-    elif sys.argv[1] == "remDupsBED":
-      remDupsBED._main(sys.argv[2:], "remDupsBED")
-    elif sys.argv[1] == "convertJunctionReads":
-      convertJunctionReads._main(sys.argv[2:], "remDupsBED")
-    else:
-      sys.stderr.write("Pyokit: I don't recognise the option '" + sys.argv[1] +
-                       "'.\n")
+    dispatch(args)
   except (IOError, PyokitIOError) as e:
     sys.stderr.write("Pyokit - Fatal IOError: " + str(e) + "\n")
     exit(1)
   except PyokitError as e:
     sys.stderr.write("Pyokit - Fatal Error: " + str(e) + "\n")
     exit(1)
+
+
+###############################################################################
+#                         UNIT TESTS FOR THIS MODULE                          #
+###############################################################################
+
+class PyokitSmokeTests(unittest.TestCase):
+  """smoke test for pyokit script execution -- just make sure they all run."""
+
+  # @mock.patch('pyokit.scripts.fdr.sys.stderr')
+  def test_dispatch(self):
+    h_args = ["-h"]
+    with mock.patch('sys.stdout'):
+      dispatch(["fdr"] + h_args)
+      dispatch(["consprofile"] + h_args)
+      dispatch(["join"] + h_args)
+      dispatch(["regionCollapse"] + h_args)
+      dispatch(["remDupsBED"] + h_args)
+      dispatch(["convertJunctionReads"] + h_args)
+    with mock.patch('sys.stderr'):
+      dispatch(["index"] + h_args)
+
+
+###############################################################################
+#              MAIN ENTRY POINT WHEN RUN AS STAND-ALONE MODULE                #
+###############################################################################
+
+if __name__ == "__main__":
+    unittest.main()

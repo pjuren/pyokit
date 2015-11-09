@@ -89,6 +89,7 @@ from pyokit.scripts.fastqNucDist import TestNucDist
 from pyokit.scripts.remDupsBED import TestRemDupsBed
 from pyokit.scripts.convertJunctionReads import ConvertJunctionsUnitTests
 from pyokit.scripts.regionCollapse import TestCollapseRegions
+from pyokit.scripts.pyokitMain import PyokitSmokeTests
 
 
 if __name__ == "__main__":
@@ -143,7 +144,8 @@ if __name__ == "__main__":
   sys.stderr.write("  " + str(TestNucDist) + "\n")
   sys.stderr.write("  " + str(TestRemDupsBed) + "\n")
   sys.stderr.write("  " + str(ConvertJunctionsUnitTests) + "\n")
-  sys.stderr.write("  " + str(TestConservationProfileIndvFiles) + "\n\n")
+  sys.stderr.write("  " + str(TestConservationProfileIndvFiles) + "\n")
+  sys.stderr.write("  " + str(PyokitSmokeTests) + "\n\n")
 
   sys.stderr.write("\n\n RUNNING TESTS \n\n")
   unittest.main()
