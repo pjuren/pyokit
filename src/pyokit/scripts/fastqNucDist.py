@@ -82,27 +82,25 @@ def _main(args, prog_name):
   # get options and arguments
   ui = getUI(prog_name, args)
 
-  # just run unit tests
   if ui.optionIsSet("test"):
+    # just run unit tests
     unittest.main(argv=[sys.argv[0]])
-    sys.exit()
-
-  # just show help
-  if ui.optionIsSet("help"):
+  elif ui.optionIsSet("help"):
+    # just show help
     ui.usage()
-    sys.exit()
-  verbose = (ui.optionIsSet("verbose") is True) or DEFAULT_VERBOSITY
+  else:
+    verbose = (ui.optionIsSet("verbose") is True) or DEFAULT_VERBOSITY
 
-  # get input handles -- we required one args, so we know these will be here.
-  infh = open(ui.getArgument(0))
+    # get input handles -- we required one args, so we know these will be here.
+    infh = open(ui.getArgument(0))
 
-  # make output handle
-  outfh = sys.stdout
-  if ui.optionIsSet("output"):
-    outfh = open(ui.getValue("output"), "w")
+    # make output handle
+    outfh = sys.stdout
+    if ui.optionIsSet("output"):
+      outfh = open(ui.getValue("output"), "w")
 
-  counts = count(infh, verbose)
-  write_output(counts, outfh)
+    counts = count(infh, verbose)
+    write_output(counts, outfh)
 
 
 ###############################################################################
