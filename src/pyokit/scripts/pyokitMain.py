@@ -49,6 +49,7 @@ from pyokit.scripts import join
 from pyokit.scripts import regionCollapse
 from pyokit.scripts import remDupsBED
 from pyokit.scripts import convertJunctionReads
+from pyokit.scripts import overlapProfile
 
 
 ###############################################################################
@@ -96,13 +97,18 @@ def dispatch_rem_dups_bed(args):
   remDupsBED._main(args, "remDupsBED")
 
 
+def dispatch_overlap_profile(args):
+  overlapProfile._main(args, "overlapProfile")
+
+
 dispatchers = {"fdr": dispatch_fdr,
                "index": dispatch_index,
                "consprofile": dispatch_cons_profile,
                "join": dispatch_join,
                "regionCollapse": dispatch_region_collapse,
                "remDupsBED": dispatch_rem_dups_bed,
-               "convertJunctionReads": dispatch_convert_junc_reads}
+               "convertJunctionReads": dispatch_convert_junc_reads,
+               "overlapProfile": dispatch_overlap_profile}
 
 
 ###############################################################################
