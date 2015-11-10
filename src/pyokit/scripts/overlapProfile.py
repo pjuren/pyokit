@@ -34,6 +34,7 @@ import unittest
 import mock
 
 # pyokit imports
+from pyokit.common.pyokitError import PyokitError
 from pyokit.interface.cli import CLI
 from pyokit.interface.cli import Option
 from pyokit.io.bedIterators import intervalTrees
@@ -49,13 +50,37 @@ START = 0
 MID = 1
 END = 2
 WHOLE = 3
+ANCHOR_START = 4
+ANCHOR_END = 5
+ANCHOR_3PRIME = 6
+ANCHOR_5PRIME = 7
+
+
+###############################################################################
+#                            EXCEPTION CLASSES                                #
+###############################################################################
+
+class UnknownAnchorPoint(PyokitError):
+  pass
 
 
 ###############################################################################
 #                             MAIN SCRIPT LOGIC                               #
 ###############################################################################
 
-def process_anchor_start(regions_fn, to_count_fn, verbose=False):
+def __to_relative(abs_pos, region, anchor_to):
+  if anchor_to == ANCHOR_START:
+    rel_pos = abs_pos - region.start
+  elif anchor_to == ANCHOR_5PRIME:
+    rel_pos = (abs_pos - region.start if region.strand == "+"
+               else region.end - abs_pos)
+  else:
+    raise UnknownAnchorPoint("Unknown anchor point: " + anchor_to)
+  return rel_pos
+
+
+def process_anchor_start(regions_fn, to_count_fn,
+                         anchor_to=ANCHOR_START, verbose=False):
   """
   :return: list where each element is the number of hits at that location
            relative to the start of the regions.
@@ -76,7 +101,8 @@ def process_anchor_start(regions_fn, to_count_fn, verbose=False):
       abs_pos = h.start
       if abs_pos < region.start or abs_pos >= region.end:
         continue
-      rel_pos = abs_pos - region.start
+      rel_pos = __to_relative(abs_pos, region, anchor_to)
+
       while(len(res) <= rel_pos):
         res.append(0)
       res[rel_pos] += 1
@@ -115,6 +141,9 @@ def getUI(prog_name, args):
   ui.maxArgs = 2
   ui.addOption(Option(short="o", long="output", argName="filename",
                       description="output to given file, else stdout",
+                      required=False, type=str))
+  ui.addOption(Option(short="a", long="anchor", argName="anchor-point",
+                      description="5-prime, start",
                       required=False, type=str))
   ui.addOption(Option(short="v", long="verbose",
                       description="output additional messages to stderr " +
@@ -156,8 +185,15 @@ def _main(args, prog_name):
     if ui.optionIsSet("output"):
       out_fh = open(ui.getValue("output"), "w")
 
-    res = process_anchor_start(regions_fn, to_count_fn, verbose)
-    write_output(res, out_fh, verbose)
+    # get anchor point
+    anch = ANCHOR_START
+    if ui.optionIsSet("anchor"):
+      if ui.getValue("anchor") == "5-prime":
+        anch = ANCHOR_5PRIME
+
+    res = process_anchor_start(regions_fn, to_count_fn, anchor_to=anch,
+                               verbose=verbose)
+    write_output(res, out_fh, verbose=verbose)
 
 
 ###############################################################################
@@ -169,9 +205,9 @@ class TestOverlapProfile(unittest.TestCase):
   """Unit tests for this script."""
 
   def setUp(self):
-    self.regions = "chr1 \t 10 \t 20 \t reg1\n" +\
-                   "chr1 \t 50 \t 70 \t reg2\n" +\
-                   "chr2 \t 15 \t 30 \t reg3\n"
+    self.regions = "chr1 \t 10 \t 20 \t reg1 \t 0 \t -\n" +\
+                   "chr1 \t 50 \t 70 \t reg2 \t 0 \t +\n" +\
+                   "chr2 \t 15 \t 30 \t reg3 \t 0 \t +\n"
     self.h1 = "chr1 \t 11 \t 14 \t r1\n" +\
               "chr1 \t 15 \t 16 \t r2\n" +\
               "chr1 \t 40 \t 55 \t r3\n" +\
@@ -192,6 +228,26 @@ class TestOverlapProfile(unittest.TestCase):
     _main(["-o", "out.dat", "regions.bed", "hits1.bed"], sys.argv[0])
     expect = [[0, 0.0], [1, 1.0], [2, 0.0], [3, 0.0], [4, 0.0], [5, 0.6667],
               [6, 0.0], [7, 0.0], [8, 0.0], [9, 0.0], [10, 0.0], [11, 0.0],
+              [12, 0.0], [13, 0.0], [14, 0.0], [15, 1.0]]
+    got = outfh.getvalue()
+    got = [[float(a) for a in x.split()] for x in got.split("\n")
+           if x.strip() != ""]
+    self.assertEqual(len(got), len(expect))
+    for i in range(0, len(got)):
+      self.assertEqual(len(got[i]), 2)
+      self.assertAlmostEqual(got[i][0], expect[i][0])
+      self.assertAlmostEqual(got[i][1], expect[i][1], places=4)
+
+  @mock.patch('__builtin__.open')
+  def test_anchor_5prime_norm(self, mock_open):
+    outfh = StringIO.StringIO()
+    streams = {"out.dat": outfh}
+    mock_open.side_effect = build_mock_open_side_effect(self.f_map, streams)
+
+    _main(["-a", "5-prime", "-o", "out.dat", "regions.bed", "hits1.bed"],
+          sys.argv[0])
+    expect = [[0, 0.0], [1, 0.6667], [2, 0.0], [3, 0.0], [4, 0.0], [5, 0.6667],
+              [6, 0.0], [7, 0.0], [8, 0.0], [9, 0.3333], [10, 0.0], [11, 0.0],
               [12, 0.0], [13, 0.0], [14, 0.0], [15, 1.0]]
     got = outfh.getvalue()
     got = [[float(a) for a in x.split()] for x in got.split("\n")
