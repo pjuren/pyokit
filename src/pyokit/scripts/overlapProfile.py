@@ -73,7 +73,7 @@ def __to_relative(abs_pos, region, anchor_to):
     rel_pos = abs_pos - region.start
   elif anchor_to == ANCHOR_5PRIME:
     rel_pos = (abs_pos - region.start if region.strand == "+"
-               else region.end - abs_pos)
+               else region.end - abs_pos - 1)
   else:
     raise UnknownAnchorPoint("Unknown anchor point: " + anchor_to)
   return rel_pos
@@ -102,6 +102,7 @@ def process_anchor_start(regions_fn, to_count_fn,
       if abs_pos < region.start or abs_pos >= region.end:
         continue
       rel_pos = __to_relative(abs_pos, region, anchor_to)
+      assert(rel_pos < len(region))
 
       while(len(res) <= rel_pos):
         res.append(0)
@@ -246,9 +247,9 @@ class TestOverlapProfile(unittest.TestCase):
 
     _main(["-a", "5-prime", "-o", "out.dat", "regions.bed", "hits1.bed"],
           sys.argv[0])
-    expect = [[0, 0.0], [1, 0.6667], [2, 0.0], [3, 0.0], [4, 0.0], [5, 0.6667],
-              [6, 0.0], [7, 0.0], [8, 0.0], [9, 0.3333], [10, 0.0], [11, 0.0],
-              [12, 0.0], [13, 0.0], [14, 0.0], [15, 1.0]]
+    expect = [[0, 0.0], [1, 0.6667], [2, 0.0], [3, 0.0], [4, 0.3333],
+              [5, 0.3333], [6, 0.0], [7, 0.0], [8, 0.3333], [9, 0.0],
+              [10, 0.0], [11, 0.0], [12, 0.0], [13, 0.0], [14, 0.0], [15, 1.0]]
     got = outfh.getvalue()
     got = [[float(a) for a in x.split()] for x in got.split("\n")
            if x.strip() != ""]
