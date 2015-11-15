@@ -564,6 +564,10 @@ class Sequence(object):
         return False
     return True
 
+  #############################################################################
+  #                     SEQUENCE CLASS -- STRING FORMATTING                   #
+  #############################################################################
+
   def __str__(self):
     """
     :return: string representation of this sequence object
@@ -583,12 +587,14 @@ class Sequence(object):
       res += (str(k) + "=" + str(self.meta_data[k]))
     return res
 
-  def to_fasta_str(self, line_width=50):
+  def to_fasta_str(self, line_width=50, include_coords=True):
     """
     :return: string representation of this sequence object in fasta format
     """
-    res = ">" + self.name + ":" + str(self.start) + "-" + str(self.end)
-    res += " (" + str(self.remaining) + ")"
+    res = ">" + self.name
+    if include_coords:
+      res += ":" + str(self.start) + "-" + str(self.end)
+      res += " (" + str(self.remaining) + ")"
     m_str = self.meta_data_to_string()
     if m_str:
       res += (" " + m_str)
