@@ -28,6 +28,20 @@ import sys
 import unittest
 import StringIO
 
+# pyokit imports
+from pyokit.common.pyokitError import PyokitError
+
+
+###############################################################################
+#                             EXCEPTION CLASSES                               #
+###############################################################################
+class ProgressIndicatorError(PyokitError):
+  pass
+
+
+###############################################################################
+#                           ProgressIndicator CLASS                           #
+###############################################################################
 
 class ProgressIndicator(object):
   def __init__(self, totalToDo, messagePrefix=None, messageSuffix=None):
