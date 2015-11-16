@@ -27,20 +27,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import StringIO
 
 
-def build_mock_open_side_effect(string_d, stream_d):
+def build_mock_open_side_effect(string_d, stream_d=None, add_names=True):
   """
   Build a mock open side effect using a dictionary of content for the files.
 
-  :param string_d: keys are file names, values are string file contents
-  :param stream_d: keys are file names, values are stream of contents
+  :param string_d:  keys are file names, values are string file contents
+  :param stream_d:  keys are file names, values are stream of contents
+  :param add_names: if True, each StringIO object will have a .name attribute
+                    added to it.
   """
+  if stream_d is None:
+    stream_d = {}
   assert(len(set(string_d.keys()).intersection(set(stream_d.keys()))) == 0)
 
   def mock_open_side_effect(*args, **kwargs):
     if args[0] in string_d:
-      return StringIO.StringIO(string_d[args[0]])
+      r = StringIO.StringIO(string_d[args[0]])
+      if add_names:
+        r.name = args[0]
+      return r
     elif args[0] in stream_d:
-      return stream_d[args[0]]
+      r = stream_d[args[0]]
+      if add_names:
+        r.name = args[0]
+      return r
     else:
       raise IOError("No such file: " + args[0] + ". Known these strings " +
                     ", ".join(string_d.keys()) + " and these streams " +
