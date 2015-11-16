@@ -178,7 +178,7 @@ TTTTTGCCCCGGCTCGAAA
 <p>Here&#8217;s the signature for the general fastQ iterator:</p>
 <dl class="function">
 <dt id="pyokit.io.fastqIterators.fastqIterator">
-<code class="descclassname">pyokit.io.fastqIterators.</code><code class="descname">fastqIterator</code><span class="sig-paren">(</span><em>fn</em>, <em>useMutableString=False</em>, <em>verbose=False</em>, <em>debug=False</em>, <em>sanger=False</em>, <em>allowNameMissmatch=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.fastqIterators.fastqIterator" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.io.fastqIterators.</code><code class="descname">fastqIterator</code><span class="sig-paren">(</span><em>fn</em>, <em>verbose=False</em>, <em>allowNameMissmatch=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.fastqIterators.fastqIterator" title="Permalink to this definition">¶</a></dt>
 <dd><p>A generator function which yields FastqSequence objects read from a file or
 stream. This is a general function which wraps fastqIteratorSimple. In
 future releases, we may allow dynamic switching of which base iterator is
@@ -245,7 +245,7 @@ progress.</li>
 sequence data:</p>
 <dl class="function">
 <dt id="pyokit.io.fastqIterators.fastqIteratorComplex">
-<code class="descclassname">pyokit.io.fastqIterators.</code><code class="descname">fastqIteratorComplex</code><span class="sig-paren">(</span><em>fn</em>, <em>useMutableString=False</em>, <em>verbose=False</em>, <em>debug=False</em>, <em>sanger=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.fastqIterators.fastqIteratorComplex" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyokit.io.fastqIterators.</code><code class="descname">fastqIteratorComplex</code><span class="sig-paren">(</span><em>fn</em>, <em>useMutableString=False</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyokit.io.fastqIterators.fastqIteratorComplex" title="Permalink to this definition">¶</a></dt>
 <dd><p>A generator function which yields FastqSequence objects read from a file or
 stream. This iterator can handle fastq files that have their sequence
 and/or their quality data split across multiple lines (i.e. there are
