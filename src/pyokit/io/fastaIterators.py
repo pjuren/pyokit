@@ -26,6 +26,7 @@
 # standard python imports
 import sys
 import os
+import math
 import unittest
 import StringIO
 
@@ -34,6 +35,10 @@ from pyokit.datastruct.sequence import Sequence
 from pyokit.util.progressIndicator import ProgressIndicator
 from pyokit.util.progressIndicator import ProgressIndicatorError
 from pyokit.common.pyokitError import PyokitError
+from pyokit.util.testing import build_mock_open_side_effect
+
+# for testing
+import mock
 
 
 ###############################################################################
@@ -132,7 +137,7 @@ def __read_seq_data(fh):
 def __build_progress_indicator(fh):
   try:
     total = os.path.getsize(fh.name)
-  except AttributeError:
+  except (AttributeError, OSError):
     raise ProgressIndicatorError("Failed to get max size for stream")
   pind = ProgressIndicator(totalToDo=total,
                            messagePrefix="completed",
@@ -173,7 +178,7 @@ def fastaIterator(fn, useMutableString=False, verbose=False):
     seq_data, prev_line = __read_seq_data(fh)
     if verbose:
       pind.done = fh.tell()
-      pind.showProgress()
+      pind.showProgress(to_strm=sys.stderr)
     yield Sequence(name, seq_data, useMutableString)
 
     # remember where we stopped for next call, or finish
@@ -198,6 +203,9 @@ class TestFastaIterators(unittest.TestCase):
                  "ACTGATCGATGCGCGATGCTAGTGC\n" +\
                  ">s1\n" +\
                  "ACTGATCGATGCGCGATGCTAGTGC\n"
+    tmp = StringIO.StringIO(self.file1)
+    tmp.seek(0, 2)
+    self.file1_size = tmp.tell()
 
   def test_num_sequences(self):
     fh = StringIO.StringIO(self.file1)
@@ -208,6 +216,46 @@ class TestFastaIterators(unittest.TestCase):
     fh = StringIO.StringIO(self.file1)
     res = "\n".join([s.to_fasta_str(include_coords=False)
                      for s in fastaIterator(fh)])
+    self.assertEqual(res.strip(), self.file1.strip())
+
+  @mock.patch('os.path.getsize')
+  @mock.patch('__builtin__.open')
+  def test_verbose(self, mock_open, mock_getsize):
+    """ Test progress reporting works properly """
+    def mock_get_size_se(*args, **kwargs):
+      if (args[0] == "in.fa"):
+        return self.file1_size
+      else:
+        raise ValueError("unknown file: " + args[0])
+    outfh = StringIO.StringIO()
+    infh = StringIO.StringIO(self.file1)
+    f_map = {"in.fa": infh}
+    mock_open.side_effect = build_mock_open_side_effect({}, f_map)
+    mock_getsize.side_effect = mock_get_size_se
+    with mock.patch('sys.stderr', outfh):
+      res = ""
+      pctngs = []
+      for s in fastaIterator("in.fa", verbose=True):
+        res += s.to_fasta_str(include_coords=False)
+        res += "\n"
+        pct = math.ceil(100 * infh.tell() / float(self.file1_size))
+        pctngs.append(" %d%% " % pct)
+      expect = "\r" + "\r".join(["completed" + m + "of processing in.fa"
+                                 for m in pctngs]) + "\n"
+      self.assertEqual(outfh.getvalue(), expect)
+
+  @mock.patch('__builtin__.open')
+  def test_verbose_stream(self, mock_open):
+    """ Test progress reporting fails gracefully on stream of unknown len. """
+    outfh = StringIO.StringIO()
+    f_map = {"in.fa": self.file1}
+    mock_open.side_effect = build_mock_open_side_effect(f_map)
+    with mock.patch('sys.stderr', outfh):
+      res = "\n".join([s.to_fasta_str(include_coords=False)
+                       for s in fastaIterator("in.fa", verbose=True)])
+    self.assertEqual("Warning: unable to show progress for stream. Reason:" +
+                     " 'Failed to get max size for stream'",
+                     outfh.getvalue())
     self.assertEqual(res.strip(), self.file1.strip())
 
 
