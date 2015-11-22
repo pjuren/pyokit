@@ -50,6 +50,8 @@ from pyokit.scripts import regionCollapse
 from pyokit.scripts import remDupsBED
 from pyokit.scripts import convertJunctionReads
 from pyokit.scripts import overlapProfile
+from pyokit.scripts import readCountExonToGene
+from pyokit.scripts import readCounts
 
 
 ###############################################################################
@@ -101,6 +103,14 @@ def dispatch_overlap_profile(args):
   overlapProfile._main(args, "overlapProfile")
 
 
+def dispatch_read_counts(args):
+  readCounts._main(args, "readCounts")
+
+
+def dispatch_exon_to_gene_read_counts(args):
+  readCountExonToGene._main(args, "exonToGeneReadCounts")
+
+
 dispatchers = {"fdr": dispatch_fdr,
                "index": dispatch_index,
                "consprofile": dispatch_cons_profile,
@@ -108,7 +118,9 @@ dispatchers = {"fdr": dispatch_fdr,
                "regionCollapse": dispatch_region_collapse,
                "remDupsBED": dispatch_rem_dups_bed,
                "convertJunctionReads": dispatch_convert_junc_reads,
-               "overlapProfile": dispatch_overlap_profile}
+               "overlapProfile": dispatch_overlap_profile,
+               "readCounts": dispatch_read_counts,
+               "exonToGeneReadCounts": dispatch_exon_to_gene_read_counts}
 
 
 ###############################################################################
