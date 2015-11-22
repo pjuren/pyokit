@@ -284,7 +284,8 @@ def bucketIterator(elements, buckets):
        ((previous.chrom > current.chrom) or
         ((previous.chrom == current.chrom) and
          (previous.start > current.start))):
-      raise GenomicIntervalError("not sorted")
+      raise GenomicIntervalError("elements not sorted. Saw " +
+                                 str(previous) + " before " + str(current))
 
   def updateOpen(openHeap, elementIterator, bucketChrom,
                  bucketStart, bucketEnd):
@@ -346,7 +347,8 @@ def bucketIterator(elements, buckets):
     if prevBucket is not None and ((bucket.chrom < prevBucket.chrom) or
                                    (bucket.chrom == prevBucket.chrom and
                                     bucket.start < prevBucket.start)):
-      raise GenomicIntervalError("not sorted")
+      raise GenomicIntervalError("regions-of-interest are not sorted. Saw " +
+                                 str(prevBucket) + " before " + str(bucket))
     updateOpen(openElems, elementIter, bucket.chrom, bucket. start, bucket.end)
 
     # be careful here not to leak a reference to the heap; if the caller
