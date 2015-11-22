@@ -281,7 +281,7 @@ def pairedBEDIterator(inputStreams, mirror=False, mirrorScore=None,
         elements[index] = next_item(bIterators[index])
 
     # stop once all streams are exhausted
-    if reduce(lambda x, y:x and y, [e is None for e in elements]):
+    if reduce(lambda x, y: x and y, [e is None for e in elements]):
       break
 
 
