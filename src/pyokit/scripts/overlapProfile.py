@@ -79,8 +79,15 @@ def __to_relative(abs_pos, region, anchor_to):
   return rel_pos
 
 
+def __norm_counts(counts, possible):
+  assert(len(counts) <= len(possible))
+  for i in range(0, len(counts)):
+    counts[i] = counts[i] / float(possible[i])
+
+
 def process_anchor_start(regions_fn, to_count_fn,
-                         anchor_to=ANCHOR_START, verbose=False):
+                         anchor_to=ANCHOR_START, normalize=False,
+                         verbose=False):
   """
   :return: list where each element is the number of hits at that location
            relative to the start of the regions.
@@ -89,10 +96,11 @@ def process_anchor_start(regions_fn, to_count_fn,
   possible = []
   trees = intervalTrees(to_count_fn, verbose=verbose)
   for region in BEDIterator(regions_fn, verbose=verbose):
-    for i in range(0, len(region)):
-      while len(possible) <= i:
-        possible.append(0)
-      possible[i] += 1
+    if normalize:
+      for i in range(0, len(region)):
+        while len(possible) <= i:
+          possible.append(0)
+        possible[i] += 1
 
     if region.chrom not in trees:
       continue
@@ -108,11 +116,8 @@ def process_anchor_start(regions_fn, to_count_fn,
         res.append(0)
       res[rel_pos] += 1
 
-  # normalize
-  assert(len(res) <= len(possible))
-  for i in range(0, len(res)):
-    res[i] = res[i] / float(possible[i])
-
+  if normalize:
+    __norm_counts(res, possible)
   return res
 
 
@@ -149,6 +154,9 @@ def getUI(prog_name, args):
   ui.addOption(Option(short="v", long="verbose",
                       description="output additional messages to stderr " +
                                   "about run", required=False))
+  ui.addOption(Option(short="n", long="normalize",
+                      description="normalize counts by number of regions " +
+                                  "overlapping that position", required=False))
   ui.addOption(Option(short="h", long="help",
                       description="show this help message ", special=True))
   ui.addOption(Option(short="u", long="test",
@@ -186,6 +194,9 @@ def _main(args, prog_name):
     if ui.optionIsSet("output"):
       out_fh = open(ui.getValue("output"), "w")
 
+    # norm?
+    norm = ui.optionIsSet("normalize")
+
     # get anchor point
     anch = ANCHOR_START
     if ui.optionIsSet("anchor"):
@@ -193,7 +204,7 @@ def _main(args, prog_name):
         anch = ANCHOR_5PRIME
 
     res = process_anchor_start(regions_fn, to_count_fn, anchor_to=anch,
-                               verbose=verbose)
+                               normalize=norm, verbose=verbose)
     write_output(res, out_fh, verbose=verbose)
 
 
@@ -226,7 +237,7 @@ class TestOverlapProfile(unittest.TestCase):
     streams = {"out.dat": outfh}
     mock_open.side_effect = build_mock_open_side_effect(self.f_map, streams)
 
-    _main(["-o", "out.dat", "regions.bed", "hits1.bed"], sys.argv[0])
+    _main(["-n", "-o", "out.dat", "regions.bed", "hits1.bed"], sys.argv[0])
     expect = [[0, 0.0], [1, 1.0], [2, 0.0], [3, 0.0], [4, 0.0], [5, 0.6667],
               [6, 0.0], [7, 0.0], [8, 0.0], [9, 0.0], [10, 0.0], [11, 0.0],
               [12, 0.0], [13, 0.0], [14, 0.0], [15, 1.0]]
@@ -245,7 +256,7 @@ class TestOverlapProfile(unittest.TestCase):
     streams = {"out.dat": outfh}
     mock_open.side_effect = build_mock_open_side_effect(self.f_map, streams)
 
-    _main(["-a", "5-prime", "-o", "out.dat", "regions.bed", "hits1.bed"],
+    _main(["-n", "-a", "5-prime", "-o", "out.dat", "regions.bed", "hits1.bed"],
           sys.argv[0])
     expect = [[0, 0.0], [1, 0.6667], [2, 0.0], [3, 0.0], [4, 0.3333],
               [5, 0.3333], [6, 0.0], [7, 0.0], [8, 0.3333], [9, 0.0],
