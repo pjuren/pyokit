@@ -43,22 +43,13 @@ class FastqFileFormatError(Exception):
     return repr(self.value)
 
 
-def _isSequenceHead(line, prevLine=None):
+def _isSequenceHead(line):
   """
     Determine if a string represents a sequence header line in fastq format.
     Sequence headers start with the '@' symbol, and are followed by sequence
     data.
 
     :param line:      The line/string to check
-    :param prevLine:  The line that came before this one. This is a hint that
-                      lets us disambiguate some potentially confusing cases:
-                      if we know the previous line and it's a quality header,
-                      we won't call this a sequence header -- the reason is
-                      that sanger format uses the '@' symbol in it's quality
-                      data and we don't want to mistake that for a sequence
-                      header if it happens to appear as the first character.
-                      You needn't provide this though, if it's set to None,
-                      the function will make its best guess without that info.
     :return: True if the given line conforms to the sequence header format for
              a fastq sequence
   """
@@ -115,8 +106,8 @@ def fastqIteratorSimple(fn, verbose=False, allowNameMissmatch=False):
                                messageSuffix="of processing "
                                              + fh.name)
     except AttributeError:
-      sys.stderr.write("fastqIterator -- warning: "
-                       + "unable to show progress for stream")
+      sys.stderr.write("fastqIterator -- warning: " +
+                       "unable to show progress for stream")
       verbose = False
 
   while True:
@@ -135,8 +126,8 @@ def fastqIteratorSimple(fn, verbose=False, allowNameMissmatch=False):
           # ok, not in the middle of a sequence
           break
         else:
-          raise FastqFileFormatError("reached end of file in the " +
-                                     "middle of sequence data")
+          raise FastqFileFormatError("reached end of file in the "
+                                     + "middle of sequence data")
 
       l = l.strip()
       if l == "":
@@ -151,17 +142,16 @@ def fastqIteratorSimple(fn, verbose=False, allowNameMissmatch=False):
     # got our 4 lines, assemble our read..
     # first check that names match
     if lines[0][1:] != lines[2][1:] and not allowNameMissmatch:
-      raise FastqFileFormatError("names in sequence don't match : "
-                                 + str(lines[0][1:]) + " != "
-                                 + str(lines[2][1:]))
+      raise FastqFileFormatError("names in sequence don't match : " +
+                                 str(lines[0][1:]) + " != " +
+                                 str(lines[2][1:]))
     name = lines[0][1:]
     seq = lines[1]
     qual = lines[3]
     yield NGSRead(seq, name, qual)
 
 
-def fastqIterator(fn, useMutableString=False, verbose=False, debug=False,
-                  sanger=False, allowNameMissmatch=False):
+def fastqIterator(fn, verbose=False, allowNameMissmatch=False):
   """
     A generator function which yields FastqSequence objects read from a file or
     stream. This is a general function which wraps fastqIteratorSimple. In
@@ -195,14 +185,14 @@ def fastqIterator(fn, useMutableString=False, verbose=False, debug=False,
 def fastq_complex_parse_qual(fh, line, prevLine, verbose=False, pind=None):
   prevLine = line
   qualdata = ""
-  while not _isSequenceHead(line, prevLine):
+  while not _isSequenceHead(line):
     prevLine = line
     line = fh.readline()
     if verbose and pind is not None:
       pind.done += 1
     if line == "":
       break
-    elif not _isSequenceHead(line, prevLine):
+    elif not _isSequenceHead(line):
       qualdata += line.strip()
   if qualdata.strip() == "":
     raise FastqFileFormatError("missing quality data..")
@@ -242,8 +232,7 @@ def fastq_complex_parse_seq_header(fh, prevLine, pind, verbose):
   return seqHeader[1:].strip(), prevLine
 
 
-def fastqIteratorComplex(fn, useMutableString=False, verbose=False,
-                         debug=False, sanger=False):
+def fastqIteratorComplex(fn, useMutableString=False, verbose=False):
   """
     A generator function which yields FastqSequence objects read from a file or
     stream. This iterator can handle fastq files that have their sequence
@@ -384,7 +373,7 @@ class FastQUintTests(unittest.TestCase):
     ins = DummyInputStream(instr)
 
     seqs = []
-    for seq in fastqIterator(ins, debug=debug):
+    for seq in fastqIterator(ins):
       seqs.append(seq)
 
     seqs.sort(key=lambda x: x.name)
@@ -430,7 +419,7 @@ class FastQUintTests(unittest.TestCase):
     ins = DummyInputStream(instr)
 
     seqs = []
-    for seq in fastqIteratorComplex(ins, debug=debug):
+    for seq in fastqIteratorComplex(ins):
       seqs.append(seq)
 
     seqs.sort(key=lambda x: x.name)

@@ -26,18 +26,26 @@
 # standard python imports
 import sys
 import os
+import math
 import unittest
+import StringIO
 
 # pyokit imports
 from pyokit.datastruct.sequence import Sequence
 from pyokit.util.progressIndicator import ProgressIndicator
+from pyokit.util.progressIndicator import ProgressIndicatorError
+from pyokit.common.pyokitError import PyokitError
+from pyokit.util.testing import build_mock_open_side_effect
+
+# for testing
+import mock
 
 
 ###############################################################################
 #                             EXCEPTION CLASSES                               #
 ###############################################################################
 
-class FastaFileFormatError(Exception):
+class FastaFileFormatError(PyokitError):
   def __init__(self, msg):
     self.value = msg
 
@@ -49,7 +57,7 @@ class FastaFileFormatError(Exception):
 #                              HELPER FUNCTIONS                               #
 ###############################################################################
 
-def numSequences(fileh):
+def num_sequences(fileh):
   """
     Determine how many sequences there are in fasta file/stream.
 
@@ -63,7 +71,7 @@ def numSequences(fileh):
   else:
     fh = fileh
   count = 0
-  for seq in fastaIterator(fh) :
+  for _ in fastaIterator(fh):
     count += 1
   return count
 
@@ -92,6 +100,51 @@ def _isSequenceHead(line):
 #                             ITERATOR FUNCTIONS                              #
 ###############################################################################
 
+def __read_seq_header(fh, prev_line):
+  """
+  Given a file handle/stream, read the next fasta header from that stream.
+
+  :param fh:         filehandle to read from
+  :param prev_line:  the previous line read from this filestream
+  """
+  seq_header = ""
+  if prev_line is not None and not _isSequenceHead(prev_line):
+    raise FastaFileFormatError("terminated on non-read header: " + prev_line)
+  if prev_line is None:
+    while seq_header.strip() == "":
+      seq_header = fh.readline()
+  else:
+    seq_header = prev_line
+  return seq_header
+
+
+def __read_seq_data(fh):
+  """
+  :return: a tuple of the sequence data and the last line that was read from
+           the file handle/stream
+  """
+  line = None
+  seq_data = ""
+  while line is None or not _isSequenceHead(line):
+    line = fh.readline()
+    if line == "":
+      break  # file is finished...
+    if not _isSequenceHead(line):
+      seq_data += line.strip()
+  return seq_data, line
+
+
+def __build_progress_indicator(fh):
+  try:
+    total = os.path.getsize(fh.name)
+  except (AttributeError, OSError):
+    raise ProgressIndicatorError("Failed to get max size for stream")
+  pind = ProgressIndicator(totalToDo=total,
+                           messagePrefix="completed",
+                           messageSuffix="of processing " + fh.name)
+  return pind
+
+
 def fastaIterator(fn, useMutableString=False, verbose=False):
   """
     A generator function which yields fastaSequence objects from a fasta-format
@@ -106,55 +159,30 @@ def fastaIterator(fn, useMutableString=False, verbose=False):
     :param verbose: if True, output additional status messages to stderr about
                     progress
   """
-  prevLine = None
   fh = fn
   if type(fh).__name__ == "str":
     fh = open(fh)
 
   if verbose:
     try:
-      total = os.path.getsize(fh.name)
-      pind = ProgressIndicator(totalToDo=total,
-                               messagePrefix="completed",
-                               messageSuffix="of processing "
-                                             + fh.name)
-    except AttributeError:
-      sys.stderr.write("Warning: unable to show progress for stream")
+      pind = __build_progress_indicator(fh)
+    except ProgressIndicatorError as e:
+      sys.stderr.write("Warning: unable to show progress for stream. " +
+                       "Reason: " + str(e))
       verbose = False
 
+  prev_line = None
   while True:
-    # either we have a sequence header left over from the prev call, or we need
-    # to read a new one from the file... try to do that now
-    seqHeader = ""
-    if prevLine is not None and not _isSequenceHead(prevLine):
-      raise FastaFileFormatError("terminated on non-read header: " + prevLine)
-    if prevLine == None:
-      while seqHeader.strip() == "":
-        seqHeader = fh.readline()
-    else:
-      seqHeader = prevLine
+    seqHeader = __read_seq_header(fh, prev_line)
     name = seqHeader[1:].strip()
-
-    # now we need to read lines until we hit another sequence header, or we
-    # run out of lines.. this is our sequence data
-    line = None
-    seqdata = ""
-    while line == None or not _isSequenceHead(line):
-      line = fh.readline()
-      if line == "":
-        break  # file is finished...
-      if not _isSequenceHead(line):
-        seqdata += line.strip()
-
-    # package it all up..
+    seq_data, prev_line = __read_seq_data(fh)
     if verbose:
       pind.done = fh.tell()
-      pind.showProgress()
-    yield Sequence(name, seqdata, useMutableString)
+      pind.showProgress(to_strm=sys.stderr)
+    yield Sequence(name, seq_data, useMutableString)
 
     # remember where we stopped for next call, or finish
-    prevLine = line
-    if prevLine == "":
+    if prev_line == "":
       break
 
 
@@ -163,7 +191,77 @@ def fastaIterator(fn, useMutableString=False, verbose=False):
 ###############################################################################
 
 class TestFastaIterators(unittest.TestCase):
-  pass
+
+  """ Unit tests for fasta iterators. """
+
+  def setUp(self):
+    self.file1 = ">s1\n" +\
+                 "ACTGATCGATGCGCGATGCTAGTGC\n" +\
+                 ">s1\n" +\
+                 "ACTGATCGATGCGCGATGCTAGTGC\n" +\
+                 ">s1\n" +\
+                 "ACTGATCGATGCGCGATGCTAGTGC\n" +\
+                 ">s1\n" +\
+                 "ACTGATCGATGCGCGATGCTAGTGC\n"
+    tmp = StringIO.StringIO(self.file1)
+    tmp.seek(0, 2)
+    self.file1_size = tmp.tell()
+
+  def test_num_sequences(self):
+    fh = StringIO.StringIO(self.file1)
+    self.assertEqual(num_sequences(fh), 4)
+
+  def test_fasta_iterator(self):
+    """ round-trip for a fasta stream """
+    fh = StringIO.StringIO(self.file1)
+    res = "\n".join([s.to_fasta_str(include_coords=False)
+                     for s in fastaIterator(fh)])
+    self.assertEqual(res.strip(), self.file1.strip())
+
+  @mock.patch('os.path.getsize')
+  @mock.patch('__builtin__.open')
+  def test_verbose(self, mock_open, mock_getsize):
+    """ Test progress reporting works properly """
+    def mock_get_size_se(*args, **kwargs):
+      if (args[0] == "in.fa"):
+        return self.file1_size
+      else:
+        raise ValueError("unknown file: " + args[0])
+    outfh = StringIO.StringIO()
+    infh = StringIO.StringIO(self.file1)
+    f_map = {"in.fa": infh}
+    mock_open.side_effect = build_mock_open_side_effect({}, f_map)
+    mock_getsize.side_effect = mock_get_size_se
+    with mock.patch('sys.stderr', outfh):
+      res = ""
+      pctngs = []
+      for s in fastaIterator("in.fa", verbose=True):
+        res += s.to_fasta_str(include_coords=False)
+        res += "\n"
+        pct = math.ceil(100 * infh.tell() / float(self.file1_size))
+        pctngs.append(" %d%% " % pct)
+      expect = "\r" + "\r".join(["completed" + m + "of processing in.fa"
+                                 for m in pctngs]) + "\n"
+      self.assertEqual(outfh.getvalue(), expect)
+
+  @mock.patch('__builtin__.open')
+  def test_verbose_stream(self, mock_open):
+    """ Test progress reporting fails gracefully on stream of unknown len. """
+    outfh = StringIO.StringIO()
+    f_map = {"in.fa": self.file1}
+    mock_open.side_effect = build_mock_open_side_effect(f_map)
+    with mock.patch('sys.stderr', outfh):
+      res = "\n".join([s.to_fasta_str(include_coords=False)
+                       for s in fastaIterator("in.fa", verbose=True)])
+    self.assertEqual("Warning: unable to show progress for stream. Reason:" +
+                     " 'Failed to get max size for stream'",
+                     outfh.getvalue())
+    self.assertEqual(res.strip(), self.file1.strip())
+
+
+###############################################################################
+#              MAIN ENTRY POINT WHEN RUN AS STAND-ALONE MODULE                #
+###############################################################################
 
 if __name__ == '__main__':
     unittest.main()
