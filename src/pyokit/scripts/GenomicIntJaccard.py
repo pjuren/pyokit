@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
 """
-  Date of Creation: 3rd Apr 2010
-  Description:      Iterators for processing BED format streams
+  Date of Creation: Dec 2015
+  Description:      Compute the Jaccard index for regions in two files
 
   Copyright (C) 2010-2014
   Philip J. Uren
