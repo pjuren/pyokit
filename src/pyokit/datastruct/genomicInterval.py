@@ -31,6 +31,7 @@ import copy
 from heapq import heappush, heappop
 
 # pyokit imports
+from pyokit.common.pyokitError import PyokitError
 from pyokit.util.progressIndicator import ProgressIndicator
 from pyokit.datastruct.intervalTree import IntervalTree
 from pyokit.util.meta import AutoApplyIterator
@@ -40,17 +41,13 @@ from pyokit.util.meta import AutoApplyIterator
 #                            EXCEPTION CLASSES                                #
 ###############################################################################
 
-class GenomicIntervalError(Exception):
 
-  """Errors raised when manipulating genomic intervals."""
+class GenomicIntervalError(PyokitError):
+  pass
 
-  def __init__(self, msg):
-    """Constructor for genomic interval errors."""
-    self.value = msg
 
-  def __str__(self):
-    """Get string representation of this exception."""
-    return repr(self.value)
+class InvalidStartIndexError(GenomicIntervalError):
+  pass
 
 
 ###############################################################################
@@ -445,7 +442,10 @@ class GenomicInterval(object):
       raise GenomicIntervalError("Must provided at least chrom, start, end " +
                                  "for Genomic Interval")
     self.chrom = chrom.strip()
-    self.start = int(start)
+    try:
+      self.start = int(start)
+    except ValueError:
+      raise InvalidStartIndexError("invalid start index: '" + str(start) + "'")
     self.end = int(end)
 
     # we might get the following too...
