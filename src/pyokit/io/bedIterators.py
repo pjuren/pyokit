@@ -29,6 +29,7 @@ import unittest
 from operator import attrgetter
 from Queue import Queue
 
+from pyokit.datastruct.genomicInterval import GenomicIntervalError
 from pyokit.testing.dummyfiles import DummyInputStream, DummyOutputStream
 from pyokit.util.progressIndicator import ProgressIndicator
 from pyokit.util.fileUtils import linesInFile
@@ -157,7 +158,10 @@ def BEDIterator(filehandle, sortedby=None, verbose=False, scoreType=int,
 
     if line.strip() == "":
       continue
-    e = parseBEDString(line, scoreType, dropAfter=dropAfter)
+    try:
+      e = parseBEDString(line, scoreType, dropAfter=dropAfter)
+    except GenomicIntervalError as e:
+      raise BEDError(str(e) + " on line " + line)
 
     # sorting by name?
     if ((sortedby == ITERATOR_SORTED_NAME and prev is not None) and
@@ -281,7 +285,7 @@ def pairedBEDIterator(inputStreams, mirror=False, mirrorScore=None,
         elements[index] = next_item(bIterators[index])
 
     # stop once all streams are exhausted
-    if reduce(lambda x, y:x and y, [e is None for e in elements]):
+    if reduce(lambda x, y: x and y, [e is None for e in elements]):
       break
 
 
