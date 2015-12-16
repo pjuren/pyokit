@@ -27,24 +27,16 @@
 import os
 import sys
 import unittest
+import StringIO
+
+# for unit testing
+import mock
 
 # pyokit imports
 from pyokit.interface.cli import CLI, Option
 from pyokit.io.bedIterators import BEDIterator
-from pyokit.datastruct.genomicInterval import regionsIntersection
-from pyokit.datascruct.genomicInterval import collapseRegions
-
-
-###############################################################################
-#                             HELPER FUNCTIONS                                #
-###############################################################################
-def count_toto_region_size(s):
-  """
-  sum the size of regions in s; no check for whether they overlap is made.
-  """
-  tot = 0
-  for r in s:
-    tot += len(r)
+from pyokit.datastruct.genomicInterval import jaccardIndex
+from pyokit.util.testing import build_mock_open_side_effect
 
 
 ###############################################################################
@@ -115,14 +107,7 @@ def main(args):
     regions_1 = [e for e in BEDIterator(ui.getArgument(0), verbose=verbose)]
     regions_2 = [e for e in BEDIterator(ui.getArgument(1), verbose=verbose)]
 
-    intersection = regionsIntersection(regions_1, regions_2)
-    union = collapseRegions(regions_1 + regions_1)
-
-    size_intersection = count_toto_region_size(intersection)
-    size_union = count_toto_region_size(union)
-
-    jac = size_intersection / float(size_union)
-    print str(jac)
+    print jaccardIndex(regions_1, regions_2)
 
 
 ###############################################################################
@@ -130,7 +115,28 @@ def main(args):
 ###############################################################################
 
 class TestGenomicIntJaccard(unittest.TestCase):
-  pass
+
+  def setUp(self):
+    f1_conts = "\n".join(["\t".join(["chr1", "10", "20", "F1_R1", "0", "+"]),
+                          "\t".join(["chr1", "70", "80", "F2_R2", "0", "+"]),
+                          "\t".join(["chr2", "05", "10", "F2_R2", "0", "+"]),
+                          "\t".join(["chr2", "70", "75", "F2_R2", "0", "+"]),
+                          "\t".join(["chr2", "90", "95", "F2_R2", "0", "+"])])
+    f2_conts = "\n".join(["\t".join(["chr1", "07", "12", "F1_R1", "0", "+"]),
+                          "\t".join(["chr1", "67", "70", "F2_R2", "0", "+"]),
+                          "\t".join(["chr1", "75", "85", "F2_R2", "0", "+"]),
+                          "\t".join(["chr2", "20", "30", "F2_R2", "0", "+"]),
+                          "\t".join(["chr2", "73", "92", "F2_R2", "0", "+"])])
+    string_d = {"file1.bed": f1_conts,
+                "file2.bed": f2_conts}
+    self.mock_open_side_effect = build_mock_open_side_effect(string_d, {})
+
+  @mock.patch('__builtin__.open')
+  @mock.patch('sys.stdout', new_callable=StringIO.StringIO)
+  def test_simple(self, mock_stdout, mock_open):
+    mock_open.side_effect = self.mock_open_side_effect
+    main(["file1.bed", "file2.bed"])
+    self.assertAlmostEqual(float(mock_stdout.getvalue()), 0.1549296)
 
 
 ###############################################################################
