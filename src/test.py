@@ -91,8 +91,8 @@ from pyokit.scripts.convertJunctionReads import ConvertJunctionsUnitTests
 from pyokit.scripts.regionCollapse import TestCollapseRegions
 from pyokit.scripts.overlapProfile import TestOverlapProfile
 from pyokit.scripts.genomicIntJaccard import TestGenomicIntJaccard
+from pyokit.scripts.genomicIntersection import TestGenomicIntIntersection
 from pyokit.scripts.pyokitMain import PyokitSmokeTests
-
 
 
 if __name__ == "__main__":
@@ -150,6 +150,7 @@ if __name__ == "__main__":
   sys.stderr.write("  " + str(TestConservationProfileIndvFiles) + "\n")
   sys.stderr.write("  " + str(TestOverlapProfile) + "\n")
   sys.stderr.write("  " + str(TestGenomicIntJaccard) + "\n")
+  sys.stderr.write("  " + str(TestGenomicIntIntersection) + "\n")
   sys.stderr.write("  " + str(PyokitSmokeTests) + "\n\n")
 
   sys.stderr.write("\n\n RUNNING TESTS \n\n")

@@ -28,13 +28,15 @@
 import os
 import sys
 import unittest
-# import StringIO
+import StringIO
 
 # for unit testing
-# import mock
+import mock
 
 # pyokit imports
 from pyokit.interface.cli import CLI, Option
+from pyokit.io.bedIterators import BEDIterator
+from pyokit.util.testing import build_mock_open_side_effect
 from pyokit.datastruct.genomicInterval import regionsIntersection
 
 
@@ -114,8 +116,8 @@ def main(args):
 
     # get input file-handles -- we know we'll get exactly two, since we
     # specified it in the UI definition
-    regions_1 = [x for x in open(ui.getArgument(0))]
-    regions_2 = [x for x in open(ui.getArgument(1))]
+    regions_1 = [x for x in BEDIterator(ui.getArgument(0), verbose=verbose)]
+    regions_2 = [x for x in BEDIterator(ui.getArgument(1), verbose=verbose)]
 
     for r in regionsIntersection(regions_1, regions_2):
       out_fh.write(str(r) + "\n")
@@ -130,7 +132,29 @@ class TestGenomicIntIntersection(unittest.TestCase):
   """Unit tests for the GenomicIntIntersection program/script."""
 
   def setUp(self):
-    pass
+    f1_conts = "\n".join(["\t".join(["chr1", "10", "20", "F1_R1", "0", "+"]),
+                          "\t".join(["chr1", "70", "80", "F2_R2", "0", "+"]),
+                          "\t".join(["chr2", "05", "10", "F2_R2", "0", "+"]),
+                          "\t".join(["chr2", "70", "75", "F2_R2", "0", "+"]),
+                          "\t".join(["chr2", "90", "95", "F2_R2", "0", "+"])])
+    f2_conts = "\n".join(["\t".join(["chr1", "07", "12", "F1_R1", "0", "+"]),
+                          "\t".join(["chr1", "67", "70", "F2_R2", "0", "+"]),
+                          "\t".join(["chr1", "75", "85", "F2_R2", "0", "+"]),
+                          "\t".join(["chr2", "20", "30", "F2_R2", "0", "+"]),
+                          "\t".join(["chr2", "73", "92", "F2_R2", "0", "+"])])
+    self.str_d = {"file1.bed": f1_conts, "file2.bed": f2_conts}
+
+  @mock.patch('__builtin__.open')
+  def testTwoFiles(self, mock_open):
+    outfh = StringIO.StringIO()
+    stream_d = {"out.bed": outfh}
+    mock_open.side_effect = build_mock_open_side_effect(self.str_d, stream_d)
+    main(["-o", "out.bed", "file1.bed", "file2.bed"])
+    expect = "\n".join(["\t".join(["chr1", "10", "12", "X", "0", "+"]),
+                        "\t".join(["chr1", "75", "80", "X", "0", "+"]),
+                        "\t".join(["chr2", "73", "75", "X", "0", "+"]),
+                        "\t".join(["chr2", "90", "92", "X", "0", "+"])]) + "\n"
+    self.assertEqual(outfh.getvalue(), expect)
 
 
 ###############################################################################
