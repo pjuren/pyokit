@@ -90,7 +90,7 @@ from pyokit.scripts.remDupsBED import TestRemDupsBed
 from pyokit.scripts.convertJunctionReads import ConvertJunctionsUnitTests
 from pyokit.scripts.regionCollapse import TestCollapseRegions
 from pyokit.scripts.overlapProfile import TestOverlapProfile
-from pyokit.scripts.GenomicIntJaccard import TestGenomicIntJaccard
+from pyokit.scripts.genomicIntJaccard import TestGenomicIntJaccard
 from pyokit.scripts.pyokitMain import PyokitSmokeTests
 
 
