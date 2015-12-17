@@ -54,6 +54,36 @@ class InvalidStartIndexError(GenomicIntervalError):
 #        FUNCTIONS FOR MANIPULATING COLLECTIONS OF GENOMIC INTERVALS          #
 ###############################################################################
 
+def jaccardIndex(s1, s2, stranded=False):
+  """
+  Compute the Jaccard index for two collections of genomic intervals
+
+  :param s1: the first set of genomic intervals
+  :param s2: the second set of genomic intervals
+  :param stranded: if True, treat regions on different strands as not
+                   intersecting each other, even if they occupy the same
+                   genomic region.
+  :return: Jaccard index
+  """
+
+  def count(s):
+    """ sum the size of regions in s. """
+    tot = 0
+    for r in s:
+      tot += len(r)
+    return tot
+
+  if stranded:
+    raise GenomicIntervalError("Sorry, stranded mode for computing Jaccard " +
+                               "index hasn't been implemented yet.")
+
+  s1 = collapseRegions(s1)
+  s2 = collapseRegions(s2)
+  intersection = regionsIntersection(s1, s2)
+  c_i = count(intersection)
+  return c_i / float(count(s1) + count(s2) - c_i)
+
+
 def intervalTreesFromList(inElements, verbose=False, openEnded=False):
   """
   build a dictionary, indexed by chrom name, of interval trees for each chrom.
@@ -197,7 +227,7 @@ def __collapse_stranded(s, proc_strands, names=False, verbose=False):
   return res
 
 
-def regionsIntersection(s1, s2):
+def regionsIntersection(s1, s2, collapse=True):
   """
   given two lists of genomic regions with chromosome, start and end
   coordinates, return a new list of regions which is the intersection of those
