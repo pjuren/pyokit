@@ -85,8 +85,12 @@ class NGSRead(Sequence):
     self.seq_qual = qual
 
     # for quality scores
+    # ILLUMINA 1.3+ Phred+64
     self.LOWSET_SCORE = 64
     self.HIGHEST_SCORE = 104
+    # Illumina 1.8+ Phred+33
+    self.LOWSET_SCORE_ILL_18_PHRD_33 = 33
+    self.HIGHEST_SCORE_ILL_18_PHRD_33 = 74
 
   def __eq__(self, seq):
     """
@@ -155,10 +159,35 @@ class NGSRead(Sequence):
     self.sequenceData = self.sequenceData[amount:]
     self.sequenceQual = self.sequenceQual[amount:]
 
-  def getRelativeQualityScore(self, i):
-    val = self.sequenceQual[i]
-    return (ord(val) - self.LOWSET_SCORE) / float(self.HIGHEST_SCORE -
-                                                  self.LOWSET_SCORE)
+  def getRelativeQualityScore(self, i, score_type="ILLUMINA_PHRED_PLUS_33"):
+    """
+    Get the realtive quality score (i.e. the phred quality score) for a given
+    base.
+
+    :raise: NGSReadError if the index is less than 0 or more than l-1 where l
+            is the length of the read; NGSReadError if the encoded quality
+            score at the given location is outside the expected range;
+            NGSReadError if the read has no quality string; NGSReadError if
+            sepficied encoding scheme is unknown.
+    """
+    # error out if no quality string, or index is out of range
+    if self.seq_qual is None:
+      raise NGSReadError("Error finding realtive quality for base call at " +
+                         "location " + str(i) + " in read " + self.name +
+                         "; read has no quality string")
+    if i < 0 or i > self.seq_qual:
+      raise NGSReadError("Error finding relative quality for base call at " +
+                         "location " + str(i) + " in read " + self.name +
+                         "; outside of range for read with quality score " +
+                         "string of length " + str(len(self.seq_qual)))
+
+    val = self.seq_qual[i]
+    if score_type == "ILLUMINA_PHRED_PLUS_33":
+      return ord(val) - self.LOWSET_SCORE_ILL_18_PHRD_33
+    elif score_type == "ILLUMINA_PHRED_PLUS_64":
+      return ord(val) - self.LOWSET_SCORE
+    else:
+      raise NGSReadError("Unknown score type: " + score_type)
 
   def reverse_complement(self, is_RNA=None):
     """
@@ -365,6 +394,15 @@ class NGSReadUnitTests(unittest.TestCase):
     clip_adaptor(input_seq, adaptor)
     got = input_seq
     self.assertTrue(expect == got)
+
+  def testGetRelativeQualityScore(self):
+    input_seq = NGSRead("TTTGTAGTTTTGATTTTTGAGGTTTTAGTTATTTATTAGTAAATTAAGGT" +
+                        "TTAAAAATATTAAATGGAAAATTTTAGAAATAAGTAATGTATAAGTTTTAA",
+                        "SN346:615:HMTFNADXX:1:1101:1413:2147 1:N:0:CGATGT",
+                        "BBBFFFFFFFFFFFIIIIFFFIIFFIFFFFIIIIIIIIIIIFIIIIFFII" +
+                        "IIFIIIFFFFIFFFFFFFFFFFFFIIFIFIFFFFFFFFFFBBFBBFBFFBB")
+    self.assertEquals(input_seq.getRelativeQualityScore(0), 33)
+    self.assertEquals(input_seq.getRelativeQualityScore(3), 37)
 
 
 ###############################################################################
